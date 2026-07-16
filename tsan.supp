@@ -1,0 +1,13 @@
+# Boost.Beast: basic_stream::close() races with on_timer() during stream
+# teardown.  close_ws_client() now destroys the stream on the client IO
+# thread (step 5) to eliminate the TSAN race entirely.  Keep this
+# suppression as defense-in-depth for any code path that might still
+# destroy a stream from a non-IO thread.
+race:*boost::beast::basic_stream*
+
+# Boost.Asio: deadline_timer_service::async_wait races with timer cancellation
+# during teardown (same root cause — library-internal, not our code).
+race:*boost::asio::deadline_timer_service*
+
+# Boost.Asio: SSL stream shutdown races with pending read/write operations.
+race:*boost::asio::ssl::detail::io_op*
