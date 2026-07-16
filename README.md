@@ -2,7 +2,7 @@
   <img src="media/logo.svg" alt="LibZenit" width="180">
 </p>
 
-Portable C library providing building blocks for systems programming: a **typed result type with error codes**, a **ring buffer**, a **finite-state machine engine**, a **fixed-block arena allocator**, a **benchmark framework**, and a **version API**.
+Portable C library providing building blocks for systems programming: a **typed result type with error codes**, a **ring buffer**, a **finite-state machine engine**, a **fixed-block arena allocator**, a **benchmark framework**, a **dynamic array (vector)**, and a **version API**.
 
 <p align="center">
 <a href="https://github.com/libzenit/libzenit/actions/workflows/ci.yml"><img src="https://github.com/libzenit/libzenit/actions/workflows/ci.yml/badge.svg?branch=master" alt="CI Status"></a>
@@ -168,6 +168,34 @@ Fixed-capacity byte-level circular FIFO buffer with wrap-around support. Push fa
 
 ---
 
+### 6. Dynamic Array (Vector) — `include/libzenit/vector.h`
+
+Generic type-erased dynamic array with 1.5x exponential growth. Elements are stored contiguously and accessed by index.
+
+| Function | Description |
+|---|---|
+| `zenit_vector_create(elem_size)` | Create empty vector (default capacity 8); returns `NULL` on zero elem_size or OOM |
+| `zenit_vector_create_with_capacity(elem_size, capacity)` | Create with pre-allocated buffer; returns `NULL` on invalid params or OOM |
+| `zenit_vector_destroy(vector)` | Free all memory; NULL-safe |
+| `zenit_vector_push(vector, elem)` | Append element; grows if full; returns `ZENIT_RESULT_OK` / `ZENIT_ERROR_NULL` / `ZENIT_ERROR_ALLOC` |
+| `zenit_vector_pop(vector, out_elem)` | Remove and retrieve last element; returns `ZENIT_ERROR_EMPTY` if empty |
+| `zenit_vector_insert(vector, index, elem)` | Insert at position, shifting right; returns `ZENIT_ERROR_PARAM` if index > count |
+| `zenit_vector_remove(vector, index, out_elem)` | Remove at position, shifting left; returns `ZENIT_ERROR_PARAM` if index >= count |
+| `zenit_vector_get(vector, index)` | Get pointer to element; returns `NULL` if out of bounds |
+| `zenit_vector_set(vector, index, elem)` | Overwrite element at index; returns `ZENIT_ERROR_PARAM` if OOB |
+| `zenit_vector_count(vector)` | Number of elements (0 if NULL) |
+| `zenit_vector_capacity(vector)` | Allocated element slots (0 if NULL) |
+| `zenit_vector_reserve(vector, capacity)` | Pre-allocate capacity; no-op if already sufficient |
+| `zenit_vector_shrink_to_fit(vector)` | Reallocate to exact element count |
+| `zenit_vector_clear(vector)` | Reset count to 0 without freeing; NULL-safe |
+| `zenit_vector_empty(vector)` | 1 if empty or NULL, 0 otherwise |
+
+- **Source:** [`src/vector.c`](src/vector.c)
+- **Tests:** [`tests/test_vector.c`](tests/test_vector.c) (20 sub-tests: create/destroy, push/pop, insert/remove, reserve/shrink, struct, edge cases, many elements), [`tests/test_vector_malloc_fail.c`](tests/test_vector_malloc_fail.c) (6 sub-tests covering malloc/calloc/realloc failure via `--wrap`)
+- **Benchmarks:** [`benchmarks/benchmark_vector.c`](benchmarks/benchmark_vector.c) — sequential push (1M), push/pop, insert front (10K), reserve+push (1M)
+
+---
+
 ## Build Options
 
 | Option | Default | Description |
@@ -196,7 +224,8 @@ libzen/
 │       ├── state.h             # State machine API
 │       ├── arena.h             # Arena allocator API
 │       ├── benchmark.h         # Benchmark framework API
-│       └── ring.h              # Ring buffer API
+│       ├── ring.h              # Ring buffer API
+│       └── vector.h            # Dynamic array API
 ├── src/
 │   ├── CMakeLists.txt          # Library target: static libzenit
 │   ├── result.c
@@ -204,9 +233,10 @@ libzen/
 │   ├── state.c
 │   ├── arena.c
 │   ├── benchmark.c
-│   └── ring.c
+│   ├── ring.c
+│   └── vector.c
 ├── tests/
-│   ├── CMakeLists.txt          # 9 test executables
+│   ├── CMakeLists.txt          # 11 test executables
 │   ├── test_malloc_fail.h      # Shared malloc/calloc wrappers
 │   ├── test_result.c           # 11 error codes + macro helpers
 │   ├── test_version.c
@@ -214,15 +244,18 @@ libzen/
 │   ├── test_state_malloc_fail.c
 │   ├── test_arena.c            # 16 sub-tests
 │   ├── test_arena_malloc_fail.c # 4 sub-tests
-│   ├── test_ring.c             # 10 sub-tests
+│   ├── test_ring.c             # 13 sub-tests
 │   ├── test_ring_malloc_fail.c # 2 sub-tests
-│   └── test_benchmark.c
+│   ├── test_benchmark.c
+│   ├── test_vector.c           # 20 sub-tests
+│   └── test_vector_malloc_fail.c # 6 sub-tests
 ├── benchmarks/
-│   ├── CMakeLists.txt          # 4 benchmark executables (label: "benchmark")
+│   ├── CMakeLists.txt          # 5 benchmark executables (label: "benchmark")
 │   ├── benchmark_version.c
 │   ├── benchmark_state.c       # 3 cases (8-state, 1024-state, miss)
 │   ├── benchmark_arena.c       # 7 cases (arena vs malloc)
-│   └── benchmark_ring.c        # 3 cases (seq 128B, seq 1K, full-miss)
+│   ├── benchmark_ring.c        # 3 cases (seq 128B, seq 1K, full-miss)
+│   └── benchmark_vector.c      # 4 cases (seq push, push/pop, insert front, reserve+push)
 ├── scripts/
 │   ├── benchmark_report.py     # CI benchmark log → BENCHMARK.md + charts
 │   └── checksum.py             # Release SHA-256 generator
@@ -269,4 +302,4 @@ libzen/
 
 ## Status
 
-Current version `0.1.0` — **alpha**. All six modules are implemented, fully tested, benchmarked, and passing CI across all platforms and sanitizers. The API is stable but may evolve before `1.0.0`.
+Current version `0.1.0` — **alpha**. All seven modules are implemented, fully tested, benchmarked, and passing CI across all platforms and sanitizers. The API is stable but may evolve before `1.0.0`.
