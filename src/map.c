@@ -132,7 +132,7 @@ static int probe_slot(
         }
 
         /* State == OCCUPIED */
-        unsigned char *slot = map->slots + index * map->slot_size;
+        const unsigned char *slot = map->slots + index * map->slot_size;
         if (memcmp(slot, key, map->key_size) == 0) {
             *out_index = index;
             return MAP_SLOT_OCCUPIED;
@@ -177,9 +177,9 @@ static zenit_result_t rehash(zenit_map_t *map, size_t new_capacity) {
     for (size_t i = 0; i < old_capacity; i++) {
         if (old_states[i] == MAP_SLOT_OCCUPIED) {
             /* Extract key and value from the old slot */
-            unsigned char *old_slot = old_slots + i * map->slot_size;
-            void *key = old_slot;
-            void *value = old_slot + map->key_size;
+            const unsigned char *old_slot = old_slots + i * map->slot_size;
+            const void *key = old_slot;
+            const void *value = old_slot + map->key_size;
 
             /* Compute the new probe position */
             size_t hash = hash_fnv1a(key, map->key_size);
@@ -411,7 +411,7 @@ void zenit_map_foreach(
     /* Walk every slot and invoke the callback for OCCUPIED entries */
     for (size_t i = 0; i < map->capacity; i++) {
         if (map->states[i] == MAP_SLOT_OCCUPIED) {
-            unsigned char *slot = map->slots + i * map->slot_size;
+            const unsigned char *slot = map->slots + i * map->slot_size;
             visit(slot, slot + map->key_size, ctx);
         }
     }

@@ -33,7 +33,7 @@ static int failed = 0;
 static void test_create_fail_handle(void) {
     TEST("create fails on handle malloc");
     malloc_fail_countdown = 0;
-    zenit_map_t *map = zenit_map_create(sizeof(int), sizeof(int));
+    const zenit_map_t *map = zenit_map_create(sizeof(int), sizeof(int));
     ASSERT(map == NULL, "expected NULL on malloc failure");
     malloc_fail_countdown = -1;
     PASS();
@@ -43,7 +43,7 @@ static void test_create_fail_handle(void) {
 static void test_create_fail_slots(void) {
     TEST("create fails on slots calloc");
     malloc_fail_countdown = 1;
-    zenit_map_t *map = zenit_map_create(sizeof(int), sizeof(int));
+    const zenit_map_t *map = zenit_map_create(sizeof(int), sizeof(int));
     ASSERT(map == NULL, "expected NULL when slots allocation fails");
     malloc_fail_countdown = -1;
     PASS();
@@ -53,7 +53,7 @@ static void test_create_fail_slots(void) {
 static void test_create_fail_states(void) {
     TEST("create fails on states calloc");
     malloc_fail_countdown = 2;
-    zenit_map_t *map = zenit_map_create(sizeof(int), sizeof(int));
+    const zenit_map_t *map = zenit_map_create(sizeof(int), sizeof(int));
     ASSERT(map == NULL, "expected NULL when states allocation fails");
     malloc_fail_countdown = -1;
     PASS();
@@ -66,11 +66,13 @@ static void test_insert_fail_rehash_slots(void) {
     zenit_map_t *map = zenit_map_create_with_capacity(sizeof(int), sizeof(int), 1);
     ASSERT(map != NULL, "expected non-NULL map");
 
-    int k1 = 10, v1 = 100;
+    int k1 = 10;
+    int v1 = 100;
     ASSERT(zenit_map_insert(map, &k1, &v1).error == ZENIT_OK, "first insert");
 
     malloc_fail_countdown = 0;
-    int k2 = 20, v2 = 200;
+    int k2 = 20;
+    int v2 = 200;
     zenit_result_t r = zenit_map_insert(map, &k2, &v2);
     ASSERT(r.error == ZENIT_ERROR_ALLOC, "insert should fail with ALLOC on rehash");
 
@@ -90,12 +92,14 @@ static void test_insert_fail_rehash_states(void) {
     zenit_map_t *map = zenit_map_create_with_capacity(sizeof(int), sizeof(int), 1);
     ASSERT(map != NULL, "expected non-NULL map");
 
-    int k1 = 10, v1 = 100;
+    int k1 = 10;
+    int v1 = 100;
     ASSERT(zenit_map_insert(map, &k1, &v1).error == ZENIT_OK, "first insert");
 
     /* Set countdown to 1 so new_slots calloc succeeds, then new_states calloc fails */
     malloc_fail_countdown = 1;
-    int k2 = 20, v2 = 200;
+    int k2 = 20;
+    int v2 = 200;
     zenit_result_t r = zenit_map_insert(map, &k2, &v2);
     ASSERT(r.error == ZENIT_ERROR_ALLOC, "insert should fail with ALLOC on rehash");
 

@@ -85,7 +85,7 @@ static void bench_insert(void *ptr) {
 static size_t get_hit_idx = 0;
 
 static void bench_get_hit(void *ptr) {
-    bench_ctx_t *ctx = (bench_ctx_t *)ptr;
+    const bench_ctx_t *ctx = (const bench_ctx_t *)ptr;
     size_t i = get_hit_idx++ % ctx->count;
     int key = ctx->keys[i];
     int out = 0;
@@ -96,7 +96,7 @@ static void bench_get_hit(void *ptr) {
 static int get_miss_counter = 1000000;
 
 static void bench_get_miss(void *ptr) {
-    bench_ctx_t *ctx = (bench_ctx_t *)ptr;
+    const bench_ctx_t *ctx = (const bench_ctx_t *)ptr;
     int key = get_miss_counter++;
     int out = 0;
     zenit_map_get(ctx->map, &key, &out);
@@ -120,7 +120,7 @@ static void bench_visit(const void *key, const void *value, void *ctx) {
 }
 
 static void bench_foreach(void *ptr) {
-    bench_ctx_t *ctx = (bench_ctx_t *)ptr;
+    const bench_ctx_t *ctx = (const bench_ctx_t *)ptr;
     zenit_map_foreach(ctx->map, bench_visit, NULL);
 }
 

@@ -105,7 +105,8 @@ static int test_insert_get(void) {
     zenit_map_t *map = zenit_map_create(sizeof(int), sizeof(int));
     ASSERT(map != NULL, "expected non-NULL map");
 
-    int key = 42, value = 100;
+    int key = 42;
+    int value = 100;
     zenit_result_t r = zenit_map_insert(map, &key, &value);
     ASSERT(r.error == ZENIT_OK, "insert should succeed");
     ASSERT(zenit_map_count(map) == 1, "count should be 1");
@@ -126,7 +127,9 @@ static int test_insert_overwrite(void) {
     zenit_map_t *map = zenit_map_create(sizeof(int), sizeof(int));
     ASSERT(map != NULL, "expected non-NULL map");
 
-    int key = 1, v1 = 10, v2 = 20;
+    int key = 1;
+    int v1 = 10;
+    int v2 = 20;
     ASSERT(zenit_map_insert(map, &key, &v1).error == ZENIT_OK, "first insert");
     ASSERT(zenit_map_insert(map, &key, &v2).error == ZENIT_OK, "second insert");
     ASSERT(zenit_map_count(map) == 1, "count should still be 1");
@@ -146,7 +149,8 @@ static int test_get_not_found(void) {
     zenit_map_t *map = zenit_map_create(sizeof(int), sizeof(int));
     ASSERT(map != NULL, "expected non-NULL map");
 
-    int key = 99, out = 0;
+    int key = 99;
+    int out = 0;
     zenit_result_t r = zenit_map_get(map, &key, &out);
     ASSERT(r.error == ZENIT_ERROR_NOT_FOUND, "get should return NOT_FOUND");
 
@@ -161,7 +165,8 @@ static int test_remove(void) {
     zenit_map_t *map = zenit_map_create(sizeof(int), sizeof(int));
     ASSERT(map != NULL, "expected non-NULL map");
 
-    int key = 7, value = 77;
+    int key = 7;
+    int value = 77;
     ASSERT(zenit_map_insert(map, &key, &value).error == ZENIT_OK, "insert");
     ASSERT(zenit_map_count(map) == 1, "count 1");
 
@@ -196,7 +201,9 @@ static int test_tombstone(void) {
     zenit_map_t *map = zenit_map_create(sizeof(int), sizeof(int));
     ASSERT(map != NULL, "expected non-NULL map");
 
-    int key = 5, v1 = 55, v2 = 66;
+    int key = 5;
+    int v1 = 55;
+    int v2 = 66;
     ASSERT(zenit_map_insert(map, &key, &v1).error == ZENIT_OK, "first insert");
     ASSERT(zenit_map_remove(map, &key).error == ZENIT_OK, "remove");
 
@@ -219,7 +226,8 @@ static int test_contains(void) {
     zenit_map_t *map = zenit_map_create(sizeof(int), sizeof(int));
     ASSERT(map != NULL, "expected non-NULL map");
 
-    int key = 10, value = 20;
+    int key = 10;
+    int value = 20;
     ASSERT(zenit_map_contains(map, &key) == 0, "should not contain before insert");
     ASSERT(zenit_map_insert(map, &key, &value).error == ZENIT_OK, "insert");
     ASSERT(zenit_map_contains(map, &key) == 1, "should contain after insert");
@@ -255,7 +263,8 @@ static int test_clear(void) {
     ASSERT(zenit_map_count(map) == 0, "count 0 after clear");
 
     /* After clear, inserting should still work */
-    int k = 1, v = 2;
+    int k = 1;
+    int v = 2;
     ASSERT(zenit_map_insert(map, &k, &v).error == ZENIT_OK, "insert after clear");
 
     zenit_map_destroy(map);
@@ -290,7 +299,8 @@ static int test_capacity_null(void) {
 /* ─── Test: insert with NULL map ─── */
 static int test_insert_null_map(void) {
     TEST("insert with NULL map");
-    { int k = 1, v = 2;
+    { int k = 1;
+      int v = 2;
       ASSERT(zenit_map_insert(NULL, &k, &v).error == ZENIT_ERROR_NULL, "NULL map"); }
     PASS();
     return 0;
@@ -323,7 +333,8 @@ static int test_insert_null_value(void) {
 /* ─── Test: get with NULL map ─── */
 static int test_get_null_map(void) {
     TEST("get with NULL map");
-    { int k = 1, v = 0;
+    { int k = 1;
+      int v = 0;
       ASSERT(zenit_map_get(NULL, &k, &v).error == ZENIT_ERROR_NULL, "NULL map"); }
     PASS();
     return 0;
@@ -463,8 +474,10 @@ static int test_string_keys(void) {
     zenit_map_t *map = zenit_map_create(sizeof(char *), sizeof(int));
     ASSERT(map != NULL, "expected non-NULL map");
 
-    char *k1 = "hello", *k2 = "world";
-    int v1 = 1, v2 = 2;
+    char *k1 = "hello";
+    char *k2 = "world";
+    int v1 = 1;
+    int v2 = 2;
     ASSERT(zenit_map_insert(map, &k1, &v1).error == ZENIT_OK, "insert hello");
     ASSERT(zenit_map_insert(map, &k2, &v2).error == ZENIT_OK, "insert world");
     ASSERT(zenit_map_count(map) == 2, "count 2");
@@ -493,7 +506,8 @@ static int test_struct_keys(void) {
 
     point_t p1 = { 1, 2 };
     point_t p2 = { 3, 4 };
-    int v1 = 100, v2 = 200;
+    int v1 = 100;
+    int v2 = 200;
 
     ASSERT(zenit_map_insert(map, &p1, &v1).error == ZENIT_OK, "insert p1");
     ASSERT(zenit_map_insert(map, &p2, &v2).error == ZENIT_OK, "insert p2");
@@ -556,11 +570,13 @@ static int test_count_ops(void) {
     ASSERT(map != NULL, "expected non-NULL map");
 
     ASSERT(zenit_map_count(map) == 0, "initial count 0");
-    int k1 = 1, v1 = 10;
+    int k1 = 1;
+    int v1 = 10;
     ASSERT(zenit_map_insert(map, &k1, &v1).error == ZENIT_OK, "insert");
     ASSERT(zenit_map_count(map) == 1, "count 1");
 
-    int k2 = 2, v2 = 20;
+    int k2 = 2;
+    int v2 = 20;
     ASSERT(zenit_map_insert(map, &k2, &v2).error == ZENIT_OK, "insert");
     ASSERT(zenit_map_count(map) == 2, "count 2");
 
