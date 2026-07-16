@@ -54,13 +54,20 @@ git checkout -b refactor/state-api
 ### 3.3 Commit discipline
 Each commit must be **atomic** (one logical change). After every commit, push immediately.
 
+Format: subject line + blank line + body (detailed description).
+
 ```bash
 git add <files>
-git commit -m "feat: add state persistence API"
+git commit -m "feat: add state persistence API" -m "Implements save/load for state machine.
+
+- Adds zenit_state_save / zenit_state_load functions
+- Handles NULL state and allocation failure
+- Includes malloc-failure test with --wrap=malloc
+- 100% coverage on all new code"
 git push -u origin feat/state-persistence
 ```
 
-Commit message format: `<prefix>: <short description>`
+**Subject line:** `<prefix>: <short description>` (imperative mood, no period).
 
 | Prefix  | Usage                            |
 |---------|----------------------------------|
@@ -70,6 +77,8 @@ Commit message format: `<prefix>: <short description>`
 | `refactor` | Code restructuring without behaviour change |
 | `docs`  | Documentation                    |
 | `chore` | Build, CI, tooling               |
+
+**Body:** Describe what changed and why. Use bullet points for multiple changes. Always mention test coverage and any relevant edge cases handled.
 
 ### 3.4 Push after every commit
 ```bash
