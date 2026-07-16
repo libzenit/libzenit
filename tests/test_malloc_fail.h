@@ -30,9 +30,9 @@
  * accidental interception of libc allocations.
  *
  * Usage:
- *   malloc_fail_countdown = 0;  // next malloc/calloc returns NULL
- *   malloc_fail_countdown = 2;  // first two succeed, third fails
- *   malloc_fail_countdown = -1; // never fail (default)
+ *   malloc_fail_countdown = 0;   — next malloc/calloc returns NULL
+ *   malloc_fail_countdown = 2;   — first two succeed, third fails
+ *   malloc_fail_countdown = -1;  — never fail (default)
  */
 
 static int malloc_fail_countdown = -1;
