@@ -66,9 +66,7 @@ static int test_create_with_capacity(void) {
 
 /* ─── Test: create_with_capacity bad params ─── */
 static int test_create_with_capacity_bad(void) {
-    zenit_vector_t *v;
-
-    v = zenit_vector_create_with_capacity(0, 16);
+    const zenit_vector_t *v = zenit_vector_create_with_capacity(0, 16);
     if (v != NULL) { FAIL("expected NULL for elem_size=0"); return 1; }
 
     v = zenit_vector_create_with_capacity(4, 0);
