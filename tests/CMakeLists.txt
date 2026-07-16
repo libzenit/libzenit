@@ -100,7 +100,7 @@ if(CMAKE_C_COMPILER_ID STREQUAL "GNU" OR (CMAKE_C_COMPILER_ID STREQUAL "Clang" A
   )
 
   target_link_libraries(test_state_malloc_fail PRIVATE zenit)
-  target_link_options(test_state_malloc_fail PRIVATE -Wl,--wrap=malloc)
+  target_link_options(test_state_malloc_fail PRIVATE -Wl,--wrap=malloc -Wl,--wrap=calloc)
 
   if(LIBZENIT_BUILD_COVERAGE)
     target_compile_options(test_state_malloc_fail PRIVATE --coverage -g -O0)

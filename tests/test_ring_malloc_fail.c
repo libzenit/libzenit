@@ -17,31 +17,7 @@
 
 #include <libzenit/ring.h>
 #include <stdio.h>
-#include <stdlib.h>
-
-static int malloc_fail_countdown = -1;
-
-void *__real_malloc(size_t size);
-void *__wrap_malloc(size_t size) {
-    if (malloc_fail_countdown == 0) {
-        return NULL;
-    }
-    if (malloc_fail_countdown > 0) {
-        malloc_fail_countdown--;
-    }
-    return __real_malloc(size);
-}
-
-void *__real_calloc(size_t nmemb, size_t size);
-void *__wrap_calloc(size_t nmemb, size_t size) {
-    if (malloc_fail_countdown == 0) {
-        return NULL;
-    }
-    if (malloc_fail_countdown > 0) {
-        malloc_fail_countdown--;
-    }
-    return __real_calloc(nmemb, size);
-}
+#include "test_malloc_fail.h"
 
 /* ─── Test: ring_create fails on handle malloc ─── */
 static int test_create_handle_fail(void) {
