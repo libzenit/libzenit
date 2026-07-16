@@ -18,6 +18,7 @@
 #ifndef LIBZENIT_ARENA_H
 #define LIBZENIT_ARENA_H
 
+#include <libzenit/result.h>
 #include <stddef.h>
 
 /**
@@ -97,10 +98,12 @@ zenit_usable_arena_t *zenit_arena_acquire(zenit_arena_t *arena, size_t size);
  *
  * @param arena Parent arena handle.
  * @param ua    Usable arena handle acquired from @p arena.
- * @return 0 on success, -1 if any buffer is still IN_USE or parameters
- *         are invalid.
+ * @return ZENIT_RESULT_OK on success, or an error:
+ *         - ZENIT_ERROR_NULL if @p arena or @p ua is NULL
+ *         - ZENIT_ERROR_STATE if any buffer is still IN_USE
+ *         - ZENIT_ERROR_CORRUPT if a corrupted block is detected.
  */
-int zenit_arena_release(zenit_arena_t *arena, zenit_usable_arena_t *ua);
+zenit_result_t zenit_arena_release(zenit_arena_t *arena, zenit_usable_arena_t *ua);
 
 /**
  * @brief Sub-allocate a buffer from a usable arena.
@@ -124,9 +127,11 @@ zenit_usable_buffer_t zenit_usable_arena_allocate(
  * with adjacent free blocks if possible.
  *
  * @param buf Buffer descriptor returned by zenit_usable_arena_allocate().
- * @return 0 on success, -1 on double-free or invalid buffer.
+ * @return ZENIT_RESULT_OK on success, or an error:
+ *         - ZENIT_ERROR_NULL if @p buf or its data is NULL
+ *         - ZENIT_ERROR_DOUBLE_FREE if the buffer was already freed.
  */
-int zenit_usable_buffer_free(zenit_usable_buffer_t *buf);
+zenit_result_t zenit_usable_buffer_free(zenit_usable_buffer_t *buf);
 
 /**
  * @brief Retrieve the data pointer from a buffer.

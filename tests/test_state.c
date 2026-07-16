@@ -16,6 +16,7 @@
 //
 
 #include <libzenit/state.h>
+#include <libzenit/result.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -54,7 +55,7 @@ int main(void) {
         return 1;
     }
 
-    if (zenit_state_process_event(state, EV_START, NULL) != 0) {
+    if (zenit_state_process_event(state, EV_START, NULL).error != ZENIT_OK) {
         fprintf(stderr, "FAIL: EV_START should be valid\n");
         return 1;
     }
@@ -72,7 +73,7 @@ int main(void) {
     }
 
     callback_invoked = 0;
-    if (zenit_state_process_event(state, EV_FAIL, NULL) != 0) {
+    if (zenit_state_process_event(state, EV_FAIL, NULL).error != ZENIT_OK) {
         fprintf(stderr, "FAIL: EV_FAIL should be valid from ACTIVE\n");
         return 1;
     }
@@ -82,7 +83,7 @@ int main(void) {
     }
 
     callback_invoked = 0;
-    if (zenit_state_process_event(state, EV_STOP, NULL) != -1) {
+    if (zenit_state_process_event(state, EV_STOP, NULL).error != ZENIT_ERROR_NOT_FOUND) {
         fprintf(stderr, "FAIL: EV_STOP from ERROR should be invalid\n");
         return 1;
     }

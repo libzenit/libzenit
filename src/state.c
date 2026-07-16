@@ -65,9 +65,10 @@ zenit_state_t *zenit_state_allocate(
  * @param state   Machine handle.
  * @param event   Event identifier to match against table entries.
  * @param context Opaque value forwarded to the callback.
- * @return 0 on successful transition, -1 when no rule matches.
+ * @return ZENIT_RESULT_OK on successful transition,
+ *         ZENIT_RESULT_ERROR(ZENIT_ERROR_NOT_FOUND) when no rule matches.
  */
-int zenit_state_process_event(zenit_state_t *state, int event, void *context) {
+zenit_result_t zenit_state_process_event(zenit_state_t *state, int event, void *context) {
     /* Snapshot the current state before we start matching */
     int from = state->current;
 
@@ -84,11 +85,11 @@ int zenit_state_process_event(zenit_state_t *state, int event, void *context) {
                 /* Callback receives: event, previous state, new state, user context */
                 t->on_transition(event, from, t->to_state, context);
             }
-            return 0;
+            return ZENIT_RESULT_OK;
         }
     }
-    /* No rule matched — return error code; machine state is unchanged */
-    return -1;
+    /* No rule matched — return error; machine state is unchanged */
+    return ZENIT_RESULT_ERROR(ZENIT_ERROR_NOT_FOUND);
 }
 
 /**

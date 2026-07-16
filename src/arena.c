@@ -215,9 +215,10 @@ zenit_usable_arena_t *zenit_arena_acquire(zenit_arena_t *arena, size_t size) {
     return ua;
 }
 
-int zenit_arena_release(zenit_arena_t *arena, zenit_usable_arena_t *ua) {
+zenit_result_t zenit_arena_release(zenit_arena_t *arena, zenit_usable_arena_t *ua) {
+    /* Reject NULL pointers on either parameter */
     if (arena == NULL || ua == NULL) {
-        return -1;
+        return ZENIT_RESULT_ERROR(ZENIT_ERROR_NULL);
     }
 
     /* Walk every block in the usable arena's memory and verify
@@ -229,12 +230,12 @@ int zenit_arena_release(zenit_arena_t *arena, zenit_usable_arena_t *ua) {
         const zenit_buf_header_t *h = (const zenit_buf_header_t *)pos;
         if (h->state == BUF_IN_USE) {
             /* Outstanding buffer — reject the release */
-            return -1;
+            return ZENIT_RESULT_ERROR(ZENIT_ERROR_STATE);
         }
         /* Advance to the next block (all blocks have headers, free or not) */
         if (h->size == 0) {
             /* Corrupted block: can't advance safely */
-            return -1;
+            return ZENIT_RESULT_ERROR(ZENIT_ERROR_CORRUPT);
         }
         pos += h->size;
     }
@@ -246,7 +247,7 @@ int zenit_arena_release(zenit_arena_t *arena, zenit_usable_arena_t *ua) {
 
     /* Release the usable arena handle */
     free(ua);
-    return 0;
+    return ZENIT_RESULT_OK;
 }
 
 /* ─── Usable arena / buffer API ─── */
@@ -325,9 +326,10 @@ zenit_usable_buffer_t zenit_usable_arena_allocate(
     return result;
 }
 
-int zenit_usable_buffer_free(zenit_usable_buffer_t *buf) {
+zenit_result_t zenit_usable_buffer_free(zenit_usable_buffer_t *buf) {
+    /* NULL buffer or NULL data pointer is an invalid operation */
     if (buf == NULL || buf->data == NULL) {
-        return -1;
+        return ZENIT_RESULT_ERROR(ZENIT_ERROR_NULL);
     }
 
     /* Locate the block header */
@@ -335,7 +337,7 @@ int zenit_usable_buffer_free(zenit_usable_buffer_t *buf) {
 
     /* Validate state: reject double-free or corrupted state */
     if (h->state != BUF_IN_USE) {
-        return -1;
+        return ZENIT_RESULT_ERROR(ZENIT_ERROR_DOUBLE_FREE);
     }
 
     /* Transition: BUF_IN_USE → BUF_FREE */
@@ -392,7 +394,7 @@ int zenit_usable_buffer_free(zenit_usable_buffer_t *buf) {
     }
     ua->free_list = h;
 
-    return 0;
+    return ZENIT_RESULT_OK;
 }
 
 void *zenit_usable_buffer_data(zenit_usable_buffer_t *buf) {
