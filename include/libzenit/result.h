@@ -35,6 +35,8 @@ typedef enum {
     ZENIT_ERROR_DOUBLE_FREE = 6, /**< Attempt to free an already-free resource */
     ZENIT_ERROR_STATE = 7,      /**< Operation not allowed in the current state */
     ZENIT_ERROR_SIZE = 8,       /**< Size mismatch (e.g. not divisible by block size) */
+    ZENIT_ERROR_FULL = 9,       /**< Buffer or container is full */
+    ZENIT_ERROR_EMPTY = 10,     /**< Buffer or container is empty */
 } zenit_error_t;
 
 /**

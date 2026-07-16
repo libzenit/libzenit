@@ -39,6 +39,35 @@ endif()
 
 add_test(NAME test_result COMMAND test_result)
 
+add_executable(test_ring
+  test_ring.c
+)
+
+target_link_libraries(test_ring PRIVATE zenit)
+
+if(LIBZENIT_BUILD_COVERAGE)
+  target_compile_options(test_ring PRIVATE --coverage -g -O0)
+  target_link_options(test_ring PRIVATE --coverage)
+endif()
+
+add_test(NAME test_ring COMMAND test_ring)
+
+if(CMAKE_C_COMPILER_ID STREQUAL "GNU" OR (CMAKE_C_COMPILER_ID STREQUAL "Clang" AND NOT APPLE))
+  add_executable(test_ring_malloc_fail
+    test_ring_malloc_fail.c
+  )
+
+  target_link_libraries(test_ring_malloc_fail PRIVATE zenit)
+  target_link_options(test_ring_malloc_fail PRIVATE -Wl,--wrap=malloc -Wl,--wrap=calloc)
+
+  if(LIBZENIT_BUILD_COVERAGE)
+    target_compile_options(test_ring_malloc_fail PRIVATE --coverage -g -O0)
+    target_link_options(test_ring_malloc_fail PRIVATE --coverage)
+  endif()
+
+  add_test(NAME test_ring_malloc_fail COMMAND test_ring_malloc_fail)
+endif()
+
 add_executable(test_state
   test_state.c
 )

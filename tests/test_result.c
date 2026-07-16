@@ -32,6 +32,8 @@ int main(void) {
         ZENIT_ERROR_DOUBLE_FREE,
         ZENIT_ERROR_STATE,
         ZENIT_ERROR_SIZE,
+        ZENIT_ERROR_FULL,
+        ZENIT_ERROR_EMPTY,
     };
     size_t n = sizeof(codes) / sizeof(codes[0]);
 
