@@ -456,6 +456,8 @@ libzen/
 ├── scripts/
 │   ├── checksum.py         # Release checksum generator
 │   └── benchmark_report.py # Benchmark log parser & report generator (BENCHMARK.md + charts)
+├── media/                  # Brand assets (logo)
+│   └── logo.svg            # LibZenit logo (geometric sun)
 ├── codecov.yaml            # Codecov configuration
 ├── AGENTS.md               # This file
 ├── LICENSE                 # AGPL-3.0
@@ -598,3 +600,65 @@ Before marking a task complete, verify:
 - [ ] Benchmarks compile with `-Wall -Wextra -Wpedantic` (no warnings).
 - [ ] Results are printed via `zenit_bench_print()`.
 - [ ] Benchmarks do **not** run with plain `ctest` (label isolation).
+
+## 15. README.md Discipline
+
+`README.md` is the project's **public front door** and must serve as a comprehensive entry point that navigates to every dimension of the project.
+
+### 15.1 When to update
+
+Update `README.md` whenever any change affects how the project is described, built, tested, or understood:
+
+- **New module added** — add a new module subsection with API summary, source path, test path, benchmark path.
+- **New public function or type** — update the relevant module table.
+- **New test or benchmark** — add the file path and a brief description.
+- **Build option added or changed** — update the build options table.
+- **CI job added, removed, or changed** — update the CI/CD table.
+- **Project tree changes** (new directory or file at the top two levels) — sync the project map.
+- **Version bump or status change** — update the Status section.
+- **New script added** — update the project map and scripts section.
+- **New platform or compiler** — update CI/CD and any relevant sections.
+- **New documentation file** (BENCHMARK.md, CHANGELOG, etc.) — add a link in "Further Reading".
+
+### 15.2 What to maintain
+
+The README must always reflect the **current state** of these sections:
+
+| Section | Mandatory content |
+|---------|-------------------|
+| Badges | CI, coverage, SonarCloud quality gates |
+| Quick Start | Build, test, coverage, benchmark commands |
+| Modules | One subsection per module: API table, source, test, benchmark links |
+| Build Options | CMake options table with defaults and descriptions |
+| Project Map | Full directory tree with one-line annotations |
+| CI/CD | Job table with platforms and description |
+| Quality | Coverage, static analysis, sanitizers, dependencies |
+| Further Reading | Links to AGENTS.md, BENCHMARK.md, LICENSE, etc. |
+| Status | Current version and release phase |
+
+### 15.3 How to update
+
+1. **Read** the current README.md first (to know what exists).
+2. **Edit** the relevant section(s). Keep tables aligned and links absolute to `tree/master`.
+3. **Verify** that every module listed has its source, test, and benchmark file paths.
+4. **Verify** that every test and benchmark file in the repository is referenced somewhere.
+5. **Verify** that the Project Map matches the actual filesystem.
+
+### 15.4 Relationship with AGENTS.md
+
+| Document | Audience | Purpose |
+|----------|----------|---------|
+| `README.md` | Public (users, contributors) | Project overview, navigation, quick start |
+| `AGENTS.md` | AI agents (internal) | Workflow, conventions, agent-specific protocol |
+
+The two documents complement each other — `AGENTS.md` references `README.md` for project map and public overview, while `README.md` references `AGENTS.md` for contributor workflow. Do **not** duplicate content; link between them.
+
+### 15.5 Pre-Commit verification
+
+Before marking a README.md change as complete:
+- [ ] Every new or changed public API is documented in its module table.
+- [ ] Every new source file, test, or benchmark has a file path reference.
+- [ ] The Project Map is in sync with the actual directory tree.
+- [ ] Build options table matches `CMakeLists.txt`.
+- [ ] CI/CD table matches `.github/workflows/ci.yml`.
+- [ ] Links are valid (point to `tree/master` or `blob/master`).
