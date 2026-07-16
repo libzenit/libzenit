@@ -144,6 +144,77 @@ static int test_peek(void) {
     return 0;
 }
 
+/* ─── Test: peek with *size == 0 ─── */
+static int test_peek_size_zero(void) {
+    zenit_ring_t *r = zenit_ring_create(16);
+    if (r == NULL) { FAIL("create"); return 1; }
+
+    char c = 'X';
+    if (zenit_ring_push(r, &c, 1).error != ZENIT_OK) { FAIL("push"); return 1; }
+
+    char buf[4] = {0};
+    size_t sz = 0;
+    zenit_result_t res = zenit_ring_peek(r, buf, &sz);
+    if (res.error != ZENIT_ERROR_PARAM) {
+        FAIL("expected PARAM on peek with *size=0"); return 1;
+    }
+
+    zenit_ring_destroy(r);
+    return 0;
+}
+
+/* ─── Test: peek on empty buffer ─── */
+static int test_peek_empty(void) {
+    zenit_ring_t *r = zenit_ring_create(16);
+    if (r == NULL) { FAIL("create"); return 1; }
+
+    char buf[4] = {0};
+    size_t sz = 4;
+    zenit_result_t res = zenit_ring_peek(r, buf, &sz);
+    if (res.error != ZENIT_ERROR_EMPTY) {
+        FAIL("expected EMPTY on peek from empty"); return 1;
+    }
+
+    zenit_ring_destroy(r);
+    return 0;
+}
+
+/* ─── Test: peek with wrap-around (second_chunk > 0) ─── */
+static int test_peek_wrap(void) {
+    zenit_ring_t *r = zenit_ring_create(4);
+    if (r == NULL) { FAIL("create"); return 1; }
+
+    /* Push ABC, pop AB → tail=2, count=1, head=3 */
+    if (zenit_ring_push(r, "ABC", 3).error != ZENIT_OK) { FAIL("push ABC"); return 1; }
+    size_t sz = 2;
+    char buf[4] = {0};
+    if (zenit_ring_pop(r, buf, &sz).error != ZENIT_OK) { FAIL("pop 2"); return 1; }
+
+    /* Push DE → head wraps to 1 */
+    if (zenit_ring_push(r, "DE", 2).error != ZENIT_OK) { FAIL("push DE"); return 1; }
+
+    /* Peek should see C (at pos 2), D (pos 3), E (pos 0 — wrapped) */
+    sz = 4;
+    memset(buf, 0, 4);
+    if (zenit_ring_peek(r, buf, &sz).error != ZENIT_OK) { FAIL("peek wrap"); return 1; }
+    if (sz != 3) { FAIL("peek wrap size"); return 1; }
+    if (buf[0] != 'C' || buf[1] != 'D' || buf[2] != 'E') {
+        FAIL("peek wrap data mismatch"); return 1;
+    }
+
+    /* Verify data is still there — pop should work */
+    sz = 4;
+    memset(buf, 0, 4);
+    if (zenit_ring_pop(r, buf, &sz).error != ZENIT_OK) { FAIL("pop after peek wrap"); return 1; }
+    if (sz != 3) { FAIL("pop after peek wrap size"); return 1; }
+    if (buf[0] != 'C' || buf[1] != 'D' || buf[2] != 'E') {
+        FAIL("pop after peek wrap data"); return 1;
+    }
+
+    zenit_ring_destroy(r);
+    return 0;
+}
+
 /* ─── Test: wrap-around behaviour ─── */
 static int test_wrap_around(void) {
     /* Create a 4-byte ring. Push 3 bytes, pop 2, push 2 (which wraps). */
@@ -303,6 +374,9 @@ int main(void) {
     ret |= test_clear();
     ret |= test_edge_cases();
     ret |= test_chunks();
+    ret |= test_peek_size_zero();
+    ret |= test_peek_empty();
+    ret |= test_peek_wrap();
 
     if (failures > 0 || ret != 0) {
         fprintf(stderr, "FAIL: %d test(s) had errors\n", failures);
