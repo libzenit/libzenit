@@ -24,5 +24,6 @@
 #include <libzenit/arena.h>
 #include <libzenit/benchmark.h>
 #include <libzenit/ring.h>
+#include <libzenit/vector.h>
 
 #endif
