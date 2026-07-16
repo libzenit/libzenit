@@ -90,6 +90,13 @@ If the branch already exists upstream, simply:
 git push
 ```
 
+> **⚠️ CI auto-commits.** The benchmark `collect` job may push a report
+> commit (`[skip ci]`) to your branch between your commits. If your push
+> is rejected with *non-fast-forward*, pull the CI-bot commit first:
+> ```bash
+> git fetch && git rebase && git push
+> ```
+
 ### 3.5 End of iteration checklist
 Before finishing any task:
 - [ ] All tests pass: `ctest --test-dir build --output-on-failure`
@@ -447,11 +454,13 @@ libzen/
 │   ├── benchmark_state.c       # State-machine transition throughput
 │   └── benchmark_arena.c       # Arena allocator throughput (vs malloc baseline)
 ├── scripts/
-│   └── checksum.py         # Release checksum generator
+│   ├── checksum.py         # Release checksum generator
+│   └── benchmark_report.py # Benchmark log parser & report generator (BENCHMARK.md + charts)
 ├── codecov.yaml            # Codecov configuration
 ├── AGENTS.md               # This file
 ├── LICENSE                 # AGPL-3.0
-└── README.md
+├── README.md
+└── BENCHMARK.md            # Auto-generated CI benchmark report ([skip ci])
 ```
 
 ## 12. Feedback Protocol (AGENTS.md)
@@ -566,6 +575,11 @@ cmake --build build --target benchmark     # via custom target
 Benchmarks are **labeled** `"benchmark"` in CTest so they never run with
 plain `ctest`. Use `ctest -L benchmark` to run only benchmarks, or
 `ctest -LE benchmark` to exclude them.
+
+Benchmark outputs are **automatically collected** in CI: each matrix job
+uploads its log as an artifact, and a `collect` job downloads all three,
+generates `BENCHMARK.md` + charts via `scripts/benchmark_report.py`, and
+commits them with `[skip ci]` to avoid re-triggering the workflow.
 
 ### 14.5 File conventions
 

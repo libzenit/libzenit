@@ -232,8 +232,66 @@ jobs:
       - name: Build
         run: cmake --build build --parallel --config Release
 
-      - name: Run benchmarks
-        run: ctest --test-dir build -L benchmark --output-on-failure -V
+      - name: Run benchmarks (save output)
+        run: |
+          ctest --test-dir build -L benchmark --output-on-failure -V 2>&1 | \
+            tee benchmark_${{ matrix.os }}.log
+
+      - name: Upload benchmark log
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-log-${{ matrix.os }}
+          path: benchmark_${{ matrix.os }}.log
+          if-no-files-found: error
+          retention-days: 1
+
+  collect:
+    if: github.ref_type != 'tag'
+    needs: [benchmark]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+
+      - name: Download all benchmark logs
+        uses: actions/download-artifact@v4
+        with:
+          pattern: benchmark-log-*
+          merge-multiple: true
+          path: benchmark_logs
+
+      - name: List downloaded logs
+        run: ls -la benchmark_logs/
+
+      - name: Install matplotlib
+        run: pip install matplotlib -q
+
+      - name: Generate report
+        run: |
+          python3 scripts/benchmark_report.py \
+            --env "macOS (Apple Silicon, clang)" \
+            --file benchmark_logs/benchmark_macos-latest.log \
+            --env "Linux ARM64 (gcc)" \
+            --file benchmark_logs/benchmark_ubuntu-24.04-arm.log \
+            --env "Linux x86_64 (gcc)" \
+            --file benchmark_logs/benchmark_ubuntu-latest.log
+
+      - name: Commit and push report
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add BENCHMARK.md
+          git add -f benchmark_charts/
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "docs: update benchmark report [skip ci]"
+            git push
+          fi
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')

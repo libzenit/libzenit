@@ -38,3 +38,4 @@ _builds/
 
 __pycache__/
 *.pyc
+benchmark_charts/
