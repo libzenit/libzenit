@@ -133,22 +133,18 @@ def _chart_path(name: str) -> Path:
     return CHARTS_DIR / name
 
 
-def generate_charts(data: dict, env_names: list[str]):
-    """Generate PNG chart files and return a list of (alt_text, rel_path)."""
-    if not HAS_MPL:
-        return []
+def _plot_grouped_bars(data: dict, env_names: list[str], bench_names: list[str],
+                       colors: list, log_scale: bool, figsize: tuple,
+                       font_size: int, rot: int) -> tuple:
+    """Draw a grouped bar chart of ops/sec for the given benchmarks.
 
-    charts = []
+    Returns (fig, ax) for the caller to finalise.
+    """
     n_envs = len(env_names)
-    cmap = plt.colormaps.get("Set2")
-    colors = [cmap(i / max(n_envs - 1, 1)) for i in range(n_envs)]
-
-    # ── 1.  Overview — all benchmarks on a log-scale grouped bar chart ──
-    bench_names = list(data.keys())
-    x = range(len(bench_names))
     width = 0.8 / n_envs
+    x = range(len(bench_names))
 
-    fig, ax = plt.subplots(figsize=(12, 5))
+    fig, ax = plt.subplots(figsize=figsize)
     for i, env in enumerate(env_names):
         vals = [data[b][env][2] for b in bench_names]
         offset = (i - (n_envs - 1) / 2) * width
@@ -158,59 +154,135 @@ def generate_charts(data: dict, env_names: list[str]):
             if v > 0:
                 ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height(),
                         fmt_ops(v).replace(" ops/s", ""),
-                        ha="center", va="bottom", fontsize=6, rotation=45)
+                        ha="center", va="bottom", fontsize=font_size, rotation=rot)
 
-    ax.set_yscale("log")
+    if log_scale:
+        ax.set_yscale("log")
     ax.set_xticks(x)
-    ax.set_xticklabels(bench_names, rotation=30, ha="right", fontsize=8)
-    ax.set_ylabel("Operations / second (log scale)")
-    ax.set_title("LibZenit Benchmark Overview")
+    ax.set_xticklabels(bench_names, rotation=30, ha="right", fontsize=9)
     ax.legend(fontsize=8)
     ax.grid(axis="y", alpha=0.3)
     fig.tight_layout()
+    return fig, ax
+
+
+def _chart_overview(data: dict, env_names: list[str], colors: list,
+                    n_envs: int) -> tuple:
+    """Generate the overview log-scale chart. Returns (alt_text, rel_path)."""
+    fig, ax = _plot_grouped_bars(data, env_names, list(data.keys()),
+                                 colors, True, (12, 5), 6, 45)
+    ax.set_ylabel("Operations / second (log scale)")
+    ax.set_title("LibZenit Benchmark Overview")
     path = _chart_path("overview.png")
     fig.savefig(path, dpi=150)
     plt.close(fig)
-    charts.append(("Benchmark Overview", "benchmark_charts/overview.png"))
+    return ("Benchmark Overview", "benchmark_charts/overview.png")
 
-    # ── 2.  Per-category charts (linear scale) ──
+
+def _chart_categories(data: dict, env_names: list[str], colors: list,
+                      n_envs: int) -> list[tuple]:
+    """Generate one linear-scale chart per category. Returns list of tuples."""
+    out = []
     for cat_name, members in CATEGORIES.items():
         present = [b for b in members if b in data]
         if not present:
             continue
 
-        fig, ax = plt.subplots(figsize=(max(6, len(present) * 2.5), 4))
-        x = range(len(present))
-        width = 0.8 / n_envs
-
-        for i, env in enumerate(env_names):
-            vals = [data[b][env][2] for b in present]
-            offset = (i - (n_envs - 1) / 2) * width
-            bars = ax.bar([p + offset for p in x], vals, width,
-                          label=env, color=colors[i])
-            for bar, v in zip(bars, vals):
-                if v > 0:
-                    ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height(),
-                            fmt_ops(v).replace(" ops/s", ""),
-                            ha="center", va="bottom", fontsize=7)
-
-        ax.set_xticks(x)
-        ax.set_xticklabels(present, rotation=20, ha="right", fontsize=9)
+        fig, ax = _plot_grouped_bars(data, env_names, present,
+                                     colors, False,
+                                     (max(6, len(present) * 2.5), 4), 7, 0)
         ax.set_ylabel("Operations / second")
-        ax.set_title(f"{cat_name}")
-        ax.legend(fontsize=8)
-        ax.grid(axis="y", alpha=0.3)
-        fig.tight_layout()
+        ax.set_title(cat_name)
+
         slug = cat_name.lower().replace(" ", "_").replace("(", "").replace(")", "")
         path = _chart_path(f"{slug}.png")
         fig.savefig(path, dpi=150)
         plt.close(fig)
-        charts.append((cat_name, f"benchmark_charts/{slug}.png"))
+        out.append((cat_name, f"benchmark_charts/{slug}.png"))
+    return out
 
+
+def generate_charts(data: dict, env_names: list[str]):
+    """Generate PNG chart files and return a list of (alt_text, rel_path)."""
+    if not HAS_MPL:
+        return []
+
+    n_envs = len(env_names)
+    cmap = plt.colormaps.get("Set2")
+    colors = [cmap(i / max(n_envs - 1, 1)) for i in range(n_envs)]
+
+    charts = [_chart_overview(data, env_names, colors, n_envs)]
+    charts.extend(_chart_categories(data, env_names, colors, n_envs))
     return charts
 
 
 # ── report generation ─────────────────────────────────────────────────────
+
+
+def _write_environment_table(w, env_names):
+    w("## Environments")
+    w()
+    w("| # | Platform | Compiler |")
+    w("|---|----------|----------|")
+    for i, env in enumerate(env_names, 1):
+        w(f"| {i} | {env} | gcc / clang |")
+    w()
+
+
+def _write_overview_section(w, charts):
+    if not charts:
+        return
+    w("## Overview")
+    w()
+    alt, src = charts[0]
+    w(f'![{alt}]({src})')
+    w()
+    w("All benchmarks on a logarithmic scale. Taller bars are faster.")
+    w()
+
+
+def _bench_order(data):
+    """Return benchmark names ordered by category, then remaining."""
+    ordered = []
+    for members in CATEGORIES.values():
+        for b in members:
+            if b in data and b not in ordered:
+                ordered.append(b)
+    for b in data:
+        if b not in ordered:
+            ordered.append(b)
+    return ordered
+
+
+def _write_results_table(w, data, env_names):
+    w("## Results")
+    w()
+    header = "| Benchmark | Iterations | " + " | ".join(env_names) + " |"
+    sep = "|---|:---:|" + "|".join(":---:" for _ in env_names) + "|"
+    w(header)
+    w(sep)
+
+    for bench in _bench_order(data):
+        iters = data[bench][env_names[0]][0]
+        row = f"| `{bench}` | {iters:,} |"
+        for env in env_names:
+            _, _, ops = data[bench][env]
+            row += f" {fmt_ops(ops)} |"
+        w(row)
+    w()
+
+
+def _write_detail_charts(w, charts):
+    if len(charts) <= 1:
+        return
+    w("## Details by Category")
+    w()
+    for cat_name, src in charts[1:]:
+        w(f"### {cat_name}")
+        w()
+        w(f"![{cat_name}]({src})")
+        w()
+
 
 def generate_report(data: dict, env_names: list[str],
                     charts: list[tuple[str, str]]) -> str:
@@ -224,63 +296,11 @@ def generate_report(data: dict, env_names: list[str],
       "Generated by `scripts/benchmark_report.py`.")
     w()
 
-    # ── Environment info ──
-    w("## Environments")
-    w()
-    w("| # | Platform | Compiler |")
-    w("|---|----------|----------|")
-    for i, env in enumerate(env_names, 1):
-        w(f"| {i} | {env} | gcc / clang |")
-    w()
+    _write_environment_table(w, env_names)
+    _write_overview_section(w, charts)
+    _write_results_table(w, data, env_names)
+    _write_detail_charts(w, charts)
 
-    # ── Overview chart ──
-    if charts:
-        w("## Overview")
-        w()
-        alt, src = charts[0]
-        w(f'![{alt}]({src})')
-        w()
-        w("All benchmarks on a logarithmic scale. "
-          "Taller bars are faster.")
-        w()
-
-    # ── Summary table ──
-    w("## Results")
-    w()
-    header = "| Benchmark | Iterations | " + " | ".join(env_names) + " |"
-    sep = "|---|:---:|" + "|".join(":---:" for _ in env_names) + "|"
-    w(header)
-    w(sep)
-
-    cg_order = []
-    for cat_members in CATEGORIES.values():
-        for b in cat_members:
-            if b in data and b not in cg_order:
-                cg_order.append(b)
-    for b in data:
-        if b not in cg_order:
-            cg_order.append(b)
-
-    for bench in cg_order:
-        iters = data[bench][env_names[0]][0]
-        row = f"| `{bench}` | {iters:,} |"
-        for env in env_names:
-            _, _, ops = data[bench][env]
-            row += f" {fmt_ops(ops)} |"
-        w(row)
-    w()
-
-    # ── Per-category detail charts ──
-    if len(charts) > 1:
-        w("## Details by Category")
-        w()
-        for cat_name, src in charts[1:]:
-            w(f"### {cat_name}")
-            w()
-            w(f"![{cat_name}]({src})")
-            w()
-
-    # ── Notes ──
     w("---")
     w()
     w("_Generated from CI benchmark job output._")
