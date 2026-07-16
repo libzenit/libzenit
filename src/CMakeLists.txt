@@ -28,3 +28,8 @@ target_include_directories(zenit
 if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
   target_compile_options(zenit PRIVATE -Wall -Wextra -Wpedantic)
 endif()
+
+if(LIBZENIT_BUILD_COVERAGE)
+  target_compile_options(zenit PRIVATE --coverage -g -O0)
+  target_link_options(zenit PRIVATE --coverage)
+endif()

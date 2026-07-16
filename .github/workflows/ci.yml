@@ -1,20 +1,3 @@
-#
-#    LibZenit
-#    Copyright (C) 2026  Ian Torres
-#
-#    This program is free software: you can redistribute it and/or modify
-#    it under the terms of the GNU Affero General Public License version 3
-#    as published by the Free Software Foundation.
-#
-#    This program is distributed in the hope that it will be useful,
-#    but WITHOUT ANY WARRANTY; without even the implied warranty of
-#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#    GNU Affero General Public License for more details.
-#
-#    You should have received a copy of the GNU Affero General Public License
-#    along with this program.  If not, see <https://www.gnu.org/licenses/>.
-#
-
 name: CI
 
 on:
@@ -30,17 +13,42 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - os: ubuntu-latest
-            arch: linux-amd64
-            compiler: gcc
-          - os: ubuntu-24.04-arm
-            arch: linux-arm64
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest, windows-latest]
+        compiler: [gcc, clang]
+        build_type: [Debug, Release]
+        exclude:
+          - os: macos-latest
             compiler: gcc
           - os: windows-latest
-            arch: windows-amd64
+            compiler: gcc
+          - os: windows-latest
+            compiler: clang
+        include:
+          - os: windows-latest
             compiler: msvc
+            build_type: Debug
             shell: pwsh
+          - os: windows-latest
+            compiler: msvc
+            build_type: Release
+            shell: pwsh
+          - os: ubuntu-latest
+            compiler: gcc
+            build_type: Debug
+            coverage: true
+          - os: ubuntu-latest
+            compiler: clang
+            build_type: Debug
+          - os: ubuntu-24.04-arm
+            compiler: gcc
+            build_type: Debug
+            coverage: true
+          - os: ubuntu-24.04-arm
+            compiler: clang
+            build_type: Debug
+          - os: macos-latest
+            compiler: clang
+            build_type: Debug
 
     runs-on: ${{ matrix.os }}
     defaults:
@@ -48,25 +56,146 @@ jobs:
         shell: ${{ matrix.shell || 'bash' }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
+
+      - name: Set up compiler
+        if: matrix.compiler != 'msvc'
+        run: |
+          echo "CC=${{ matrix.compiler == 'gcc' && 'gcc' || 'clang' }}" >> $GITHUB_ENV
+          echo "CXX=${{ matrix.compiler == 'gcc' && 'g++' || 'clang++' }}" >> $GITHUB_ENV
 
       - name: Configure
-        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+        run: >
+          cmake -B build
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+          -DLIBZENIT_BUILD_TESTS=ON
+          ${{ matrix.coverage && '-DLIBZENIT_BUILD_COVERAGE=ON' || '' }}
 
       - name: Build
-        run: cmake --build build --config Release --parallel
+        run: cmake --build build --config ${{ matrix.build_type }} --parallel
 
-  ios-build:
+      - name: Test
+        run: ctest --test-dir build --output-on-failure -C ${{ matrix.build_type }} --parallel -V
+
+      - name: Install lcov
+        if: matrix.coverage
+        run: |
+          if [ "$RUNNER_OS" = "macOS" ]; then
+            brew install lcov
+          else
+            sudo apt-get update -qq && sudo apt-get install -y -qq lcov
+          fi
+
+      - name: Generate coverage report
+        if: matrix.coverage
+        run: |
+          lcov --capture -d build --output-file coverage.info \
+            --branch-coverage \
+            --ignore-errors unused,version,empty,inconsistent,mismatch
+          lcov --remove coverage.info -o coverage.info \
+            '/usr/*' '*/_deps/*' '*/tests/*' \
+            '*/googletest/*' \
+            --ignore-errors unused,empty,inconsistent,mismatch
+          lcov --list coverage.info --ignore-errors empty,inconsistent,mismatch
+
+      - name: Upload coverage to Codecov
+        if: matrix.coverage
+        uses: codecov/codecov-action@v6
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage.info
+          flags: ${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.build_type }}
+          fail_ci_if_error: false
+
+  ios:
     if: github.ref_type != 'tag'
     runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        build_type: [Debug, Release]
+
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - name: Configure (iOS)
-        run: cmake -B build-ios -G Xcode -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_ARCHITECTURES=arm64
+      - name: Configure
+        run: >
+          cmake -B build-ios
+          -G Xcode
+          -DCMAKE_SYSTEM_NAME=iOS
+          -DCMAKE_OSX_ARCHITECTURES=arm64
+          -DLIBZENIT_BUILD_TESTS=OFF
 
-      - name: Build (iOS)
-        run: cmake --build build-ios --config Release
+      - name: Build
+        run: cmake --build build-ios --config ${{ matrix.build_type }}
+
+  sanitize:
+    if: github.ref_type != 'tag'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - compiler: gcc
+            sanitizer: address+undefined+leak
+            flags: -fsanitize=address,undefined,leak -fno-omit-frame-pointer
+          - compiler: gcc
+            sanitizer: thread
+            flags: -fsanitize=thread -fno-omit-frame-pointer
+          - compiler: clang
+            sanitizer: address+undefined+leak
+            flags: -fsanitize=address,undefined,leak -fno-omit-frame-pointer
+          - compiler: clang
+            sanitizer: thread
+            flags: -fsanitize=thread -fno-omit-frame-pointer
+          - compiler: clang
+            sanitizer: memory
+            flags: -fsanitize=memory -fno-omit-frame-pointer -fsanitize-memory-track-origins
+          - compiler: clang
+            sanitizer: cfi
+            flags: -fsanitize=cfi -flto -fvisibility=hidden
+            ldflags: -fuse-ld=lld-18
+          - compiler: clang
+            sanitizer: safe-stack
+            flags: -fsanitize=safe-stack
+          - compiler: clang
+            sanitizer: implicit-truncation
+            flags: -fsanitize=implicit-integer-truncation -fno-omit-frame-pointer
+
+    runs-on: ubuntu-latest
+    continue-on-error: ${{ contains(fromJson('["memory", "cfi", "implicit-truncation"]'), matrix.sanitizer) }}
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up compiler
+        run: |
+          if [ "${{ matrix.compiler }}" = "gcc" ]; then
+            echo "CC=gcc" >> $GITHUB_ENV
+            echo "CXX=g++" >> $GITHUB_ENV
+          else
+            echo "CC=clang" >> $GITHUB_ENV
+            echo "CXX=clang++" >> $GITHUB_ENV
+          fi
+
+      - name: Install lld
+        if: matrix.sanitizer == 'cfi'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq lld-18
+
+      - name: Configure
+        run: >
+          cmake -B build
+          -DCMAKE_BUILD_TYPE=Debug
+          -DCMAKE_C_FLAGS="${{ matrix.flags }}"
+          -DCMAKE_EXE_LINKER_FLAGS="${{ matrix.flags }} ${{ matrix.ldflags || '' }}"
+          -DLIBZENIT_BUILD_TESTS=ON
+
+      - name: Build
+        run: cmake --build build --parallel --config Debug
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure --parallel -C Debug -V
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')
@@ -78,13 +207,25 @@ jobs:
         include:
           - os: ubuntu-latest
             arch: linux-amd64
+            cc: gcc
+            cxx: g++
           - os: ubuntu-24.04-arm
             arch: linux-arm64
+            cc: gcc
+            cxx: g++
+          - os: macos-latest
+            arch: macos-arm64
+            cc: clang
+            cxx: clang++
           - os: windows-latest
             arch: windows-amd64
+            cc: msvc
+            cxx: msvc
             shell: pwsh
           - os: macos-latest
             arch: ios-arm64
+            cc: clang
+            cxx: clang++
             cmake_system: iOS
             cmake_arch: arm64
 
@@ -94,32 +235,48 @@ jobs:
         shell: ${{ matrix.shell || 'bash' }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
+
+      - name: Set up compiler
+        if: runner.os != 'Windows' && matrix.cmake_system != 'iOS'
+        run: |
+          echo "CC=${{ matrix.cc }}" >> $GITHUB_ENV
+          echo "CXX=${{ matrix.cxx }}" >> $GITHUB_ENV
+
+      - name: Configure (desktop)
+        if: matrix.cmake_system == ''
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DLIBZENIT_BUILD_TESTS=OFF
 
       - name: Configure (iOS)
         if: matrix.cmake_system != ''
-        run: cmake -B build -G Xcode -DCMAKE_SYSTEM_NAME=${{ matrix.cmake_system }} -DCMAKE_OSX_ARCHITECTURES=${{ matrix.cmake_arch }}
+        run: >
+          cmake -B build
+          -G Xcode
+          -DCMAKE_SYSTEM_NAME=${{ matrix.cmake_system }}
+          -DCMAKE_OSX_ARCHITECTURES=${{ matrix.cmake_arch }}
+          -DLIBZENIT_BUILD_TESTS=OFF
 
-      - name: Configure (Desktop)
+      - name: Build (desktop)
         if: matrix.cmake_system == ''
-        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
-
-      - name: Build
         run: cmake --build build --config Release --parallel
+
+      - name: Build (iOS)
+        if: matrix.cmake_system != ''
+        run: cmake --build build --config Release
 
       - name: Install
         run: cmake --install build --config Release --prefix ${{ runner.temp }}/libzenit-${{ matrix.arch }}
 
-      - name: Generate checksum
+      - name: Checksum
         run: python3 ${{ github.workspace }}/scripts/checksum.py ${{ runner.temp }}/libzenit-${{ matrix.arch }}
 
-      - name: Include LICENSE
+      - name: Bundle license
         run: cp ${{ github.workspace }}/LICENSE ${{ runner.temp }}/libzenit-${{ matrix.arch }}/
 
       - name: Package
         run: tar -C ${{ runner.temp }}/libzenit-${{ matrix.arch }} -czf ${{ runner.temp }}/libzenit-${{ matrix.arch }}.tar.gz .
 
-      - name: Upload
+      - name: Upload to release
         uses: softprops/action-gh-release@v3
         with:
           files: ${{ runner.temp }}/libzenit-${{ matrix.arch }}.tar.gz
