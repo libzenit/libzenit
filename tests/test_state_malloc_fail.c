@@ -19,10 +19,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+static int malloc_fail_once = 1;
+
 void *__real_malloc(size_t size);
 void *__wrap_malloc(size_t size) {
-    (void)size;
-    return NULL;
+    if (malloc_fail_once) {
+        malloc_fail_once = 0;
+        return NULL;
+    }
+    return __real_malloc(size);
 }
 
 int main(void) {
