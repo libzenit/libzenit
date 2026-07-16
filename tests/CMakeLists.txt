@@ -55,4 +55,33 @@ if(CMAKE_C_COMPILER_ID STREQUAL "GNU" OR (CMAKE_C_COMPILER_ID STREQUAL "Clang" A
   add_test(NAME test_state_malloc_fail COMMAND test_state_malloc_fail)
 endif()
 
+add_executable(test_arena
+  test_arena.c
+)
+
+target_link_libraries(test_arena PRIVATE zenit)
+
+if(LIBZENIT_BUILD_COVERAGE)
+  target_compile_options(test_arena PRIVATE --coverage -g -O0)
+  target_link_options(test_arena PRIVATE --coverage)
+endif()
+
+add_test(NAME test_arena COMMAND test_arena)
+
+if(CMAKE_C_COMPILER_ID STREQUAL "GNU" OR (CMAKE_C_COMPILER_ID STREQUAL "Clang" AND NOT APPLE))
+  add_executable(test_arena_malloc_fail
+    test_arena_malloc_fail.c
+  )
+
+  target_link_libraries(test_arena_malloc_fail PRIVATE zenit)
+  target_link_options(test_arena_malloc_fail PRIVATE -Wl,--wrap=malloc -Wl,--wrap=calloc)
+
+  if(LIBZENIT_BUILD_COVERAGE)
+    target_compile_options(test_arena_malloc_fail PRIVATE --coverage -g -O0)
+    target_link_options(test_arena_malloc_fail PRIVATE --coverage)
+  endif()
+
+  add_test(NAME test_arena_malloc_fail COMMAND test_arena_malloc_fail)
+endif()
+
 add_test(NAME test_libzenit COMMAND test_libzenit)

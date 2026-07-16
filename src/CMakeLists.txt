@@ -18,6 +18,7 @@
 add_library(zenit STATIC
   version.c
   state.c
+  arena.c
 )
 
 target_include_directories(zenit
