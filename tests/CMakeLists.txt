@@ -39,6 +39,19 @@ endif()
 
 add_test(NAME test_state COMMAND test_state)
 
+add_executable(test_benchmark
+  test_benchmark.c
+)
+
+target_link_libraries(test_benchmark PRIVATE zenit)
+
+if(LIBZENIT_BUILD_COVERAGE)
+  target_compile_options(test_benchmark PRIVATE --coverage -g -O0)
+  target_link_options(test_benchmark PRIVATE --coverage)
+endif()
+
+add_test(NAME test_benchmark COMMAND test_benchmark)
+
 if(CMAKE_C_COMPILER_ID STREQUAL "GNU" OR (CMAKE_C_COMPILER_ID STREQUAL "Clang" AND NOT APPLE))
   add_executable(test_state_malloc_fail
     test_state_malloc_fail.c

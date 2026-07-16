@@ -439,7 +439,8 @@ libzen/
 │   ├── test_state.c
 │   ├── test_state_malloc_fail.c
 │   ├── test_arena.c        # Arena happy path, edge cases, coalescing, corruption
-│   └── test_arena_malloc_fail.c  # Malloc/calloc failure via --wrap
+│   ├── test_arena_malloc_fail.c  # Malloc/calloc failure via --wrap
+│   └── test_benchmark.c    # Benchmark API validation & coverage
 ├── benchmarks/
 │   ├── CMakeLists.txt
 │   ├── benchmark_version.c     # Version call throughput
