@@ -90,6 +90,13 @@ If the branch already exists upstream, simply:
 git push
 ```
 
+> **⚠️ CI auto-commits.** The benchmark `collect` job may push a report
+> commit (`[skip ci]`) to your branch between your commits. If your push
+> is rejected with *non-fast-forward*, pull the CI-bot commit first:
+> ```bash
+> git fetch && git rebase && git push
+> ```
+
 ### 3.5 End of iteration checklist
 Before finishing any task:
 - [ ] All tests pass: `ctest --test-dir build --output-on-failure`
