@@ -21,6 +21,7 @@ project(libzenit VERSION 0.1.0 LANGUAGES C)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 option(LIBZENIT_BUILD_TESTS "Build tests" ON)
+option(LIBZENIT_BUILD_BENCHMARKS "Build benchmarks" OFF)
 option(LIBZENIT_BUILD_COVERAGE "Build with coverage instrumentation" OFF)
 
 enable_testing()
@@ -29,6 +30,10 @@ add_subdirectory(src)
 
 if(LIBZENIT_BUILD_TESTS)
   add_subdirectory(tests)
+endif()
+
+if(LIBZENIT_BUILD_BENCHMARKS)
+  add_subdirectory(benchmarks)
 endif()
 
 include(GNUInstallDirs)

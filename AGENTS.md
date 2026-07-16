@@ -425,19 +425,27 @@ libzen/
 │   └── libzenit/
 │       ├── version.h       # Version API
 │       ├── state.h         # State machine API
-│       └── arena.h         # Arena allocator API
+│       ├── arena.h         # Arena allocator API
+│       └── benchmark.h     # Benchmark framework API
 ├── src/
 │   ├── CMakeLists.txt
 │   ├── version.c
 │   ├── state.c
-│   └── arena.c             # Arena allocator impl (free-list, bitmap, boundary tags)
+│   ├── arena.c             # Arena allocator impl (free-list, bitmap, boundary tags)
+│   └── benchmark.c         # Benchmark runner impl (clock_gettime / QueryPerformanceCounter)
 ├── tests/
 │   ├── CMakeLists.txt
 │   ├── test_version.c
 │   ├── test_state.c
 │   ├── test_state_malloc_fail.c
 │   ├── test_arena.c        # Arena happy path, edge cases, coalescing, corruption
-│   └── test_arena_malloc_fail.c  # Malloc/calloc failure via --wrap
+│   ├── test_arena_malloc_fail.c  # Malloc/calloc failure via --wrap
+│   └── test_benchmark.c    # Benchmark API validation & coverage
+├── benchmarks/
+│   ├── CMakeLists.txt
+│   ├── benchmark_version.c     # Version call throughput
+│   ├── benchmark_state.c       # State-machine transition throughput
+│   └── benchmark_arena.c       # Arena allocator throughput (vs malloc baseline)
 ├── scripts/
 │   └── checksum.py         # Release checksum generator
 ├── codecov.yaml            # Codecov configuration
@@ -502,3 +510,77 @@ This ensures the agent returns to the main branch with the latest merged code.
 - Do not fetch or rebase unless explicitly instructed.
 - If the current branch is already `master`, still run `git pull` to update.
 - Report the result of `git pull` to the user (fast-forward or already up-to-date).
+
+## 14. Benchmarking Discipline
+
+Every agent that adds or modifies a public API **must** include or update a corresponding benchmark in `benchmarks/`.
+
+### 14.1 API
+
+The benchmark framework is part of the public library (`<libzenit/benchmark.h>`). Use it in all benchmarks:
+
+```c
+#include <libzenit/benchmark.h>
+
+static void my_bench_fn(void* ctx) {
+    /* one unit of work, called repeatedly by the runner */
+}
+```
+
+```c
+zenit_bench_result_t r = zenit_bench_run("my_label", my_bench_fn, ctx, 1000000);
+zenit_bench_print(&r);
+```
+
+| Element | Purpose |
+|---------|---------|
+| `zenit_bench_result_t` | Holds name, elapsed time, iterations, ops/sec |
+| `zenit_bench_fn_t` | Pointer to the function under measurement |
+| `zenit_bench_run()` | Runs warm-up + timed loop, returns result |
+| `zenit_bench_print()` | Prints aligned output to stdout |
+
+### 14.2 What to benchmark
+
+| Case | Example |
+|------|---------|
+| **Happy path** | Sequential transitions in a state machine |
+| **Worst case** | Linear scan of a 1024-entry table |
+| **Miss / no-op** | Invalid event (table miss) |
+| **Comparison** | Arena alloc/free vs malloc/free baseline |
+
+### 14.3 Timing infrastructure
+
+- `clock_gettime(CLOCK_MONOTONIC, ...)` on POSIX (Linux, macOS)
+- `QueryPerformanceCounter` on Windows
+- One warm-up iteration before timed run
+
+### 14.4 Build & run
+
+```bash
+cmake -B build -D LIBZENIT_BUILD_BENCHMARKS=ON
+cmake --build build
+ctest --test-dir build -L benchmark        # via CTest
+cmake --build build --target benchmark     # via custom target
+```
+
+Benchmarks are **labeled** `"benchmark"` in CTest so they never run with
+plain `ctest`. Use `ctest -L benchmark` to run only benchmarks, or
+`ctest -LE benchmark` to exclude them.
+
+### 14.5 File conventions
+
+| Aspect | Convention |
+|--------|-----------|
+| Location | `benchmarks/benchmark_<feature>.c` |
+| Prefix | `benchmark_` |
+| Link target | PRIVATE `zenit` |
+| Registration | `add_test(NAME benchmark_<name> COMMAND benchmark_<name>)` + LABELS `"benchmark"` |
+| Return | `0` on success, `1` on error |
+
+### 14.6 Verification
+
+Before marking a task complete, verify:
+- [ ] Every new public function has a corresponding benchmark.
+- [ ] Benchmarks compile with `-Wall -Wextra -Wpedantic` (no warnings).
+- [ ] Results are printed via `zenit_bench_print()`.
+- [ ] Benchmarks do **not** run with plain `ctest` (label isolation).
