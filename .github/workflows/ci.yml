@@ -240,8 +240,9 @@ jobs:
       - name: Upload benchmark log
         uses: actions/upload-artifact@v4
         with:
-          name: benchmark-logs
+          name: benchmark-log-${{ matrix.os }}
           path: benchmark_${{ matrix.os }}.log
+          if-no-files-found: error
           retention-days: 1
 
   collect:
@@ -259,7 +260,8 @@ jobs:
       - name: Download all benchmark logs
         uses: actions/download-artifact@v4
         with:
-          name: benchmark-logs
+          pattern: benchmark-log-*
+          merge-multiple: true
           path: benchmark_logs
 
       - name: List downloaded logs
