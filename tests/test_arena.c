@@ -497,9 +497,18 @@ static int test_release_corrupted(void) {
 
     /* Release must detect the corrupted block and refuse */
     int ret = zenit_arena_release(a, ua);
-    *size_field = saved_size; /* restore for clean shutdown */
     if (ret != -1) {
+        *size_field = saved_size;
         FAIL("release should detect corrupted block (size==0)");
+        return 1;
+    }
+
+    /* Restore the corrupted field and re-release to clean up the handle.
+     * After restoration the traversal will succeed and free the ua. */
+    *size_field = saved_size;
+    if (zenit_arena_release(a, ua) != 0) {
+        FAIL("second release should succeed after restoration");
+        zenit_arena_destroy(a);
         return 1;
     }
 
