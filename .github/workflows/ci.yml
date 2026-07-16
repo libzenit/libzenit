@@ -267,6 +267,9 @@ jobs:
       - name: List downloaded logs
         run: ls -la benchmark_logs/
 
+      - name: Install matplotlib
+        run: pip install matplotlib -q
+
       - name: Generate report
         run: |
           python3 scripts/benchmark_report.py \
