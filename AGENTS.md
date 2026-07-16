@@ -424,16 +424,20 @@ libzen/
 │   ├── libzenit.h          # Umbrella header
 │   └── libzenit/
 │       ├── version.h       # Version API
-│       └── state.h         # State machine API
+│       ├── state.h         # State machine API
+│       └── arena.h         # Arena allocator API
 ├── src/
 │   ├── CMakeLists.txt
 │   ├── version.c
-│   └── state.c
+│   ├── state.c
+│   └── arena.c             # Arena allocator impl (free-list, bitmap, boundary tags)
 ├── tests/
 │   ├── CMakeLists.txt
 │   ├── test_version.c
 │   ├── test_state.c
-│   └── test_state_malloc_fail.c
+│   ├── test_state_malloc_fail.c
+│   ├── test_arena.c        # Arena happy path, edge cases, coalescing, corruption
+│   └── test_arena_malloc_fail.c  # Malloc/calloc failure via --wrap
 ├── scripts/
 │   └── checksum.py         # Release checksum generator
 ├── codecov.yaml            # Codecov configuration

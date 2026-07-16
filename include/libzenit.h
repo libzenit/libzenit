@@ -20,5 +20,6 @@
 
 #include <libzenit/version.h>
 #include <libzenit/state.h>
+#include <libzenit/arena.h>
 
 #endif
