@@ -1,4 +1,6 @@
-# LibZenit
+<p align="center">
+  <img src="media/logo.svg" alt="LibZenit" width="180">
+</p>
 
 Portable C library providing building blocks for systems programming: a **finite-state machine engine**, a **fixed-block arena allocator**, a **benchmark framework**, and a **version API**.
 

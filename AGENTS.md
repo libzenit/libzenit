@@ -456,6 +456,8 @@ libzen/
 ├── scripts/
 │   ├── checksum.py         # Release checksum generator
 │   └── benchmark_report.py # Benchmark log parser & report generator (BENCHMARK.md + charts)
+├── media/                  # Brand assets (logo)
+│   └── logo.svg            # LibZenit logo (geometric sun)
 ├── codecov.yaml            # Codecov configuration
 ├── AGENTS.md               # This file
 ├── LICENSE                 # AGPL-3.0
