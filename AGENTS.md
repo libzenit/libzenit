@@ -10,6 +10,8 @@
 - **CI:** GitHub Actions (build matrix across 4 OS, sanitizers, iOS, releases)
 - **Coverage:** Codecov via lcov + `--coverage` flag
 
+> **This is a living document.** Every agent must update it when discovering new conventions, encountering structural changes, or making decisions worth recording (see §12).
+
 ## 2. Getting Started
 
 ```bash
@@ -364,6 +366,8 @@ Before concluding any work:
 
 ## 11. Project structure
 
+> **Keep this in sync.** Update this tree whenever you add, rename, or remove directories or files — it is the agent's primary navigation reference.
+
 ```
 libzen/
 ├── CMakeLists.txt          # Root build configuration
@@ -389,3 +393,43 @@ libzen/
 ├── LICENSE                 # AGPL-3.0
 └── README.md
 ```
+
+## 12. Feedback Protocol (AGENTS.md)
+
+AGENTS.md is the project's **collective memory** for AI agents. It must evolve as the project grows.
+
+### 12.1 When to update
+
+Update AGENTS.md whenever you encounter:
+
+- **New directory / file added** — sync the project tree in §11.
+- **New code convention discovered** — e.g. a new naming pattern, a style rule not yet documented.
+- **Build system changes** — new CMake options, new targets, changed flags.
+- **Tooling changes** — new CI jobs, new sanitizers, new scripts.
+- **Workflow improvements** — better ways to branch, commit, test, or verify.
+- **Common pitfalls** — errors or gotchas you resolved that future agents should avoid.
+- **Any decision worth recording** — architecture rationale, API design choices, dependency justifications.
+
+### 12.2 How to update
+
+1. **Read** the current AGENTS.md first (to avoid duplication).
+2. **Edit** the relevant section, or add a new subsection if the topic is new.
+3. **Commit** with prefix `docs:` and a descriptive message:
+   ```
+   docs: add thread-safety considerations to code style section
+   docs: update project tree after adding src/parser.c
+   ```
+4. **Push** immediately — see §3.4.
+
+### 12.3 Guiding principles
+
+| Principle | Rationale |
+|-----------|-----------|
+| **Be concise** | Agents have limited context windows. Prefer tables and examples over prose. |
+| **Be precise** | Include exact code snippets, not descriptions. Show, don't tell. |
+| **Be actionable** | Every rule must be directly enforceable (e.g. "4 spaces, no tabs", not "use good formatting"). |
+| **Don't repeat** | If the information exists elsewhere (README, CI YAML, CMake), reference it rather than copying. |
+
+### 12.4 Review on entry
+
+Every agent **must** read AGENTS.md at the start of a session to ensure awareness of the latest conventions and project state.
