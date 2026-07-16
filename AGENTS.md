@@ -452,7 +452,8 @@ libzen/
 ├── codecov.yaml            # Codecov configuration
 ├── AGENTS.md               # This file
 ├── LICENSE                 # AGPL-3.0
-└── README.md
+├── README.md
+└── BENCHMARK.md            # Auto-generated CI benchmark report ([skip ci])
 ```
 
 ## 12. Feedback Protocol (AGENTS.md)
@@ -567,6 +568,11 @@ cmake --build build --target benchmark     # via custom target
 Benchmarks are **labeled** `"benchmark"` in CTest so they never run with
 plain `ctest`. Use `ctest -L benchmark` to run only benchmarks, or
 `ctest -LE benchmark` to exclude them.
+
+Benchmark outputs are **automatically collected** in CI: each matrix job
+uploads its log as an artifact, and a `collect` job downloads all three,
+generates `BENCHMARK.md` + charts via `scripts/benchmark_report.py`, and
+commits them with `[skip ci]` to avoid re-triggering the workflow.
 
 ### 14.5 File conventions
 
