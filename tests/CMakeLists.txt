@@ -39,16 +39,16 @@ endif()
 
 add_test(NAME test_state COMMAND test_state)
 
-add_executable(test_malloc_fail
-  test_malloc_fail.c
+add_executable(test_state_malloc_fail
+  test_state_malloc_fail.c
 )
 
-target_link_libraries(test_malloc_fail PRIVATE zenit)
+target_link_libraries(test_state_malloc_fail PRIVATE zenit)
 
 if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
-  target_link_options(test_malloc_fail PRIVATE -Wl,--wrap=malloc)
+  target_link_options(test_state_malloc_fail PRIVATE -Wl,--wrap=malloc)
 endif()
 
-add_test(NAME test_malloc_fail COMMAND test_malloc_fail)
+add_test(NAME test_state_malloc_fail COMMAND test_state_malloc_fail)
 
 add_test(NAME test_libzenit COMMAND test_libzenit)
