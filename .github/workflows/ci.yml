@@ -153,6 +153,7 @@ jobs:
           - compiler: clang
             sanitizer: cfi
             flags: -fsanitize=cfi -flto -fvisibility=hidden
+            ldflags: -fuse-ld=lld-18
           - compiler: clang
             sanitizer: safe-stack
             flags: -fsanitize=safe-stack
@@ -176,12 +177,18 @@ jobs:
             echo "CXX=clang++" >> $GITHUB_ENV
           fi
 
+      - name: Install lld
+        if: matrix.sanitizer == 'cfi'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq lld-18
+
       - name: Configure
         run: >
           cmake -B build
           -DCMAKE_BUILD_TYPE=Debug
           -DCMAKE_C_FLAGS="${{ matrix.flags }}"
-          -DCMAKE_EXE_LINKER_FLAGS="${{ matrix.flags }}"
+          -DCMAKE_EXE_LINKER_FLAGS="${{ matrix.flags }} ${{ matrix.ldflags || '' }}"
           -DLIBZENIT_BUILD_TESTS=ON
 
       - name: Build
