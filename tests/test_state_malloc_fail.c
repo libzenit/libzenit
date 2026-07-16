@@ -15,26 +15,28 @@
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //
 
-#include <libzenit/version.h>
+#include <libzenit/state.h>
 #include <stdio.h>
 #include <stdlib.h>
 
+static int malloc_fail_once = 1;
+
+void *__real_malloc(size_t size);
+void *__wrap_malloc(size_t size) {
+    if (malloc_fail_once) {
+        malloc_fail_once = 0;
+        return NULL;
+    }
+    return __real_malloc(size);
+}
+
 int main(void) {
-    libzenit_version_t v = libzenit_version();
-
-    if (v.major != 0) {
-        fprintf(stderr, "FAIL: major expected 0 got %d\n", v.major);
-        return 1;
+    zenit_state_transition_t t = {0, 0, 0, NULL};
+    const zenit_state_t *state = zenit_state_allocate(&t, 1, 0);
+    if (state == NULL) {
+        printf("PASS: malloc failure returns NULL\n");
+        return 0;
     }
-    if (v.minor != 1) {
-        fprintf(stderr, "FAIL: minor expected 1 got %d\n", v.minor);
-        return 1;
-    }
-    if (v.patch != 0) {
-        fprintf(stderr, "FAIL: patch expected 0 got %d\n", v.patch);
-        return 1;
-    }
-
-    printf("PASS: libzenit v%d.%d.%d (%s)\n", v.major, v.minor, v.patch, v.name);
-    return 0;
+    printf("FAIL: expected NULL\n");
+    return 1;
 }

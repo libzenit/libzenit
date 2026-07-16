@@ -19,5 +19,6 @@
 #define LIBZENIT_H
 
 #include <libzenit/version.h>
+#include <libzenit/state.h>
 
 #endif

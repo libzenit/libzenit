@@ -20,8 +20,15 @@ import os
 import sys
 from pathlib import Path
 
+def _resolve(path_str):
+    p = Path(path_str).resolve()
+    if not p.is_dir():
+        print(f"error: not a directory: {p}", file=sys.stderr)
+        sys.exit(1)
+    return p
+
 def main():
-    prefix = Path(sys.argv[1]) if len(sys.argv) > 1 else Path.cwd()
+    prefix = _resolve(sys.argv[1]) if len(sys.argv) > 1 else Path.cwd().resolve()
     lib_dir = prefix / "lib"
     if not lib_dir.exists():
         lib_dir = prefix

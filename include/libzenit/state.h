@@ -15,26 +15,30 @@
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //
 
-#include <libzenit/version.h>
-#include <stdio.h>
-#include <stdlib.h>
+#ifndef LIBZENIT_STATE_H
+#define LIBZENIT_STATE_H
 
-int main(void) {
-    libzenit_version_t v = libzenit_version();
+#include <stddef.h>
 
-    if (v.major != 0) {
-        fprintf(stderr, "FAIL: major expected 0 got %d\n", v.major);
-        return 1;
-    }
-    if (v.minor != 1) {
-        fprintf(stderr, "FAIL: minor expected 1 got %d\n", v.minor);
-        return 1;
-    }
-    if (v.patch != 0) {
-        fprintf(stderr, "FAIL: patch expected 0 got %d\n", v.patch);
-        return 1;
-    }
+typedef void (*zenit_state_callback_t)(int event, int from_state, int to_state, void *context);
 
-    printf("PASS: libzenit v%d.%d.%d (%s)\n", v.major, v.minor, v.patch, v.name);
-    return 0;
-}
+typedef struct {
+    int from_state;
+    int event;
+    int to_state;
+    zenit_state_callback_t on_transition;
+} zenit_state_transition_t;
+
+typedef struct zenit_state_t zenit_state_t;
+
+zenit_state_t *zenit_state_allocate(
+    const zenit_state_transition_t *table,
+    size_t count,
+    int initial_state
+);
+
+int  zenit_state_process_event(zenit_state_t *state, int event, void *context);
+int  zenit_get_last_state(const zenit_state_t *state);
+void zenit_state_deallocate(zenit_state_t *state);
+
+#endif
