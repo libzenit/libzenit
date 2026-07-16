@@ -83,6 +83,31 @@ static void test_insert_fail_rehash_slots(void) {
     PASS();
 }
 
+/* ─── Test: insert fails during rehash (states calloc fails after slots succeed) ─── */
+static void test_insert_fail_rehash_states(void) {
+    TEST("insert fails during rehash (states calloc)");
+
+    zenit_map_t *map = zenit_map_create_with_capacity(sizeof(int), sizeof(int), 1);
+    ASSERT(map != NULL, "expected non-NULL map");
+
+    int k1 = 10, v1 = 100;
+    ASSERT(zenit_map_insert(map, &k1, &v1).error == ZENIT_OK, "first insert");
+
+    /* Set countdown to 1 so new_slots calloc succeeds, then new_states calloc fails */
+    malloc_fail_countdown = 1;
+    int k2 = 20, v2 = 200;
+    zenit_result_t r = zenit_map_insert(map, &k2, &v2);
+    ASSERT(r.error == ZENIT_ERROR_ALLOC, "insert should fail with ALLOC on rehash");
+
+    int out = 0;
+    ASSERT(zenit_map_get(map, &k1, &out).error == ZENIT_OK, "first key still accessible");
+    ASSERT(out == 100, "first value intact");
+
+    malloc_fail_countdown = -1;
+    zenit_map_destroy(map);
+    PASS();
+}
+
 /* ─── Main ─── */
 int main(void) {
     printf("hash map malloc-fail tests\n");
@@ -95,6 +120,7 @@ int main(void) {
     test_create_fail_slots();
     test_create_fail_states();
     test_insert_fail_rehash_slots();
+    test_insert_fail_rehash_states();
 
     printf("\n%d passed, %d failed, %d total\n",
            passed, failed, passed + failed);

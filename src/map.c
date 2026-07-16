@@ -55,10 +55,6 @@ struct zenit_map_t {
 
 /* ─── Helper: round up to the next power of two ─── */
 static size_t round_pow2(size_t n) {
-    /* If n is already a power of two, return it */
-    if (n == 0) {
-        return MAP_DEFAULT_CAPACITY;
-    }
     /* Decrement so that a perfect power of two rounds to itself */
     n--;
     /* Propagate the highest set bit through all lower bits */
@@ -91,44 +87,59 @@ static size_t hash_fnv1a(const void *data, size_t len) {
 }
 
 /* ─── Probe: walk the slot array looking for a key ───
- * Returns a pointer to the slot's state byte, and writes the slot index
- * into *out_index.  If an EMPTY slot is encountered before the key is found,
- * *out_index is set to that slot and the function returns MAP_SLOT_EMPTY.
+ * Returns the slot state (OCCUPIED, DELETED, or EMPTY) and writes the slot
+ * index into *out_index.
+ *
+ * - If an OCCUPIED slot with a matching key is found, returns OCCUPIED.
+ * - If the key is not found, returns the first available slot for insertion
+ *   (preferring an earlier DELETED tombstone over a later EMPTY slot so that
+ *   tombstones are reclaimed and deleted_count decreases).
+ * - Returns EMPTY only when no DELETED slot was encountered along the chain.
  */
 static int probe_slot(
     const zenit_map_t *map, const void *key, size_t *out_index
 ) {
-    /* Calculate the initial probe index from the hash */
     size_t hash = hash_fnv1a(key, map->key_size);
     size_t mask = map->capacity - 1;
     size_t index = hash & mask;
 
-    /* Linear probing: walk until we find the key or an EMPTY slot */
-    for (size_t i = 0; i < map->capacity; i++) {
+    /* Track the first DELETED slot seen, so we can reclaim tombstones */
+    size_t first_deleted = map->capacity;
+    int found_deleted = 0;
+
+    /* Walk until we find an EMPTY slot or a key match.  The 75 % load factor
+     * guarantees at least 25 % EMPTY slots, so we always terminate. */
+    while (1) {
         unsigned char state = map->states[index];
+
         if (state == MAP_SLOT_EMPTY) {
-            /* Slot is empty — key cannot be beyond this point (probe chain
-             * is broken only by EMPTY slots, not by DELETED ones) */
+            /* Prefer reclaiming a tombstone over an empty slot */
+            if (found_deleted) {
+                *out_index = first_deleted;
+                return MAP_SLOT_DELETED;
+            }
             *out_index = index;
             return MAP_SLOT_EMPTY;
         }
-        if (state == MAP_SLOT_OCCUPIED) {
-            /* Compute the key pointer for this slot and compare */
-            unsigned char *slot = map->slots + index * map->slot_size;
-            if (memcmp(slot, key, map->key_size) == 0) {
-                /* Key matched */
-                *out_index = index;
-                return MAP_SLOT_OCCUPIED;
+
+        if (state == MAP_SLOT_DELETED) {
+            if (!found_deleted) {
+                first_deleted = index;
+                found_deleted = 1;
             }
+            index = (index + 1) & mask;
+            continue;
         }
-        /* Move to the next slot (wrap around using bitmask) */
+
+        /* State == OCCUPIED */
+        unsigned char *slot = map->slots + index * map->slot_size;
+        if (memcmp(slot, key, map->key_size) == 0) {
+            *out_index = index;
+            return MAP_SLOT_OCCUPIED;
+        }
+
         index = (index + 1) & mask;
     }
-
-    /* The table is completely full of DELETED slots — this should not happen
-     * because we rehash before we reach that state, but handle defensively. */
-    *out_index = 0;
-    return MAP_SLOT_EMPTY;
 }
 
 /* ─── Rehash: grow the table and re-insert all live entries ─── */
