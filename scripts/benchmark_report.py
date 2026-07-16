@@ -166,8 +166,7 @@ def _plot_grouped_bars(data: dict, env_names: list[str], bench_names: list[str],
     return fig, ax
 
 
-def _chart_overview(data: dict, env_names: list[str], colors: list,
-                    n_envs: int) -> tuple:
+def _chart_overview(data: dict, env_names: list[str], colors: list) -> tuple:
     """Generate the overview log-scale chart. Returns (alt_text, rel_path)."""
     fig, ax = _plot_grouped_bars(data, env_names, list(data.keys()),
                                  colors, True, (12, 5), 6, 45)
@@ -179,8 +178,7 @@ def _chart_overview(data: dict, env_names: list[str], colors: list,
     return ("Benchmark Overview", "benchmark_charts/overview.png")
 
 
-def _chart_categories(data: dict, env_names: list[str], colors: list,
-                      n_envs: int) -> list[tuple]:
+def _chart_categories(data: dict, env_names: list[str], colors: list) -> list[tuple]:
     """Generate one linear-scale chart per category. Returns list of tuples."""
     out = []
     for cat_name, members in CATEGORIES.items():
@@ -211,8 +209,8 @@ def generate_charts(data: dict, env_names: list[str]):
     cmap = plt.colormaps.get("Set2")
     colors = [cmap(i / max(n_envs - 1, 1)) for i in range(n_envs)]
 
-    charts = [_chart_overview(data, env_names, colors, n_envs)]
-    charts.extend(_chart_categories(data, env_names, colors, n_envs))
+    charts = [_chart_overview(data, env_names, colors)]
+    charts.extend(_chart_categories(data, env_names, colors))
     return charts
 
 
