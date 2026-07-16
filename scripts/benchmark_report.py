@@ -61,9 +61,10 @@ PREFIX_MAP = {
     "state_": "State Machine",
     "arena_create_destroy": "Arena (overhead)",
     "arena_acquire_release": "Arena (overhead)",
-    "arena_alloc_free": "Arena (alloc)",
+    "arena_alloc": "Arena (alloc)",
     "malloc_free": "malloc (baseline)",
     "ring_": "Ring Buffer",
+    "vector_": "Vector",
 }
 
 
