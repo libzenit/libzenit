@@ -59,6 +59,7 @@ CATEGORIES = {
     "Arena (alloc)":  ["arena_alloc_free_8", "arena_alloc_free_64",
                        "arena_alloc_free_4k"],
     "malloc (baseline)": ["malloc_free_8", "malloc_free_64", "malloc_free_4k"],
+    "Ring Buffer":    ["ring_seq_128", "ring_seq_1k", "ring_full_miss"],
 }
 
 
