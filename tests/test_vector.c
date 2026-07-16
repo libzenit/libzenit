@@ -91,7 +91,7 @@ static int test_push_get(void) {
     if (zenit_vector_count(v) != 100) { FAIL("count should be 100"); return 1; }
 
     for (int i = 0; i < 100; i++) {
-        int *p = (int *)zenit_vector_get(v, (size_t)i);
+        const int *p = (const int *)zenit_vector_get(v, (size_t)i);
         if (p == NULL) { FAIL("get returned NULL"); return 1; }
         if (*p != i) { FAIL("data mismatch"); return 1; }
     }
@@ -150,7 +150,7 @@ static int test_set(void) {
     int b = 99;
     if (zenit_vector_set(v, 0, &b).error != ZENIT_OK) { FAIL("set"); return 1; }
 
-    int *p = (int *)zenit_vector_get(v, 0);
+    const int *p = (const int *)zenit_vector_get(v, 0);
     if (p == NULL) { FAIL("get after set"); return 1; }
     if (*p != 99) { FAIL("set data mismatch"); return 1; }
 
@@ -178,7 +178,7 @@ static int test_get_oob(void) {
     zenit_vector_t *v = zenit_vector_create(4);
     if (v == NULL) { FAIL("create"); return 1; }
 
-    void *p = zenit_vector_get(v, 0);
+    const void *p = zenit_vector_get(v, 0);
     if (p != NULL) { FAIL("expected NULL for OOB get"); return 1; }
 
     p = zenit_vector_get(NULL, 0);
@@ -211,7 +211,7 @@ static int test_insert(void) {
     /* Expected: [0, 10, 20, 30] */
     int expected[] = {0, 10, 20, 30};
     for (size_t i = 0; i < 4; i++) {
-        int *p = (int *)zenit_vector_get(v, i);
+        const int *p = (const int *)zenit_vector_get(v, i);
         if (p == NULL || *p != expected[i]) {
             FAIL("insert data mismatch"); return 1;
         }
@@ -259,7 +259,7 @@ static int test_remove(void) {
     /* Expected: [0, 10, 30, 40] */
     int expected1[] = {0, 10, 30, 40};
     for (size_t i = 0; i < 4; i++) {
-        int *p = (int *)zenit_vector_get(v, i);
+        const int *p = (const int *)zenit_vector_get(v, i);
         if (p == NULL || *p != expected1[i]) {
             FAIL("remove data order wrong"); return 1;
         }
@@ -328,7 +328,7 @@ static int test_shrink_to_fit(void) {
 
     /* Verify data still intact */
     for (int i = 0; i < 10; i++) {
-        int *p = (int *)zenit_vector_get(v, (size_t)i);
+        const int *p = (const int *)zenit_vector_get(v, (size_t)i);
         if (p == NULL || *p != i) { FAIL("data after shrink"); return 1; }
     }
 
@@ -462,8 +462,8 @@ static int test_struct(void) {
     if (zenit_vector_push(v, &p1).error != ZENIT_OK) { FAIL("push p1"); return 1; }
     if (zenit_vector_push(v, &p2).error != ZENIT_OK) { FAIL("push p2"); return 1; }
 
-    point_t *g1 = (point_t *)zenit_vector_get(v, 0);
-    point_t *g2 = (point_t *)zenit_vector_get(v, 1);
+    const point_t *g1 = (const point_t *)zenit_vector_get(v, 0);
+    const point_t *g2 = (const point_t *)zenit_vector_get(v, 1);
     if (g1 == NULL || g2 == NULL) { FAIL("get struct"); return 1; }
     if (g1->x != 1 || g1->y != 2.5) { FAIL("struct 1 mismatch"); return 1; }
     if (g2->x != 3 || g2->y != 4.5) { FAIL("struct 2 mismatch"); return 1; }
@@ -487,7 +487,7 @@ static int test_many_elements(void) {
     if (zenit_vector_count(v) != (size_t)n) { FAIL("count should be 10000"); return 1; }
 
     for (int i = 0; i < n; i++) {
-        int *p = (int *)zenit_vector_get(v, (size_t)i);
+        const int *p = (const int *)zenit_vector_get(v, (size_t)i);
         if (p == NULL || *p != i) { FAIL("many data mismatch"); return 1; }
     }
 

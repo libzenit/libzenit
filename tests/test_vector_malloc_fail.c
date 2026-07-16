@@ -108,7 +108,8 @@ static int test_push_grow_full_fail(void) {
         return 1;
     }
 
-    int a = 1, b = 2;
+    int a = 1;
+    int b = 2;
     if (zenit_vector_push(v, &a).error != ZENIT_OK) {
         fprintf(stderr, "FAIL: push a\n");
         zenit_vector_destroy(v);
@@ -144,7 +145,8 @@ static int test_insert_grow_fail(void) {
         return 1;
     }
 
-    int a = 1, b = 2;
+    int a = 1;
+    int b = 2;
     if (zenit_vector_insert(v, 0, &a).error != ZENIT_OK) {
         fprintf(stderr, "FAIL: insert a\n");
         zenit_vector_destroy(v);

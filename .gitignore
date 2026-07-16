@@ -39,3 +39,5 @@ _builds/
 __pycache__/
 *.pyc
 benchmark_charts/
+coverage.info
+coverage_html/

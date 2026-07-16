@@ -174,7 +174,7 @@ zenit_result_t zenit_vector_pop(zenit_vector_t *vector, void *out_elem) {
 
     /* Decrement count first so we read from the last stored element */
     vector->count--;
-    unsigned char *src = vector->buffer + vector->count * vector->elem_size;
+    const unsigned char *src = vector->buffer + vector->count * vector->elem_size;
     memcpy(out_elem, src, vector->elem_size);
 
     return ZENIT_RESULT_OK;
@@ -200,7 +200,7 @@ zenit_result_t zenit_vector_insert(zenit_vector_t *vector, size_t index, const v
     /* Shift elements from index onward to the right by one slot */
     if (index < vector->count) {
         unsigned char *dest = vector->buffer + (index + 1) * vector->elem_size;
-        unsigned char *src = vector->buffer + index * vector->elem_size;
+        const unsigned char *src = vector->buffer + index * vector->elem_size;
         size_t bytes = (vector->count - index) * vector->elem_size;
         memmove(dest, src, bytes);
     }
@@ -223,13 +223,13 @@ zenit_result_t zenit_vector_remove(zenit_vector_t *vector, size_t index, void *o
     }
 
     /* Copy the element to be removed into out_elem */
-    unsigned char *src = vector->buffer + index * vector->elem_size;
+    const unsigned char *src = vector->buffer + index * vector->elem_size;
     memcpy(out_elem, src, vector->elem_size);
 
     /* Shift remaining elements left by one slot */
     if (index + 1 < vector->count) {
         unsigned char *dest = vector->buffer + index * vector->elem_size;
-        unsigned char *src_shift = vector->buffer + (index + 1) * vector->elem_size;
+        const unsigned char *src_shift = vector->buffer + (index + 1) * vector->elem_size;
         size_t bytes = (vector->count - index - 1) * vector->elem_size;
         memmove(dest, src_shift, bytes);
     }
