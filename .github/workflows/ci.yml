@@ -1,0 +1,125 @@
+#
+#    LibZenit
+#    Copyright (C) 2026  Ian Torres
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU Affero General Public License version 3
+#    as published by the Free Software Foundation.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU Affero General Public License for more details.
+#
+#    You should have received a copy of the GNU Affero General Public License
+#    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+
+name: CI
+
+on:
+  push:
+    branches: [master]
+    tags: ['v*']
+  pull_request:
+    branches: [master]
+
+jobs:
+  build:
+    if: github.ref_type != 'tag'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            arch: linux-amd64
+            compiler: gcc
+          - os: ubuntu-24.04-arm
+            arch: linux-arm64
+            compiler: gcc
+          - os: windows-latest
+            arch: windows-amd64
+            compiler: msvc
+            shell: pwsh
+
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: ${{ matrix.shell || 'bash' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+  ios-build:
+    if: github.ref_type != 'tag'
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure (iOS)
+        run: cmake -B build-ios -G Xcode -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_ARCHITECTURES=arm64
+
+      - name: Build (iOS)
+        run: cmake --build build-ios --config Release
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            arch: linux-amd64
+          - os: ubuntu-24.04-arm
+            arch: linux-arm64
+          - os: windows-latest
+            arch: windows-amd64
+            shell: pwsh
+          - os: macos-latest
+            arch: ios-arm64
+            cmake_system: iOS
+            cmake_arch: arm64
+
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: ${{ matrix.shell || 'bash' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure (iOS)
+        if: matrix.cmake_system != ''
+        run: cmake -B build -G Xcode -DCMAKE_SYSTEM_NAME=${{ matrix.cmake_system }} -DCMAKE_OSX_ARCHITECTURES=${{ matrix.cmake_arch }}
+
+      - name: Configure (Desktop)
+        if: matrix.cmake_system == ''
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      - name: Install
+        run: cmake --install build --config Release --prefix ${{ runner.temp }}/libzenit-${{ matrix.arch }}
+
+      - name: Generate checksum
+        run: python3 ${{ github.workspace }}/scripts/checksum.py ${{ runner.temp }}/libzenit-${{ matrix.arch }}
+
+      - name: Include LICENSE
+        run: cp ${{ github.workspace }}/LICENSE ${{ runner.temp }}/libzenit-${{ matrix.arch }}/
+
+      - name: Package
+        run: tar -C ${{ runner.temp }}/libzenit-${{ matrix.arch }} -czf ${{ runner.temp }}/libzenit-${{ matrix.arch }}.tar.gz .
+
+      - name: Upload
+        uses: softprops/action-gh-release@v3
+        with:
+          files: ${{ runner.temp }}/libzenit-${{ matrix.arch }}.tar.gz
