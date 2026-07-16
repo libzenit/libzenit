@@ -153,7 +153,7 @@ static int test_buffer_alloc_free(void) {
 
     /* Write and verify */
     memset(buf.data, 0xAB, 1024);
-    unsigned char *p = (unsigned char *)buf.data;
+    const unsigned char *p = (const unsigned char *)buf.data;
     for (size_t i = 0; i < 1024; i++) {
         if (p[i] != 0xAB) { FAIL("data mismatch"); return 1; }
     }
@@ -421,7 +421,7 @@ static int test_multiple_usable_arenas(void) {
 
     /* 30+40+20 = 90 MB used; try to acquire another 20 (needs 2 blocks,
      * only 10 MB free) */
-    zenit_usable_arena_t *ua4 = zenit_arena_acquire(a, 20 * MB);
+    const zenit_usable_arena_t *ua4 = zenit_arena_acquire(a, 20 * MB);
     if (ua4 != NULL) {
         FAIL("expected NULL — only 10 MB remaining");
         return 1;
@@ -457,7 +457,7 @@ static int test_multiple_usable_arenas(void) {
 
     /* Now all blocks are used. ua1=0-2, ua5=3-4, ua6=5-6, ua3=7-8.
      * Only block 9 is free (10 MB). Acquiring 20 MB should fail. */
-    zenit_usable_arena_t *ua7 = zenit_arena_acquire(a, 20 * MB);
+    const zenit_usable_arena_t *ua7 = zenit_arena_acquire(a, 20 * MB);
     if (ua7 != NULL) {
         FAIL("expected NULL — no more contiguous space");
         return 1;

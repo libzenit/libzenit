@@ -71,7 +71,7 @@ struct zenit_usable_arena_t {
 /* ─── Footer helpers ─── */
 
 /* Initialise a block's footer with the same size and state as the header. */
-static void footer_sync(const zenit_buf_header_t *h) {
+static void footer_sync(zenit_buf_header_t *h) {
     zenit_buf_footer_t *f = (zenit_buf_footer_t *)((unsigned char *)h + h->size - sizeof(zenit_buf_footer_t));
     f->size = h->size;
     f->state = h->state;
@@ -223,10 +223,10 @@ int zenit_arena_release(zenit_arena_t *arena, zenit_usable_arena_t *ua) {
     /* Walk every block in the usable arena's memory and verify
      * that no buffer is still IN_USE. This prevents leaking
      * allocated buffers when releasing the usable arena. */
-    unsigned char *pos = ua->memory;
-    unsigned char *end = ua->memory + ua->size;
+    const unsigned char *pos = ua->memory;
+    const unsigned char *end = ua->memory + ua->size;
     while (pos < end) {
-        zenit_buf_header_t *h = (zenit_buf_header_t *)pos;
+        const zenit_buf_header_t *h = (const zenit_buf_header_t *)pos;
         if (h->state == BUF_IN_USE) {
             /* Outstanding buffer — reject the release */
             return -1;
@@ -251,6 +251,57 @@ int zenit_arena_release(zenit_arena_t *arena, zenit_usable_arena_t *ua) {
 
 /* ─── Usable arena / buffer API ─── */
 
+/*
+ * Take a free block, split it if the leftover is large enough, remove it
+ * from the free list, and mark it IN_USE.  Returns a populated buffer
+ * descriptor (caller provides the skeleton { NULL, 0 }).
+ */
+static zenit_usable_buffer_t claim_block(
+    zenit_usable_arena_t *ua,
+    zenit_buf_header_t *walk,
+    size_t needed,
+    size_t aligned
+) {
+    zenit_usable_buffer_t result = { NULL, 0 };
+
+    size_t remainder = walk->size - needed;
+    if (remainder >= MIN_SPLIT_TOTAL) {
+        walk->size = needed;
+        footer_sync(walk);
+
+        zenit_buf_header_t *split = (zenit_buf_header_t *)((unsigned char *)walk + needed);
+        split->state = BUF_FREE;
+        split->ua = ua;
+        split->size = remainder;
+        footer_sync(split);
+
+        split->next = walk->next;
+        split->prev = walk;
+        if (walk->next != NULL) {
+            walk->next->prev = split;
+        }
+        walk->next = split;
+    }
+
+    if (walk->prev != NULL) {
+        walk->prev->next = walk->next;
+    } else {
+        ua->free_list = walk->next;
+    }
+    if (walk->next != NULL) {
+        walk->next->prev = walk->prev;
+    }
+    walk->prev = NULL;
+    walk->next = NULL;
+
+    walk->state = BUF_IN_USE;
+    footer_sync(walk);
+
+    result.data = (unsigned char *)walk + sizeof(zenit_buf_header_t);
+    result.size = aligned;
+    return result;
+}
+
 zenit_usable_buffer_t zenit_usable_arena_allocate(
     zenit_usable_arena_t *ua, size_t size
 ) {
@@ -260,63 +311,17 @@ zenit_usable_buffer_t zenit_usable_arena_allocate(
         return result;
     }
 
-    /* Align the requested size */
     size_t aligned = ALIGN(size);
     size_t needed = sizeof(zenit_buf_header_t) + aligned + sizeof(zenit_buf_footer_t);
 
-    /* First-fit search over the free list */
     zenit_buf_header_t *walk = ua->free_list;
     while (walk != NULL) {
         if (walk->state == BUF_FREE && walk->size >= needed) {
-            /* Found a suitable free block */
-
-            /* Decide whether to split: only if the leftover is large enough */
-            size_t remainder = walk->size - needed;
-            if (remainder >= MIN_SPLIT_TOTAL) {
-                /* Shrink the current block */
-                walk->size = needed;
-                footer_sync(walk);
-
-                /* Create the new free block after it */
-                zenit_buf_header_t *split = (zenit_buf_header_t *)((unsigned char *)walk + needed);
-                split->state = BUF_FREE;
-                split->ua = ua;
-                split->size = remainder;
-                footer_sync(split);
-
-                /* Insert split into free list after walk */
-                split->next = walk->next;
-                split->prev = walk;
-                if (walk->next != NULL) {
-                    walk->next->prev = split;
-                }
-                walk->next = split;
-            }
-
-            /* Remove walk from free list */
-            if (walk->prev != NULL) {
-                walk->prev->next = walk->next;
-            } else {
-                ua->free_list = walk->next;
-            }
-            if (walk->next != NULL) {
-                walk->next->prev = walk->prev;
-            }
-            walk->prev = NULL;
-            walk->next = NULL;
-
-            /* Transition: BUF_FREE → BUF_IN_USE */
-            walk->state = BUF_IN_USE;
-            footer_sync(walk);
-
-            result.data = (unsigned char *)walk + sizeof(zenit_buf_header_t);
-            result.size = aligned;
-            return result;
+            return claim_block(ua, walk, needed, aligned);
         }
         walk = walk->next;
     }
 
-    /* No suitable block found */
     return result;
 }
 
@@ -341,7 +346,7 @@ int zenit_usable_buffer_free(zenit_usable_buffer_t *buf) {
 
     /* ─── Coalesce with next block if it is free ─── */
     unsigned char *next_ptr = (unsigned char *)h + h->size;
-    unsigned char *ua_end = ua->memory + ua->size;
+    const unsigned char *ua_end = ua->memory + ua->size;
     if (next_ptr < ua_end) {
         zenit_buf_header_t *next = (zenit_buf_header_t *)next_ptr;
         if (next->state == BUF_FREE) {
@@ -363,7 +368,7 @@ int zenit_usable_buffer_free(zenit_usable_buffer_t *buf) {
 
     /* ─── Coalesce with previous block if it is free ─── */
     if ((unsigned char *)h > ua->memory) {
-        zenit_buf_footer_t *prev_f = (zenit_buf_footer_t *)((unsigned char *)h - sizeof(zenit_buf_footer_t));
+        const zenit_buf_footer_t *prev_f = (const zenit_buf_footer_t *)((unsigned char *)h - sizeof(zenit_buf_footer_t));
         if (prev_f->state == BUF_FREE) {
             zenit_buf_header_t *prev = (zenit_buf_header_t *)((unsigned char *)h - prev_f->size);
             if (prev->state == BUF_FREE) {
