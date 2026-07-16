@@ -17,12 +17,23 @@
 
 #include <libzenit/version.h>
 
+/**
+ * @brief Return the compiled-in library version.
+ *
+ * Uses C99 designated initialisers to build the version struct so every
+ * field is explicitly set — no risk of uninitialised padding or fields.
+ *
+ * @return libzenit_version_t populated with the current release numbers.
+ */
 libzenit_version_t libzenit_version(void) {
+    /* Designated-initialiser list — fields are clear even if the struct layout
+     * changes, and the compiler warns on unknown fields */
     libzenit_version_t v = {
         .major = 0,
         .minor = 1,
         .patch = 0,
         .name = "alpha"
     };
+    /* Return by value (small struct, easily elided by the ABI / inlining) */
     return v;
 }

@@ -161,8 +161,47 @@ for (size_t i = 0; i < state->count; i++) {
 ### 4.5 Comments
 
 - **File headers:** Block of `//` single-line comments (16 lines, see §5).
-- **Inline comments:** Avoid unless the logic is non-obvious. Use `//` style.
-- **No Doxygen/Javadoc.**
+
+#### 4.5.1 Headers (`*.h`) — Doxygen docblocks
+
+Every public function, typedef, struct, or macro exported in a header **must** carry a Doxygen documentation block in the following format:
+
+```c
+/**
+ * @brief One line describing what the entity does.
+ *
+ * Optional paragraph with further detail, preconditions, postconditions,
+ * ownership notes, thread safety, etc.
+ *
+ * @param param1 Description of the parameter.
+ * @param param2 Description of the parameter.
+ * @return Description of the return value.
+ */
+```
+
+- Use `@param` (not `\param`).
+- Use `@return` (not `\return` or `@returns`).
+- For structs/typedefs, document fields inline with `/**< */`.
+
+#### 4.5.2 Implementations (`*.c`) — Line-by-line comments
+
+Every implemented function **must** document its internal logic with `/* ... */` or `//` comments that explain **what each line or block does** and, when relevant, **why** it is done that way.
+
+The goal is not to parrot the C code — it is to explain the intent:
+
+```c
+/* Walk the transition table — O(n) */
+for (size_t i = 0; i < state->count; i++) {
+    /* Grab a pointer to the i-th rule (avoids copying the struct) */
+    const zenit_state_transition_t *t = &state->table[i];
+```
+
+#### 4.5.3 Documentation verification
+
+Before marking a task as complete, the agent must:
+
+1. Verify that every new public function has a Doxygen docblock in its header.
+2. Verify that every new implementation has line-by-line comments.
 
 ### 4.6 Include guards
 
@@ -442,3 +481,20 @@ Update AGENTS.md whenever you encounter:
 ### 12.4 Review on entry
 
 Every agent **must** read AGENTS.md at the start of a session to ensure awareness of the latest conventions and project state.
+
+---
+
+## 13. Merge closure protocol
+
+When the user says **"Acabo de fusionar tu rama"** (or any variant indicating the merge is complete), the agent must run:
+
+```
+git checkout master
+git pull
+```
+
+This ensures the agent returns to the main branch with the latest merged code.
+
+- Do not fetch or rebase unless explicitly instructed.
+- If the current branch is already `master`, still run `git pull` to update.
+- Report the result of `git pull` to the user (fast-forward or already up-to-date).

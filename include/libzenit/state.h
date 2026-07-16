@@ -20,25 +20,80 @@
 
 #include <stddef.h>
 
+/**
+ * @brief Callback invoked when a state transition occurs.
+ *
+ * @param event      The event that triggered the transition.
+ * @param from_state The state the machine was in before the transition.
+ * @param to_state   The state the machine transitions to.
+ * @param context    Opaque user pointer forwarded from the process_event call.
+ */
 typedef void (*zenit_state_callback_t)(int event, int from_state, int to_state, void *context);
 
+/**
+ * @brief A single entry in the state transition table.
+ *
+ * Defines a directed edge in the state machine: when the current state equals
+ * @p from_state and the incoming event equals @p event, the machine moves to
+ * @p to_state and (if set) fires @p on_transition.
+ */
 typedef struct {
-    int from_state;
-    int event;
-    int to_state;
-    zenit_state_callback_t on_transition;
+    int from_state;                /**< Source state that triggers this rule */
+    int event;                     /**< Event that triggers this rule */
+    int to_state;                  /**< Target state after the transition */
+    zenit_state_callback_t on_transition; /**< Optional callback (may be NULL) */
 } zenit_state_transition_t;
 
+/** @brief Opaque handle for a finite-state machine instance. */
 typedef struct zenit_state_t zenit_state_t;
 
+/**
+ * @brief Allocate and initialise a state machine.
+ *
+ * The caller must keep @p table alive for the lifetime of the returned state
+ * machine. The table is not copied internally.
+ *
+ * @param table         Pointer to an array of transition rules.
+ * @param count         Number of elements in @p table.
+ * @param initial_state State the machine starts in.
+ * @return Opaque handle, or NULL on allocation failure.
+ */
 zenit_state_t *zenit_state_allocate(
     const zenit_state_transition_t *table,
     size_t count,
     int initial_state
 );
 
-int  zenit_state_process_event(zenit_state_t *state, int event, void *context);
-int  zenit_get_last_state(const zenit_state_t *state);
+/**
+ * @brief Feed an event into the state machine.
+ *
+ * Walks the transition table linearly looking for a rule where
+ * @c from_state matches the current state and @c event matches the event.
+ * On match the machine transitions and (if present) fires the callback.
+ *
+ * @param state   Opaque handle obtained from zenit_state_allocate().
+ * @param event   Event to process.
+ * @param context Opaque user pointer forwarded to the transition callback.
+ * @return 0 on success (transition found), -1 if no matching rule exists.
+ */
+int zenit_state_process_event(zenit_state_t *state, int event, void *context);
+
+/**
+ * @brief Read the current state without modifying the machine.
+ *
+ * @param state Opaque handle.
+ * @return The current internal state value.
+ */
+int zenit_get_last_state(const zenit_state_t *state);
+
+/**
+ * @brief Release all memory owned by a state machine.
+ *
+ * Does NOT free the transition table — that is the caller's responsibility.
+ * Passing NULL is safe and is a no-op.
+ *
+ * @param state Opaque handle, or NULL.
+ */
 void zenit_state_deallocate(zenit_state_t *state);
 
 #endif

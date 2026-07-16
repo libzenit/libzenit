@@ -18,13 +18,21 @@
 #ifndef LIBZENIT_VERSION_H
 #define LIBZENIT_VERSION_H
 
+/**
+ * @brief Version descriptor for the libzenit library.
+ */
 typedef struct {
-    int major;
-    int minor;
-    int patch;
-    const char* name;
+    int major;      /**< Major version — incremented on breaking changes */
+    int minor;      /**< Minor version — incremented on feature additions */
+    int patch;      /**< Patch version — incremented on bug fixes */
+    const char* name; /**< Pre-release / codename label (e.g. "alpha") */
 } libzenit_version_t;
 
+/**
+ * @brief Retrieve the compiled-in library version.
+ *
+ * @return A fully populated libzenit_version_t describing the current release.
+ */
 libzenit_version_t libzenit_version(void);
 
 #endif
