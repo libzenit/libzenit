@@ -23,5 +23,6 @@
 #include <libzenit/state.h>
 #include <libzenit/arena.h>
 #include <libzenit/benchmark.h>
+#include <libzenit/ring.h>
 
 #endif

@@ -17,36 +17,7 @@
 
 #include <libzenit/arena.h>
 #include <stdio.h>
-#include <stdlib.h>
-
-/* Control malloc/calloc failures across allocation sites.
- * -1  → never fail
- *  0  → fail next call
- *  >0 → fail after N successful calls
- */
-static int malloc_fail_countdown = -1;
-
-void *__real_malloc(size_t size);
-void *__wrap_malloc(size_t size) {
-    if (malloc_fail_countdown == 0) {
-        return NULL;
-    }
-    if (malloc_fail_countdown > 0) {
-        malloc_fail_countdown--;
-    }
-    return __real_malloc(size);
-}
-
-void *__real_calloc(size_t nmemb, size_t size);
-void *__wrap_calloc(size_t nmemb, size_t size) {
-    if (malloc_fail_countdown == 0) {
-        return NULL;
-    }
-    if (malloc_fail_countdown > 0) {
-        malloc_fail_countdown--;
-    }
-    return __real_calloc(nmemb, size);
-}
+#include "test_malloc_fail.h"
 
 /* Helper: run a test block with forced malloc/calloc failure at step N.
  * Resets countdown to -1 before any output to keep printf/stdio safe. */

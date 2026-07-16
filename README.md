@@ -2,7 +2,7 @@
   <img src="media/logo.svg" alt="LibZenit" width="180">
 </p>
 
-Portable C library providing building blocks for systems programming: a **typed result type with error codes**, a **finite-state machine engine**, a **fixed-block arena allocator**, a **benchmark framework**, and a **version API**.
+Portable C library providing building blocks for systems programming: a **typed result type with error codes**, a **ring buffer**, a **finite-state machine engine**, a **fixed-block arena allocator**, a **benchmark framework**, and a **version API**.
 
 <p align="center">
 <a href="https://github.com/libzenit/libzenit/actions/workflows/ci.yml"><img src="https://github.com/libzenit/libzenit/actions/workflows/ci.yml/badge.svg?branch=master" alt="CI Status"></a>
@@ -147,6 +147,27 @@ Minimal benchmarking harness used by all project benchmarks. Uses `clock_gettime
 
 ---
 
+### 5. Ring Buffer — `include/libzenit/ring.h`
+
+Fixed-capacity byte-level circular FIFO buffer with wrap-around support. Push fails on full, pop fails on empty — no overwrite.
+
+| Function | Description |
+|---|---|
+| `zenit_ring_create(capacity)` | Create a ring buffer; returns `NULL` on OOM or zero capacity |
+| `zenit_ring_destroy(ring)` | Free all memory; NULL-safe |
+| `zenit_ring_push(ring, data, size)` | Push bytes; returns `zenit_result_t` (`ZENIT_OK` / `ZENIT_ERROR_NULL` / `ZENIT_ERROR_PARAM` / `ZENIT_ERROR_FULL`) |
+| `zenit_ring_pop(ring, data, size)` | Pop oldest bytes; returns `zenit_result_t` (`ZENIT_OK` / `ZENIT_ERROR_NULL` / `ZENIT_ERROR_PARAM` / `ZENIT_ERROR_EMPTY`) |
+| `zenit_ring_peek(ring, data, size)` | Read without consuming; same returns as pop |
+| `zenit_ring_count(ring)` | Bytes currently stored (0 if NULL) |
+| `zenit_ring_capacity(ring)` | Maximum bytes (0 if NULL) |
+| `zenit_ring_clear(ring)` | Reset without freeing; NULL-safe |
+
+- **Source:** [`src/ring.c`](src/ring.c)
+- **Tests:** [`tests/test_ring.c`](tests/test_ring.c) (10 sub-tests: create/destroy, push/pop, full, empty, peek, wrap-around, clear, edge cases, chunks), [`tests/test_ring_malloc_fail.c`](tests/test_ring_malloc_fail.c) (allocation failure via shared `test_malloc_fail.h`)
+- **Benchmark:** [`benchmarks/benchmark_ring.c`](benchmarks/benchmark_ring.c) — sequential push/pop 128B, 1KB, full-miss
+
+---
+
 ## Build Options
 
 | Option | Default | Description |
@@ -174,28 +195,34 @@ libzen/
 │       ├── version.h           # Version API
 │       ├── state.h             # State machine API
 │       ├── arena.h             # Arena allocator API
-│       └── benchmark.h         # Benchmark framework API
+│       ├── benchmark.h         # Benchmark framework API
+│       └── ring.h              # Ring buffer API
 ├── src/
 │   ├── CMakeLists.txt          # Library target: static libzenit
 │   ├── result.c
 │   ├── version.c
 │   ├── state.c
 │   ├── arena.c
-│   └── benchmark.c
+│   ├── benchmark.c
+│   └── ring.c
 ├── tests/
-│   ├── CMakeLists.txt          # 7 test executables
-│   ├── test_result.c           # 9 error codes + macro helpers
+│   ├── CMakeLists.txt          # 9 test executables
+│   ├── test_malloc_fail.h      # Shared malloc/calloc wrappers
+│   ├── test_result.c           # 11 error codes + macro helpers
 │   ├── test_version.c
 │   ├── test_state.c
 │   ├── test_state_malloc_fail.c
 │   ├── test_arena.c            # 16 sub-tests
 │   ├── test_arena_malloc_fail.c # 4 sub-tests
+│   ├── test_ring.c             # 10 sub-tests
+│   ├── test_ring_malloc_fail.c # 2 sub-tests
 │   └── test_benchmark.c
 ├── benchmarks/
-│   ├── CMakeLists.txt          # 3 benchmark executables (label: "benchmark")
+│   ├── CMakeLists.txt          # 4 benchmark executables (label: "benchmark")
 │   ├── benchmark_version.c
 │   ├── benchmark_state.c       # 3 cases (8-state, 1024-state, miss)
-│   └── benchmark_arena.c       # 7 cases (arena vs malloc)
+│   ├── benchmark_arena.c       # 7 cases (arena vs malloc)
+│   └── benchmark_ring.c        # 3 cases (seq 128B, seq 1K, full-miss)
 ├── scripts/
 │   ├── benchmark_report.py     # CI benchmark log → BENCHMARK.md + charts
 │   └── checksum.py             # Release SHA-256 generator
@@ -242,4 +269,4 @@ libzen/
 
 ## Status
 
-Current version `0.1.0` — **alpha**. All five modules are implemented, fully tested, benchmarked, and passing CI across all platforms and sanitizers. The API is stable but may evolve before `1.0.0`.
+Current version `0.1.0` — **alpha**. All six modules are implemented, fully tested, benchmarked, and passing CI across all platforms and sanitizers. The API is stable but may evolve before `1.0.0`.

@@ -17,22 +17,17 @@
 
 #include <libzenit/state.h>
 #include <stdio.h>
-#include <stdlib.h>
-
-static int malloc_fail_once = 1;
-
-void *__real_malloc(size_t size);
-void *__wrap_malloc(size_t size) {
-    if (malloc_fail_once) {
-        malloc_fail_once = 0;
-        return NULL;
-    }
-    return __real_malloc(size);
-}
+#include "test_malloc_fail.h"
 
 int main(void) {
     zenit_state_transition_t t = {0, 0, 0, NULL};
-    const zenit_state_t *state = zenit_state_allocate(&t, 1, 0);
+
+    const zenit_state_t *state;
+    /* Wrap only the first call; reset immediately so stdio works. */
+    malloc_fail_countdown = 0;
+    state = zenit_state_allocate(&t, 1, 0);
+    malloc_fail_countdown = -1;
+
     if (state == NULL) {
         printf("PASS: malloc failure returns NULL\n");
         return 0;

@@ -347,18 +347,15 @@ add_test(NAME test_my_feature COMMAND test_my_feature)
 ### 6.3 What to test
 - **Happy path** — normal operation
 - **Edge cases** — NULL pointers, empty tables, invalid events
-- **Allocation failure** — use `--wrap=malloc` (see existing `test_state_malloc_fail.c`):
+- **Allocation failure** — use `--wrap=malloc` with the shared helper header `tests/test_malloc_fail.h` (see `test_ring_malloc_fail.c` for a minimal example):
 
 ```c
-static int malloc_fail_once = 1;
+#include "test_malloc_fail.h"
 
-void *__real_malloc(size_t size);
-void *__wrap_malloc(size_t size) {
-    if (malloc_fail_once) {
-        malloc_fail_once = 0;
-        return NULL;
-    }
-    return __real_malloc(size);
+int main(void) {
+    malloc_fail_countdown = 0;  // fail next malloc/calloc
+    void *p = malloc(1024);
+    if (p == NULL) { /* success */ }
 }
 ```
 
@@ -437,28 +434,34 @@ libzen/
     │       ├── version.h       # Version API
     │       ├── state.h         # State machine API
     │       ├── arena.h         # Arena allocator API
-    │       └── benchmark.h     # Benchmark framework API
+    │       ├── benchmark.h     # Benchmark framework API
+    │       └── ring.h          # Ring buffer API
     ├── src/
     │   ├── CMakeLists.txt
     │   ├── result.c            # Error string conversion
     │   ├── version.c
     │   ├── state.c
     │   ├── arena.c             # Arena allocator impl (free-list, bitmap, boundary tags)
-    │   └── benchmark.c         # Benchmark runner impl (clock_gettime / QueryPerformanceCounter)
+    │   ├── benchmark.c         # Benchmark runner impl (clock_gettime / QueryPerformanceCounter)
+    │   └── ring.c              # Ring buffer impl (circular FIFO, wrap-around)
     ├── tests/
     │   ├── CMakeLists.txt
+    │   ├── test_malloc_fail.h  # Shared malloc/calloc wrappers for --wrap tests
     │   ├── test_result.c       # Error code & macro validation
     │   ├── test_version.c
     │   ├── test_state.c
     │   ├── test_state_malloc_fail.c
     │   ├── test_arena.c        # Arena happy path, edge cases, coalescing, corruption
     │   ├── test_arena_malloc_fail.c  # Malloc/calloc failure via --wrap
+    │   ├── test_ring.c         # Ring buffer happy path, wrap-around, edge cases
+    │   ├── test_ring_malloc_fail.c   # Malloc/calloc failure via --wrap
     │   └── test_benchmark.c    # Benchmark API validation & coverage
 ├── benchmarks/
-│   ├── CMakeLists.txt
-│   ├── benchmark_version.c     # Version call throughput
-│   ├── benchmark_state.c       # State-machine transition throughput
-│   └── benchmark_arena.c       # Arena allocator throughput (vs malloc baseline)
+    │   ├── CMakeLists.txt
+    │   ├── benchmark_version.c     # Version call throughput
+    │   ├── benchmark_state.c       # State-machine transition throughput
+    │   ├── benchmark_arena.c       # Arena allocator throughput (vs malloc baseline)
+    │   └── benchmark_ring.c        # Ring buffer throughput (seq 128B, 1K, full-miss)
 ├── scripts/
 │   ├── checksum.py         # Release checksum generator
 │   └── benchmark_report.py # Benchmark log parser & report generator (BENCHMARK.md + charts)

@@ -21,6 +21,7 @@ add_library(zenit STATIC
   state.c
   arena.c
   benchmark.c
+  ring.c
 )
 
 target_include_directories(zenit

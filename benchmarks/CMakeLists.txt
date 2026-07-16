@@ -45,6 +45,12 @@ target_link_libraries(benchmark_arena PRIVATE zenit)
 add_test(NAME benchmark_arena COMMAND benchmark_arena)
 set_tests_properties(benchmark_arena PROPERTIES LABELS "benchmark")
 
+# Ring-buffer throughput
+add_executable(benchmark_ring benchmark_ring.c)
+target_link_libraries(benchmark_ring PRIVATE zenit)
+add_test(NAME benchmark_ring COMMAND benchmark_ring)
+set_tests_properties(benchmark_ring PROPERTIES LABELS "benchmark")
+
 # Convenience target — runs all benchmarks sequentially
 add_custom_target(benchmark
   COMMAND ${CMAKE_COMMAND} -E echo ""
@@ -53,6 +59,7 @@ add_custom_target(benchmark
   COMMAND "$<TARGET_FILE:benchmark_version>"
   COMMAND "$<TARGET_FILE:benchmark_state>"
   COMMAND "$<TARGET_FILE:benchmark_arena>"
+  COMMAND "$<TARGET_FILE:benchmark_ring>"
   COMMAND ${CMAKE_COMMAND} -E echo ""
   COMMAND ${CMAKE_COMMAND} -E echo "===== Done ====="
   USES_TERMINAL

@@ -38,6 +38,8 @@ const char* zenit_error_string(zenit_error_t error) {
         case ZENIT_ERROR_DOUBLE_FREE: return "double free";
         case ZENIT_ERROR_STATE:  return "invalid state";
         case ZENIT_ERROR_SIZE:   return "size mismatch";
+        case ZENIT_ERROR_FULL:   return "buffer full";
+        case ZENIT_ERROR_EMPTY:  return "buffer empty";
     }
     /* Fallback — defensive; should never reach here unless a new error code
      * was added to the enum without a corresponding case. */
