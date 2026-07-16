@@ -15,12 +15,22 @@
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //
 
-#ifndef LIBZENIT_H
-#define LIBZENIT_H
-
-#include <libzenit/version.h>
-#include <libzenit/state.h>
-#include <libzenit/arena.h>
 #include <libzenit/benchmark.h>
+#include <libzenit/version.h>
 
-#endif
+/* Benchmark: measure libzenit_version() call overhead.
+ * The volatile qualifier prevents the compiler from eliding the call. */
+static void bench_libzenit_version(void* ctx) {
+    (void)ctx;
+
+    volatile libzenit_version_t v = libzenit_version();
+    (void)v;
+}
+
+int main(void) {
+    zenit_bench_result_t r = zenit_bench_run(
+        "libzenit_version", bench_libzenit_version, NULL, 100000000
+    );
+    zenit_bench_print(&r);
+    return 0;
+}

@@ -75,7 +75,7 @@ jobs:
         run: cmake --build build --config ${{ matrix.build_type }} --parallel
 
       - name: Test
-        run: ctest --test-dir build --output-on-failure -C ${{ matrix.build_type }} --parallel -V
+        run: ctest --test-dir build --output-on-failure -C ${{ matrix.build_type }} --parallel -V -LE benchmark
 
       - name: Install lcov
         if: matrix.coverage
@@ -196,7 +196,44 @@ jobs:
         run: cmake --build build --parallel --config Debug
 
       - name: Test
-        run: ctest --test-dir build --output-on-failure --parallel -C Debug -V
+        run: ctest --test-dir build --output-on-failure --parallel -C Debug -V -LE benchmark
+
+  benchmark:
+    if: github.ref_type != 'tag'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            compiler: gcc
+          - os: ubuntu-24.04-arm
+            compiler: gcc
+          - os: macos-latest
+            compiler: clang
+
+    runs-on: ${{ matrix.os }}
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up compiler
+        run: |
+          echo "CC=${{ matrix.compiler == 'gcc' && 'gcc' || 'clang' }}" >> $GITHUB_ENV
+          echo "CXX=${{ matrix.compiler == 'gcc' && 'g++' || 'clang++' }}" >> $GITHUB_ENV
+
+      - name: Configure
+        run: |
+          cmake -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DLIBZENIT_BUILD_TESTS=OFF \
+            -DLIBZENIT_BUILD_BENCHMARKS=ON
+
+      - name: Build
+        run: cmake --build build --parallel --config Release
+
+      - name: Run benchmarks
+        run: ctest --test-dir build -L benchmark --output-on-failure -V
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')
