@@ -447,7 +447,8 @@ libzen/
 │   ├── benchmark_state.c       # State-machine transition throughput
 │   └── benchmark_arena.c       # Arena allocator throughput (vs malloc baseline)
 ├── scripts/
-│   └── checksum.py         # Release checksum generator
+│   ├── checksum.py         # Release checksum generator
+│   └── benchmark_report.py # Benchmark log parser & report generator (BENCHMARK.md + charts)
 ├── codecov.yaml            # Codecov configuration
 ├── AGENTS.md               # This file
 ├── LICENSE                 # AGPL-3.0
