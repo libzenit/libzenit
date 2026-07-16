@@ -18,6 +18,7 @@
 #ifndef LIBZENIT_STATE_H
 #define LIBZENIT_STATE_H
 
+#include <libzenit/result.h>
 #include <stddef.h>
 
 /**
@@ -74,9 +75,10 @@ zenit_state_t *zenit_state_allocate(
  * @param state   Opaque handle obtained from zenit_state_allocate().
  * @param event   Event to process.
  * @param context Opaque user pointer forwarded to the transition callback.
- * @return 0 on success (transition found), -1 if no matching rule exists.
+ * @return ZENIT_RESULT_OK on transition, or ZENIT_RESULT_ERROR(ZENIT_ERROR_NOT_FOUND)
+ *         if no matching rule exists.
  */
-int zenit_state_process_event(zenit_state_t *state, int event, void *context);
+zenit_result_t zenit_state_process_event(zenit_state_t *state, int event, void *context);
 
 /**
  * @brief Read the current state without modifying the machine.

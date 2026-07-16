@@ -18,6 +18,7 @@
 #ifndef LIBZENIT_H
 #define LIBZENIT_H
 
+#include <libzenit/result.h>
 #include <libzenit/version.h>
 #include <libzenit/state.h>
 #include <libzenit/arena.h>

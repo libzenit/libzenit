@@ -16,6 +16,7 @@
 #
 
 add_library(zenit STATIC
+  result.c
   version.c
   state.c
   arena.c

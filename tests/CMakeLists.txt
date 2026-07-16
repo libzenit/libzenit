@@ -26,6 +26,19 @@ if(LIBZENIT_BUILD_COVERAGE)
   target_link_options(test_libzenit PRIVATE --coverage)
 endif()
 
+add_executable(test_result
+  test_result.c
+)
+
+target_link_libraries(test_result PRIVATE zenit)
+
+if(LIBZENIT_BUILD_COVERAGE)
+  target_compile_options(test_result PRIVATE --coverage -g -O0)
+  target_link_options(test_result PRIVATE --coverage)
+endif()
+
+add_test(NAME test_result COMMAND test_result)
+
 add_executable(test_state
   test_state.c
 )

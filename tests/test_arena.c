@@ -16,6 +16,7 @@
 //
 
 #include <libzenit/arena.h>
+#include <libzenit/result.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -67,7 +68,7 @@ static int test_acquire_release(void) {
     zenit_usable_arena_t *ua = zenit_arena_acquire(a, 30 * MB);
     if (ua == NULL) { FAIL("acquire returned NULL"); return 1; }
 
-    if (zenit_arena_release(a, ua) != 0) {
+    if (zenit_arena_release(a, ua).error != ZENIT_OK) {
         FAIL("release should succeed");
         return 1;
     }
@@ -167,12 +168,12 @@ static int test_buffer_alloc_free(void) {
         return 1;
     }
 
-    if (zenit_usable_buffer_free(&buf) != 0) {
+    if (zenit_usable_buffer_free(&buf).error != ZENIT_OK) {
         FAIL("free returned error");
         return 1;
     }
 
-    if (zenit_arena_release(a, ua) != 0) {
+    if (zenit_arena_release(a, ua).error != ZENIT_OK) {
         FAIL("release");
         return 1;
     }
@@ -192,18 +193,18 @@ static int test_double_free(void) {
     if (buf.data == NULL) { FAIL("allocate"); return 1; }
 
     /* First free should succeed */
-    if (zenit_usable_buffer_free(&buf) != 0) {
+    if (zenit_usable_buffer_free(&buf).error != ZENIT_OK) {
         FAIL("first free failed");
         return 1;
     }
 
     /* Second free of same buffer should fail (double-free detection) */
-    if (zenit_usable_buffer_free(&buf) != -1) {
+    if (zenit_usable_buffer_free(&buf).error != ZENIT_ERROR_DOUBLE_FREE) {
         FAIL("double-free not detected");
         return 1;
     }
 
-    if (zenit_arena_release(a, ua) != 0) {
+    if (zenit_arena_release(a, ua).error != ZENIT_OK) {
         FAIL("release");
         return 1;
     }
@@ -227,19 +228,19 @@ static int test_buffer_edge_cases(void) {
     }
 
     /* Free NULL buffer */
-    if (zenit_usable_buffer_free(NULL) != -1) {
-        FAIL("free(NULL) should return -1");
+    if (zenit_usable_buffer_free(NULL).error != ZENIT_ERROR_NULL) {
+        FAIL("free(NULL) should return ZENIT_ERROR_NULL");
         return 1;
     }
 
     /* Free buffer with NULL data */
     zenit_usable_buffer_t bnull = { NULL, 0 };
-    if (zenit_usable_buffer_free(&bnull) != -1) {
-        FAIL("free with NULL data should return -1");
+    if (zenit_usable_buffer_free(&bnull).error != ZENIT_ERROR_NULL) {
+        FAIL("free with NULL data should return ZENIT_ERROR_NULL");
         return 1;
     }
 
-    if (zenit_arena_release(a, ua) != 0) {
+    if (zenit_arena_release(a, ua).error != ZENIT_OK) {
         FAIL("release");
         return 1;
     }
@@ -262,7 +263,7 @@ static int test_allocate_too_large(void) {
         return 1;
     }
 
-    if (zenit_arena_release(a, ua) != 0) {
+    if (zenit_arena_release(a, ua).error != ZENIT_OK) {
         FAIL("release");
         return 1;
     }
@@ -289,19 +290,19 @@ static int test_multiple_buffers(void) {
     }
 
     /* Free middle buffer */
-    if (zenit_usable_buffer_free(&b2) != 0) {
+    if (zenit_usable_buffer_free(&b2).error != ZENIT_OK) {
         FAIL("free b2");
         return 1;
     }
 
     /* Free first buffer */
-    if (zenit_usable_buffer_free(&b1) != 0) {
+    if (zenit_usable_buffer_free(&b1).error != ZENIT_OK) {
         FAIL("free b1");
         return 1;
     }
 
     /* Free last buffer */
-    if (zenit_usable_buffer_free(&b3) != 0) {
+    if (zenit_usable_buffer_free(&b3).error != ZENIT_OK) {
         FAIL("free b3");
         return 1;
     }
@@ -314,12 +315,12 @@ static int test_multiple_buffers(void) {
         return 1;
     }
 
-    if (zenit_usable_buffer_free(&big) != 0) {
+    if (zenit_usable_buffer_free(&big).error != ZENIT_OK) {
         FAIL("free big");
         return 1;
     }
 
-    if (zenit_arena_release(a, ua) != 0) {
+    if (zenit_arena_release(a, ua).error != ZENIT_OK) {
         FAIL("release");
         return 1;
     }
@@ -339,18 +340,18 @@ static int test_release_with_outstanding(void) {
     if (buf.data == NULL) { FAIL("allocate"); return 1; }
 
     /* Release should fail because buffer is still IN_USE */
-    if (zenit_arena_release(a, ua) != -1) {
-        FAIL("expected -1 for release with outstanding buffers");
+    if (zenit_arena_release(a, ua).error != ZENIT_ERROR_STATE) {
+        FAIL("expected ZENIT_ERROR_STATE for release with outstanding buffers");
         return 1;
     }
 
     /* Free buffer, then release should work */
-    if (zenit_usable_buffer_free(&buf) != 0) {
+    if (zenit_usable_buffer_free(&buf).error != ZENIT_OK) {
         FAIL("free");
         return 1;
     }
 
-    if (zenit_arena_release(a, ua) != 0) {
+    if (zenit_arena_release(a, ua).error != ZENIT_OK) {
         FAIL("release after free");
         return 1;
     }
@@ -369,16 +370,16 @@ static int test_arena_edge_cases(void) {
     }
 
     /* release(NULL, ...) */
-    if (zenit_arena_release(NULL, (zenit_usable_arena_t *)1) != -1) {
-        FAIL("release(NULL, ...) should return -1");
+    if (zenit_arena_release(NULL, (zenit_usable_arena_t *)1).error != ZENIT_ERROR_NULL) {
+        FAIL("release(NULL, ...) should return ZENIT_ERROR_NULL");
         return 1;
     }
 
     /* release(..., NULL) */
     zenit_arena_t *a = zenit_arena_create(100 * MB, 10 * MB);
     if (a == NULL) { FAIL("create"); return 1; }
-    if (zenit_arena_release(a, NULL) != -1) {
-        FAIL("release(..., NULL) should return -1");
+    if (zenit_arena_release(a, NULL).error != ZENIT_ERROR_NULL) {
+        FAIL("release(..., NULL) should return ZENIT_ERROR_NULL");
         return 1;
     }
 
@@ -434,7 +435,7 @@ static int test_multiple_usable_arenas(void) {
      * 3-4 are free (from ua2), 5-6 free (from ua2), 7-8 used by ua3.
      * So we have blocks 3-6 (4 contiguous blocks = 40 MB). Acquiring 20 MB
      * should work. */
-    if (zenit_arena_release(a, ua2) != 0) {
+    if (zenit_arena_release(a, ua2).error != ZENIT_OK) {
         FAIL("release ua2");
         return 1;
     }
@@ -485,7 +486,7 @@ static int test_release_corrupted(void) {
     zenit_usable_buffer_t b = zenit_usable_arena_allocate(ua, 64);
     if (b.data == NULL) { FAIL("alloc"); return 1; }
 
-    if (zenit_usable_buffer_free(&b) != 0) { FAIL("free"); return 1; }
+    if (zenit_usable_buffer_free(&b).error != ZENIT_OK) { FAIL("free"); return 1; }
 
     /* The header is immediately before the data pointer.
      * On x86-64 (GCC/Clang): sizeof(header)=40, size field at offset 16.
@@ -496,8 +497,8 @@ static int test_release_corrupted(void) {
     *size_field = 0;
 
     /* Release must detect the corrupted block and refuse */
-    int ret = zenit_arena_release(a, ua);
-    if (ret != -1) {
+    zenit_result_t ret = zenit_arena_release(a, ua);
+    if (ret.error != ZENIT_ERROR_CORRUPT) {
         *size_field = saved_size;
         FAIL("release should detect corrupted block (size==0)");
         return 1;
@@ -506,7 +507,7 @@ static int test_release_corrupted(void) {
     /* Restore the corrupted field and re-release to clean up the handle.
      * After restoration the traversal will succeed and free the ua. */
     *size_field = saved_size;
-    if (zenit_arena_release(a, ua) != 0) {
+    if (zenit_arena_release(a, ua).error != ZENIT_OK) {
         FAIL("second release should succeed after restoration");
         zenit_arena_destroy(a);
         return 1;
@@ -538,13 +539,13 @@ static int test_buffer_split(void) {
     if (b3.data == NULL) { FAIL("b3 alloc"); return 1; }
 
     /* Free b2 (middle) — b1 and b3 remain, b2 goes to free list */
-    if (zenit_usable_buffer_free(&b2) != 0) { FAIL("free b2"); return 1; }
+    if (zenit_usable_buffer_free(&b2).error != ZENIT_OK) { FAIL("free b2"); return 1; }
 
     /* Free b1 — should coalesce with b2 if adjacent */
-    if (zenit_usable_buffer_free(&b1) != 0) { FAIL("free b1"); return 1; }
+    if (zenit_usable_buffer_free(&b1).error != ZENIT_OK) { FAIL("free b1"); return 1; }
 
     /* Free b3 */
-    if (zenit_usable_buffer_free(&b3) != 0) { FAIL("free b3"); return 1; }
+    if (zenit_usable_buffer_free(&b3).error != ZENIT_OK) { FAIL("free b3"); return 1; }
 
     /* Allocate a big chunk to verify coalescing */
     zenit_usable_buffer_t big = zenit_usable_arena_allocate(ua, 20 * MB);
@@ -553,9 +554,12 @@ static int test_buffer_split(void) {
         return 1;
     }
 
-    if (zenit_usable_buffer_free(&big) != 0) { FAIL("free big"); return 1; }
+    if (zenit_usable_buffer_free(&big).error != ZENIT_OK) { FAIL("free big"); return 1; }
 
-    if (zenit_arena_release(a, ua) != 0) { FAIL("release"); return 1; }
+    if (zenit_arena_release(a, ua).error != ZENIT_OK) {
+        FAIL("release");
+        return 1;
+    }
     zenit_arena_destroy(a);
     return 0;
 }
