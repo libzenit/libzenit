@@ -31,6 +31,9 @@ Usage:
 Each log file should contain raw CTest output (the full log from the
 "Run benchmarks" step).  The script extracts lines matching the
 zenit_bench_print format.
+
+New benchmarks are auto-categorised by name prefix — update PREFIX_MAP
+when adding a new module so it gets its own chart category.
 """
 
 import argparse
@@ -51,16 +54,34 @@ BENCH_LINE_RE = re.compile(
     r'(?P<ops>[\d.]+)\s+ops/s'
 )
 
-# Benchmarks grouped by category for the report
-CATEGORIES = {
-    "Version":        ["libzenit_version"],
-    "State Machine":  ["state_seq_8", "state_seq_1024", "state_miss"],
-    "Arena (overhead)": ["arena_create_destroy", "arena_acquire_release"],
-    "Arena (alloc)":  ["arena_alloc_free_8", "arena_alloc_free_64",
-                       "arena_alloc_free_4k"],
-    "malloc (baseline)": ["malloc_free_8", "malloc_free_64", "malloc_free_4k"],
-    "Ring Buffer":    ["ring_seq_128", "ring_seq_1k", "ring_full_miss"],
+# Map benchmark name prefix → display category.
+# Add a new entry here when a module is added so it gets its own chart.
+PREFIX_MAP = {
+    "libzenit_version": "Version",
+    "state_": "State Machine",
+    "arena_create_destroy": "Arena (overhead)",
+    "arena_acquire_release": "Arena (overhead)",
+    "arena_alloc_free": "Arena (alloc)",
+    "malloc_free": "malloc (baseline)",
+    "ring_": "Ring Buffer",
 }
+
+
+def categorize(bench_name: str) -> str:
+    """Determine category from benchmark name prefix."""
+    for prefix, category in PREFIX_MAP.items():
+        if bench_name.startswith(prefix):
+            return category
+    return "Other"
+
+
+def build_categories(data: dict) -> dict[str, list[str]]:
+    """Group benchmark names by auto-detected category."""
+    cats: dict[str, list[str]] = {}
+    for bench in data:
+        cat = categorize(bench)
+        cats.setdefault(cat, []).append(bench)
+    return cats
 
 
 def parse_log(text: str):
@@ -73,10 +94,8 @@ def parse_log(text: str):
     """
     results = {}
     for line in text.splitlines():
-        # Strip CTest prefix: "1: libzenit_version  ..." -> "libzenit_version  ..."
         clean = line
         if ":" in line:
-            # Only strip if the prefix looks like "N: " (CTest test number)
             parts = line.split(":", 1)
             if len(parts) == 2 and parts[0].strip().isdigit():
                 clean = parts[1]
@@ -167,22 +186,12 @@ def _plot_grouped_bars(data: dict, env_names: list[str], bench_names: list[str],
     return fig, ax
 
 
-def _chart_overview(data: dict, env_names: list[str], colors: list) -> tuple:
-    """Generate the overview log-scale chart. Returns (alt_text, rel_path)."""
-    fig, ax = _plot_grouped_bars(data, env_names, list(data.keys()),
-                                 colors, True, (12, 5), 6, 45)
-    ax.set_ylabel("Operations / second (log scale)")
-    ax.set_title("LibZenit Benchmark Overview")
-    path = _chart_path("overview.png")
-    fig.savefig(path, dpi=150)
-    plt.close(fig)
-    return ("Benchmark Overview", "benchmark_charts/overview.png")
-
-
-def _chart_categories(data: dict, env_names: list[str], colors: list) -> list[tuple]:
+def _chart_categories(data: dict, env_names: list[str],
+                      categories: dict[str, list[str]], colors: list) -> list[tuple]:
     """Generate one linear-scale chart per category. Returns list of tuples."""
     out = []
-    for cat_name, members in CATEGORIES.items():
+    for cat_name in sorted(categories):
+        members = categories[cat_name]
         present = [b for b in members if b in data]
         if not present:
             continue
@@ -201,7 +210,7 @@ def _chart_categories(data: dict, env_names: list[str], colors: list) -> list[tu
     return out
 
 
-def generate_charts(data: dict, env_names: list[str]):
+def generate_charts(data: dict, env_names: list[str], categories: dict[str, list[str]]):
     """Generate PNG chart files and return a list of (alt_text, rel_path)."""
     if not HAS_MPL:
         return []
@@ -210,9 +219,7 @@ def generate_charts(data: dict, env_names: list[str]):
     cmap = plt.colormaps.get("Set2")
     colors = [cmap(i / max(n_envs - 1, 1)) for i in range(n_envs)]
 
-    charts = [_chart_overview(data, env_names, colors)]
-    charts.extend(_chart_categories(data, env_names, colors))
-    return charts
+    return _chart_categories(data, env_names, categories, colors)
 
 
 # ── report generation ─────────────────────────────────────────────────────
@@ -228,55 +235,32 @@ def _write_environment_table(w, env_names):
     w()
 
 
-def _write_overview_section(w, charts):
-    if not charts:
-        return
-    w("## Overview")
-    w()
-    alt, src = charts[0]
-    w(f'![{alt}]({src})')
-    w()
-    w("All benchmarks on a logarithmic scale. Taller bars are faster.")
-    w()
-
-
-def _bench_order(data):
-    """Return benchmark names ordered by category, then remaining."""
-    ordered = []
-    for members in CATEGORIES.values():
-        for b in members:
-            if b in data and b not in ordered:
-                ordered.append(b)
-    for b in data:
-        if b not in ordered:
-            ordered.append(b)
-    return ordered
-
-
-def _write_results_table(w, data, env_names):
+def _write_results_table(w, data, env_names, categories):
     w("## Results")
     w()
-    header = "| Benchmark | Iterations | " + " | ".join(env_names) + " |"
-    sep = "|---|:---:|" + "|".join(":---:" for _ in env_names) + "|"
+    header = "| Category | Benchmark | Iterations | " + " | ".join(env_names) + " |"
+    sep = "|---|:---|---:|" + "|".join(":---:" for _ in env_names) + "|"
     w(header)
     w(sep)
 
-    for bench in _bench_order(data):
-        iters = data[bench][env_names[0]][0]
-        row = f"| `{bench}` | {iters:,} |"
-        for env in env_names:
-            _, _, ops = data[bench][env]
-            row += f" {fmt_ops(ops)} |"
-        w(row)
+    for cat_name in sorted(categories):
+        members = sorted(categories[cat_name])
+        for bench in members:
+            iters = data[bench][env_names[0]][0]
+            row = f"| {cat_name} | `{bench}` | {iters:,} |"
+            for env in env_names:
+                _, _, ops = data[bench][env]
+                row += f" {fmt_ops(ops)} |"
+            w(row)
     w()
 
 
 def _write_detail_charts(w, charts):
-    if len(charts) <= 1:
+    if not charts:
         return
     w("## Details by Category")
     w()
-    for cat_name, src in charts[1:]:
+    for cat_name, src in charts:
         w(f"### {cat_name}")
         w()
         w(f"![{cat_name}]({src})")
@@ -284,7 +268,8 @@ def _write_detail_charts(w, charts):
 
 
 def generate_report(data: dict, env_names: list[str],
-                    charts: list[tuple[str, str]]) -> str:
+                    charts: list[tuple[str, str]],
+                    categories: dict[str, list[str]]) -> str:
     """Produce the BENCHMARK.md content as a string."""
     lines = []
     def w(s=""): lines.append(s)
@@ -296,8 +281,7 @@ def generate_report(data: dict, env_names: list[str],
     w()
 
     _write_environment_table(w, env_names)
-    _write_overview_section(w, charts)
-    _write_results_table(w, data, env_names)
+    _write_results_table(w, data, env_names, categories)
     _write_detail_charts(w, charts)
 
     w("---")
@@ -351,16 +335,19 @@ def main():
 
     data = build_data(environments)
     env_names = [e[0] for e in environments]
+    categories = build_categories(data)
 
     print(f"Parsed {len(data)} benchmarks across {len(env_names)} environments")
+    for cat, members in sorted(categories.items()):
+        print(f"  {cat}: {', '.join(members)}")
 
-    charts = generate_charts(data, env_names)
+    charts = generate_charts(data, env_names, categories)
     if charts:
         print(f"Generated {len(charts)} chart(s) in {CHARTS_DIR}/")
     else:
         print("Note: install 'matplotlib' for charts", file=sys.stderr)
 
-    md = generate_report(data, env_names, charts)
+    md = generate_report(data, env_names, charts, categories)
     REPORT_PATH.write_text(md, encoding="utf-8")
     print(f"Report written to {REPORT_PATH}")
 
