@@ -20,18 +20,18 @@ All benchmarks on a logarithmic scale. Taller bars are faster.
 
 | Benchmark | Iterations | macOS (Apple Silicon, clang) | Linux ARM64 (gcc) | Linux x86_64 (gcc) |
 |---|:---:|:---:|:---:|:---:|
-| `libzenit_version` | 100,000,000 | 518.68 Mops/s | 533.09 Mops/s | 291.42 Mops/s |
-| `state_seq_8` | 1,000,000 | 28.75 Mops/s | 41.30 Mops/s | 31.47 Mops/s |
-| `state_seq_1024` | 10,000 | 5.34 Kops/s | 6.00 Kops/s | 5.71 Kops/s |
-| `state_miss` | 10,000,000 | 442.81 Mops/s | 424.19 Mops/s | 320.89 Mops/s |
-| `arena_create_destroy` | 500,000 | 1.81 Mops/s | 159.54 Kops/s | 61.92 Kops/s |
-| `arena_acquire_release` | 2,000,000 | 45.91 Mops/s | 55.19 Mops/s | 55.15 Mops/s |
-| `arena_alloc_free_8` | 5,000,000 | 126.20 Mops/s | 101.95 Mops/s | 107.08 Mops/s |
-| `arena_alloc_free_64` | 5,000,000 | 120.72 Mops/s | 102.06 Mops/s | 107.11 Mops/s |
-| `arena_alloc_free_4k` | 500,000 | 118.06 Mops/s | 102.22 Mops/s | 106.97 Mops/s |
-| `malloc_free_8` | 5,000,000 | 999.40 Mops/s | 95.87 Mops/s | 86.95 Mops/s |
-| `malloc_free_64` | 5,000,000 | 1.01 Bops/s | 96.14 Mops/s | 89.32 Mops/s |
-| `malloc_free_4k` | 500,000 | 988.14 Mops/s | 24.69 Mops/s | 23.98 Mops/s |
+| `libzenit_version` | 100,000,000 | 402.06 Mops/s | 532.96 Mops/s | 362.65 Mops/s |
+| `state_seq_8` | 1,000,000 | 18.87 Mops/s | 41.34 Mops/s | 30.08 Mops/s |
+| `state_seq_1024` | 10,000 | 3.73 Kops/s | 6.05 Kops/s | 5.08 Kops/s |
+| `state_miss` | 10,000,000 | 308.67 Mops/s | 424.24 Mops/s | 305.73 Mops/s |
+| `arena_create_destroy` | 500,000 | 1.39 Mops/s | 167.29 Kops/s | 46.28 Kops/s |
+| `arena_acquire_release` | 2,000,000 | 33.62 Mops/s | 55.09 Mops/s | 66.14 Mops/s |
+| `arena_alloc_free_8` | 5,000,000 | 77.50 Mops/s | 102.22 Mops/s | 138.78 Mops/s |
+| `arena_alloc_free_64` | 5,000,000 | 81.93 Mops/s | 102.14 Mops/s | 126.86 Mops/s |
+| `arena_alloc_free_4k` | 500,000 | 91.96 Mops/s | 101.44 Mops/s | 143.45 Mops/s |
+| `malloc_free_8` | 5,000,000 | 670.24 Mops/s | 95.67 Mops/s | 104.12 Mops/s |
+| `malloc_free_64` | 5,000,000 | 626.80 Mops/s | 96.13 Mops/s | 106.74 Mops/s |
+| `malloc_free_4k` | 500,000 | 778.82 Mops/s | 24.74 Mops/s | 26.32 Mops/s |
 
 ## Details by Category
 
