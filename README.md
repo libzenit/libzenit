@@ -2,7 +2,7 @@
   <img src="media/logo.svg" alt="LibZenit" width="180">
 </p>
 
-Portable C library providing building blocks for systems programming: a **finite-state machine engine**, a **fixed-block arena allocator**, a **benchmark framework**, and a **version API**.
+Portable C library providing building blocks for systems programming: a **typed result type with error codes**, a **finite-state machine engine**, a **fixed-block arena allocator**, a **benchmark framework**, and a **version API**.
 
 <p align="center">
 <a href="https://github.com/libzenit/libzenit/actions/workflows/ci.yml"><img src="https://github.com/libzenit/libzenit/actions/workflows/ci.yml/badge.svg?branch=master" alt="CI Status"></a>
@@ -59,6 +59,22 @@ ctest --test-dir build -L benchmark
 
 ## Modules
 
+### 0. Result Type — `include/libzenit/result.h`
+
+Typed error handling replacing raw `int` (0/-1) returns across all public APIs.
+
+| Type / Function | Description |
+|---|---|
+| `zenit_error_t` | Enum with codes: `ZENIT_OK`, `ZENIT_ERROR_NULL`, `ZENIT_ERROR_ALLOC`, `ZENIT_ERROR_PARAM`, `ZENIT_ERROR_NOT_FOUND`, `ZENIT_ERROR_CORRUPT`, `ZENIT_ERROR_DOUBLE_FREE`, `ZENIT_ERROR_STATE`, `ZENIT_ERROR_SIZE` |
+| `zenit_result_t` | Struct wrapping a `zenit_error_t` — returned by all mutator functions |
+| `ZENIT_RESULT_OK` / `ZENIT_RESULT_ERROR(e)` | Macros to construct results inline |
+| `zenit_error_string(code)` | Returns a static human-readable string for any error code |
+
+- **Source:** [`src/result.c`](src/result.c)
+- **Test:** [`tests/test_result.c`](tests/test_result.c) — all 9 codes, fallback, macro helpers
+
+---
+
 ### 1. Version API — `include/libzenit/version.h`
 
 Runtime library version introspection.
@@ -80,7 +96,7 @@ Generic deterministic finite-state machine driven by a transition table. Opaque 
 | Function | Description |
 |---|---|
 | `zenit_state_allocate(table, count, initial)` | Create a state machine; returns `NULL` on allocation failure |
-| `zenit_state_process_event(state, event, ctx)` | Feed an event; returns `0` on match, `-1` on miss |
+| `zenit_state_process_event(state, event, ctx)` | Feed an event; returns `zenit_result_t` (`ZENIT_OK` / `ZENIT_ERROR_NOT_FOUND`) |
 | `zenit_get_last_state(state)` | Read current state (no side-effect) |
 | `zenit_state_deallocate(state)` | Free all memory; NULL-safe |
 
@@ -106,9 +122,9 @@ Fixed-block memory arena with sub-allocation, free-list coalescing, and corrupti
 | `zenit_arena_create(total_size, block_size)` | Create arena; returns `NULL` on invalid params or OOM |
 | `zenit_arena_destroy(arena)` | Free all memory; NULL-safe |
 | `zenit_arena_acquire(arena, size)` | Acquire contiguous region; returns `NULL` on OOM or fragmentation |
-| `zenit_arena_release(arena, ua)` | Release region back; fails if any buffer is still `IN_USE` |
+| `zenit_arena_release(arena, ua)` | Release region back; returns `zenit_result_t` (`ZENIT_OK` / `ZENIT_ERROR_NULL` / `ZENIT_ERROR_STATE` / `ZENIT_ERROR_CORRUPT`) |
 | `zenit_usable_arena_allocate(ua, size)` | Sub-allocate a buffer; `.data == NULL` on OOM |
-| `zenit_usable_buffer_free(buf)` | Free buffer; returns `-1` on double-free or corruption |
+| `zenit_usable_buffer_free(buf)` | Free buffer; returns `zenit_result_t` (`ZENIT_OK` / `ZENIT_ERROR_NULL` / `ZENIT_ERROR_DOUBLE_FREE`) |
 | `zenit_usable_buffer_data(buf)` / `zenit_usable_buffer_size(buf)` | Inspect buffer |
 
 - **Source:** [`src/arena.c`](src/arena.c)
@@ -154,18 +170,21 @@ libzen/
 ├── include/
 │   ├── libzenit.h              # Umbrella header
 │   └── libzenit/
+│       ├── result.h            # Error codes & result type
 │       ├── version.h           # Version API
 │       ├── state.h             # State machine API
 │       ├── arena.h             # Arena allocator API
 │       └── benchmark.h         # Benchmark framework API
 ├── src/
 │   ├── CMakeLists.txt          # Library target: static libzenit
+│   ├── result.c
 │   ├── version.c
 │   ├── state.c
 │   ├── arena.c
 │   └── benchmark.c
 ├── tests/
-│   ├── CMakeLists.txt          # 6 test executables
+│   ├── CMakeLists.txt          # 7 test executables
+│   ├── test_result.c           # 9 error codes + macro helpers
 │   ├── test_version.c
 │   ├── test_state.c
 │   ├── test_state_malloc_fail.c
@@ -223,4 +242,4 @@ libzen/
 
 ## Status
 
-Current version `0.1.0` — **alpha**. All four modules are implemented, fully tested, benchmarked, and passing CI across all platforms and sanitizers. The API is stable but may evolve before `1.0.0`.
+Current version `0.1.0` — **alpha**. All five modules are implemented, fully tested, benchmarked, and passing CI across all platforms and sanitizers. The API is stable but may evolve before `1.0.0`.

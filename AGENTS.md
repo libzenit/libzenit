@@ -235,8 +235,11 @@ Before marking a task as complete, the agent must:
 
 ### 4.8 Error handling
 
-- **Constructors** return `NULL` on allocation failure.
-- **Mutators** return `int`: `0` on success, `-1` on failure.
+- **Constructors** return a typed pointer, or `NULL` on allocation failure (idiomatic C option pattern).
+- **Mutators** return `zenit_result_t` (defined in `<libzenit/result.h>`):
+  - `ZENIT_RESULT_OK` on success.
+  - `ZENIT_RESULT_ERROR(ZENIT_ERROR_*)` with a specific `zenit_error_t` code on failure.
+- Use `zenit_error_string(code)` for human-readable error messages.
 - **Always check malloc/calloc return:**
 
 ```c
@@ -425,29 +428,32 @@ Before concluding any work:
 
 ```
 libzen/
-├── CMakeLists.txt          # Root build configuration
-├── cmake/                  # Custom CMake modules (empty, available for use)
-├── include/
-│   ├── libzenit.h          # Umbrella header
-│   └── libzenit/
-│       ├── version.h       # Version API
-│       ├── state.h         # State machine API
-│       ├── arena.h         # Arena allocator API
-│       └── benchmark.h     # Benchmark framework API
-├── src/
-│   ├── CMakeLists.txt
-│   ├── version.c
-│   ├── state.c
-│   ├── arena.c             # Arena allocator impl (free-list, bitmap, boundary tags)
-│   └── benchmark.c         # Benchmark runner impl (clock_gettime / QueryPerformanceCounter)
-├── tests/
-│   ├── CMakeLists.txt
-│   ├── test_version.c
-│   ├── test_state.c
-│   ├── test_state_malloc_fail.c
-│   ├── test_arena.c        # Arena happy path, edge cases, coalescing, corruption
-│   ├── test_arena_malloc_fail.c  # Malloc/calloc failure via --wrap
-│   └── test_benchmark.c    # Benchmark API validation & coverage
+    ├── CMakeLists.txt          # Root build configuration
+    ├── cmake/                  # Custom CMake modules (empty, available for use)
+    ├── include/
+    │   ├── libzenit.h          # Umbrella header
+    │   └── libzenit/
+    │       ├── result.h        # Error codes & result type
+    │       ├── version.h       # Version API
+    │       ├── state.h         # State machine API
+    │       ├── arena.h         # Arena allocator API
+    │       └── benchmark.h     # Benchmark framework API
+    ├── src/
+    │   ├── CMakeLists.txt
+    │   ├── result.c            # Error string conversion
+    │   ├── version.c
+    │   ├── state.c
+    │   ├── arena.c             # Arena allocator impl (free-list, bitmap, boundary tags)
+    │   └── benchmark.c         # Benchmark runner impl (clock_gettime / QueryPerformanceCounter)
+    ├── tests/
+    │   ├── CMakeLists.txt
+    │   ├── test_result.c       # Error code & macro validation
+    │   ├── test_version.c
+    │   ├── test_state.c
+    │   ├── test_state_malloc_fail.c
+    │   ├── test_arena.c        # Arena happy path, edge cases, coalescing, corruption
+    │   ├── test_arena_malloc_fail.c  # Malloc/calloc failure via --wrap
+    │   └── test_benchmark.c    # Benchmark API validation & coverage
 ├── benchmarks/
 │   ├── CMakeLists.txt
 │   ├── benchmark_version.c     # Version call throughput
