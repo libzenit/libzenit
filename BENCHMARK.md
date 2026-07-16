@@ -20,21 +20,21 @@ All benchmarks on a logarithmic scale. Taller bars are faster.
 
 | Benchmark | Iterations | macOS (Apple Silicon, clang) | Linux ARM64 (gcc) | Linux x86_64 (gcc) |
 |---|:---:|:---:|:---:|:---:|
-| `libzenit_version` | 100,000,000 | 424.20 Mops/s | 532.50 Mops/s | 282.40 Mops/s |
-| `state_seq_8` | 1,000,000 | 27.19 Mops/s | 41.24 Mops/s | 33.20 Mops/s |
-| `state_seq_1024` | 10,000 | 3.94 Kops/s | 6.01 Kops/s | 5.71 Kops/s |
-| `state_miss` | 10,000,000 | 354.07 Mops/s | 424.09 Mops/s | 321.74 Mops/s |
-| `arena_create_destroy` | 500,000 | 1.07 Mops/s | 166.17 Kops/s | 50.73 Kops/s |
-| `arena_acquire_release` | 2,000,000 | 9.18 Mops/s | 55.18 Mops/s | 55.35 Mops/s |
-| `arena_alloc_free_8` | 5,000,000 | 87.64 Mops/s | 101.23 Mops/s | 103.26 Mops/s |
-| `arena_alloc_free_64` | 5,000,000 | 54.45 Mops/s | 102.41 Mops/s | 103.51 Mops/s |
-| `arena_alloc_free_4k` | 500,000 | 84.09 Mops/s | 101.98 Mops/s | 103.62 Mops/s |
-| `malloc_free_8` | 5,000,000 | 635.89 Mops/s | 95.60 Mops/s | 86.79 Mops/s |
-| `malloc_free_64` | 5,000,000 | 479.75 Mops/s | 96.27 Mops/s | 89.35 Mops/s |
-| `malloc_free_4k` | 500,000 | 990.10 Mops/s | 24.82 Mops/s | 23.91 Mops/s |
-| `ring_full_miss` | 10,000,000 | 528.09 Mops/s | 338.72 Mops/s | 246.18 Mops/s |
-| `ring_seq_128` | 500,000 | 94.09 Mops/s | 92.82 Mops/s | 80.69 Mops/s |
-| `ring_seq_1k` | 100,000 | 9.29 Mops/s | 20.54 Mops/s | 20.52 Mops/s |
+| `libzenit_version` | 100,000,000 | 498.04 Mops/s | 533.70 Mops/s | 286.94 Mops/s |
+| `state_seq_8` | 1,000,000 | 26.88 Mops/s | 41.31 Mops/s | 30.45 Mops/s |
+| `state_seq_1024` | 10,000 | 4.32 Kops/s | 6.05 Kops/s | 5.73 Kops/s |
+| `state_miss` | 10,000,000 | 409.37 Mops/s | 423.70 Mops/s | 321.59 Mops/s |
+| `arena_create_destroy` | 500,000 | 1.30 Mops/s | 156.93 Kops/s | 62.29 Kops/s |
+| `arena_acquire_release` | 2,000,000 | 38.51 Mops/s | 55.26 Mops/s | 55.19 Mops/s |
+| `arena_alloc_free_8` | 5,000,000 | 116.68 Mops/s | 99.77 Mops/s | 103.66 Mops/s |
+| `arena_alloc_free_64` | 5,000,000 | 99.87 Mops/s | 101.03 Mops/s | 103.51 Mops/s |
+| `arena_alloc_free_4k` | 500,000 | 100.30 Mops/s | 95.15 Mops/s | 103.50 Mops/s |
+| `malloc_free_8` | 5,000,000 | 987.17 Mops/s | 95.50 Mops/s | 86.66 Mops/s |
+| `malloc_free_64` | 5,000,000 | 991.47 Mops/s | 96.10 Mops/s | 89.22 Mops/s |
+| `malloc_free_4k` | 500,000 | 994.04 Mops/s | 24.83 Mops/s | 23.79 Mops/s |
+| `ring_full_miss` | 10,000,000 | 522.82 Mops/s | 338.20 Mops/s | 246.95 Mops/s |
+| `ring_seq_128` | 500,000 | 71.27 Mops/s | 90.43 Mops/s | 80.74 Mops/s |
+| `ring_seq_1k` | 100,000 | 23.15 Mops/s | 20.33 Mops/s | 21.20 Mops/s |
 
 ## Details by Category
 
