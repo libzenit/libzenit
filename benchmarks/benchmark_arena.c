@@ -122,7 +122,7 @@ static void bench_alloc_free_fn(void* ctx) {
  * -------------------------------------------------------------------------*/
 
 static void bench_malloc_free_fn(void* ctx) {
-    size_t* size = (size_t*)ctx;
+    const size_t* size = (const size_t*)ctx;
     void* p = malloc(*size);
     if (p != NULL) {
         free(p);

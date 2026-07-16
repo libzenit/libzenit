@@ -23,7 +23,7 @@
 static void bench_libzenit_version(void* ctx) {
     (void)ctx;
 
-    volatile libzenit_version_t v = libzenit_version();
+    volatile libzenit_version_t v = libzenit_version(); /* NOSONAR — prevents compiler from eliding the call */
     (void)v;
 }
 

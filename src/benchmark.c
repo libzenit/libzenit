@@ -19,7 +19,7 @@
 #include <stdio.h>
 
 #if defined(_WIN32)
-#include <windows.h>
+#include <Windows.h>
 #else
 #include <time.h>
 #endif
@@ -29,7 +29,8 @@
 static double bench_time_s(void) {
 #if defined(_WIN32)
     /* Windows high-performance counter (nanosecond resolution) */
-    LARGE_INTEGER freq, counter;
+    LARGE_INTEGER freq;
+    LARGE_INTEGER counter;
     QueryPerformanceFrequency(&freq);
     QueryPerformanceCounter(&counter);
     return (double)counter.QuadPart / (double)freq.QuadPart;
