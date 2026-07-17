@@ -455,7 +455,8 @@ static int test_set_iter(void) {
     TEST("set_iter");
     zenit_set_t *s = zenit_set_create(sizeof(int));
     ASSERT(s != NULL, "create");
-    int k1 = 1, k2 = 2;
+    int k1 = 1;
+    int k2 = 2;
     zenit_set_insert(s, &k1);
     zenit_set_insert(s, &k2);
     zenit_iter_t it = zenit_set_iter(s);
@@ -480,7 +481,8 @@ static int test_set_to_array(void) {
     TEST("set_to_array");
     zenit_set_t *s = zenit_set_create(sizeof(int));
     ASSERT(s != NULL, "create");
-    int k1 = 1, k2 = 2;
+    int k1 = 1;
+    int k2 = 2;
     zenit_set_insert(s, &k1);
     zenit_set_insert(s, &k2);
     int *keys = NULL;
@@ -488,7 +490,8 @@ static int test_set_to_array(void) {
     zenit_result_t r = zenit_set_to_array(s, (void**)&keys, &count);
     ASSERT(r.error == ZENIT_OK, "to_array ok");
     ASSERT(count == 2, "2 keys");
-    int found1 = 0, found2 = 0;
+    int found1 = 0;
+    int found2 = 0;
     for (size_t i = 0; i < count; i++) {
         if (keys[i] == 1) found1 = 1;
         if (keys[i] == 2) found2 = 1;

@@ -422,12 +422,14 @@ static int test_deque_iter(void) {
     TEST("deque_iter");
     zenit_deque_t *d = zenit_deque_create(sizeof(int));
     ASSERT(d != NULL, "create");
-    int a = 10, b = 20, c = 30;
+    int a = 10;
+    int b = 20;
+    int c = 30;
     zenit_deque_push_back(d, &a);
     zenit_deque_push_back(d, &b);
     zenit_deque_push_back(d, &c);
     zenit_iter_t it = zenit_deque_iter(d);
-    int *p = (int*)zenit_deque_iter_next(&it);
+    const int *p = (const int*)zenit_deque_iter_next(&it);
     ASSERT(p != NULL && *p == 10, "first");
     p = (int*)zenit_deque_iter_next(&it);
     ASSERT(p != NULL && *p == 20, "second");

@@ -484,12 +484,14 @@ static int test_list_iter(void) {
     TEST("list_iter");
     zenit_list_t *l = zenit_list_create(sizeof(int));
     ASSERT(l != NULL, "create");
-    int a = 10, b = 20, c = 30;
+    int a = 10;
+    int b = 20;
+    int c = 30;
     zenit_list_push_back(l, &a);
     zenit_list_push_back(l, &b);
     zenit_list_push_back(l, &c);
     zenit_iter_t it = zenit_list_iter(l);
-    int *p = (int*)zenit_list_iter_next(&it);
+    const int *p = (const int*)zenit_list_iter_next(&it);
     ASSERT(p != NULL && *p == 10, "first");
     p = (int*)zenit_list_iter_next(&it);
     ASSERT(p != NULL && *p == 20, "second");
@@ -512,7 +514,9 @@ static int test_list_reverse_foreach(void) {
     ASSERT(l != NULL, "create");
     rev_cb_invoked = 0;
     rev_idx = 0;
-    int a = 10, b = 20, c = 30;
+    int a = 10;
+    int b = 20;
+    int c = 30;
     zenit_list_push_back(l, &a);
     zenit_list_push_back(l, &b);
     zenit_list_push_back(l, &c);

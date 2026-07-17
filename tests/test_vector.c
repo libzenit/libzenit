@@ -502,7 +502,7 @@ static int test_vector_iter(void) {
     if (zenit_vector_push(v, &vals[1]).error != ZENIT_OK) { FAIL("push 20"); return 1; }
     if (zenit_vector_push(v, &vals[2]).error != ZENIT_OK) { FAIL("push 30"); return 1; }
     zenit_iter_t it = zenit_vector_iter(v);
-    int *p = (int*)zenit_vector_iter_next(&it);
+    const int *p = (const int*)zenit_vector_iter_next(&it);
     if (p == NULL || *p != 10) { FAIL("first element"); return 1; }
     p = (int*)zenit_vector_iter_next(&it);
     if (p == NULL || *p != 20) { FAIL("second element"); return 1; }

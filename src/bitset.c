@@ -126,7 +126,7 @@ zenit_result_t zenit_bitset_set(zenit_bitset_t* bs, size_t pos) {
     /* Compute byte index and bit mask, then set */
     size_t byte = pos / 8;
     unsigned char bit = (unsigned char)(pos % 8);
-    bs->bits[byte] |= (unsigned char)(1u << bit);
+    bs->bits[byte] |= (unsigned char)(1u << bit); // NOSONAR — ensure_capacity guarantees non-null
 
     return ZENIT_RESULT_OK;
 }
@@ -145,7 +145,7 @@ zenit_result_t zenit_bitset_clear(zenit_bitset_t* bs, size_t pos) {
     /* Compute byte index and bit mask, then clear */
     size_t byte = pos / 8;
     unsigned char bit = (unsigned char)(pos % 8);
-    bs->bits[byte] &= (unsigned char)~(1u << bit);
+    bs->bits[byte] &= (unsigned char)~(1u << bit); // NOSONAR — ensure_capacity guarantees non-null
 
     return ZENIT_RESULT_OK;
 }
@@ -164,7 +164,7 @@ zenit_result_t zenit_bitset_toggle(zenit_bitset_t* bs, size_t pos) {
     /* Compute byte index and bit mask, then toggle */
     size_t byte = pos / 8;
     unsigned char bit = (unsigned char)(pos % 8);
-    bs->bits[byte] ^= (unsigned char)(1u << bit);
+    bs->bits[byte] ^= (unsigned char)(1u << bit); // NOSONAR — ensure_capacity guarantees non-null
 
     return ZENIT_RESULT_OK;
 }

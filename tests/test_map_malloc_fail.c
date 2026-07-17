@@ -117,7 +117,8 @@ static void test_keys_fail_alloc(void) {
     TEST("map_keys alloc fail");
     zenit_map_t *map = zenit_map_create(sizeof(int), sizeof(int));
     ASSERT(map != NULL, "create");
-    int k = 42, v = 100;
+    int k = 42;
+    int v = 100;
     ASSERT(zenit_map_insert(map, &k, &v).error == ZENIT_OK, "insert");
     int *keys = NULL;
     size_t count = 0;
@@ -134,7 +135,8 @@ static void test_values_fail_alloc(void) {
     TEST("map_values alloc fail");
     zenit_map_t *map = zenit_map_create(sizeof(int), sizeof(int));
     ASSERT(map != NULL, "create");
-    int k = 42, v = 100;
+    int k = 42;
+    int v = 100;
     ASSERT(zenit_map_insert(map, &k, &v).error == ZENIT_OK, "insert");
     int *values = NULL;
     size_t count = 0;

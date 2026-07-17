@@ -583,8 +583,10 @@ static int test_map_iter(void) {
     TEST("map_iter");
     zenit_map_t *m = zenit_map_create(sizeof(int), sizeof(int));
     ASSERT(m != NULL, "create");
-    int k1 = 1, v1 = 100;
-    int k2 = 2, v2 = 200;
+    int k1 = 1;
+    int v1 = 100;
+    int k2 = 2;
+    int v2 = 200;
     zenit_map_insert(m, &k1, &v1);
     zenit_map_insert(m, &k2, &v2);
     zenit_iter_t it = zenit_map_iter(m);
@@ -609,8 +611,10 @@ static int test_map_keys(void) {
     TEST("map_keys");
     zenit_map_t *m = zenit_map_create(sizeof(int), sizeof(int));
     ASSERT(m != NULL, "create");
-    int k1 = 1, v1 = 100;
-    int k2 = 2, v2 = 200;
+    int k1 = 1;
+    int v1 = 100;
+    int k2 = 2;
+    int v2 = 200;
     zenit_map_insert(m, &k1, &v1);
     zenit_map_insert(m, &k2, &v2);
     int *keys = NULL;
@@ -620,7 +624,8 @@ static int test_map_keys(void) {
     ASSERT(count == 2, "2 keys");
     ASSERT(keys != NULL, "keys allocated");
     /* keys should be 1 and 2 in some order */
-    int found1 = 0, found2 = 0;
+    int found1 = 0;
+    int found2 = 0;
     for (size_t i = 0; i < count; i++) {
         if (keys[i] == 1) found1 = 1;
         if (keys[i] == 2) found2 = 1;
@@ -659,8 +664,10 @@ static int test_map_values(void) {
     TEST("map_values");
     zenit_map_t *m = zenit_map_create(sizeof(int), sizeof(int));
     ASSERT(m != NULL, "create");
-    int k1 = 1, v1 = 100;
-    int k2 = 2, v2 = 200;
+    int k1 = 1;
+    int v1 = 100;
+    int k2 = 2;
+    int v2 = 200;
     zenit_map_insert(m, &k1, &v1);
     zenit_map_insert(m, &k2, &v2);
     int *values = NULL;
@@ -668,7 +675,8 @@ static int test_map_values(void) {
     zenit_result_t r = zenit_map_values(m, (void**)&values, &count);
     ASSERT(r.error == ZENIT_OK, "values ok");
     ASSERT(count == 2, "2 values");
-    int found1 = 0, found2 = 0;
+    int found1 = 0;
+    int found2 = 0;
     for (size_t i = 0; i < count; i++) {
         if (values[i] == 100) found1 = 1;
         if (values[i] == 200) found2 = 1;
