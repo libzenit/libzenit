@@ -353,7 +353,6 @@ static char *parse_string_raw(parser_t *p) {
             return NULL;
         }
         if (!encode_utf8(&buf, &cap, &len, cp, a, p)) {
-            a.free_fn(buf, a.ctx);
             return NULL;
         }
     }
@@ -1076,32 +1075,24 @@ static int value_serialize_into(const zenit_json_value_t *val, zenit_string_t *o
     if (val == NULL) {
         return append_cstr(out, "null");
     }
-
-    switch (val->type) {
-        case ZENIT_JSON_NULL:
-            return append_cstr(out, "null");
-
-        case ZENIT_JSON_BOOL:
-            if (val->bool_val) { return append_cstr(out, "true"); }
-            return append_cstr(out, "false");
-
-        case ZENIT_JSON_NUMBER: {
-            char buf[64];
-            format_number(val->num_val, buf, sizeof(buf));
-            return append_cstr(out, buf);
-        }
-
-        case ZENIT_JSON_STRING:
-            return string_escape_into(val->str, out, a);
-
-        case ZENIT_JSON_ARRAY:
-            return serialize_array(val, out, a);
-
-        case ZENIT_JSON_OBJECT:
-            return serialize_object(val, out, a);
+    if (val->type == ZENIT_JSON_NULL) {
+        return append_cstr(out, "null");
     }
-
-    return 0;
+    if (val->type == ZENIT_JSON_BOOL) {
+        return val->bool_val ? append_cstr(out, "true") : append_cstr(out, "false");
+    }
+    if (val->type == ZENIT_JSON_NUMBER) {
+        char buf[64];
+        format_number(val->num_val, buf, sizeof(buf));
+        return append_cstr(out, buf);
+    }
+    if (val->type == ZENIT_JSON_STRING) {
+        return string_escape_into(val->str, out, a);
+    }
+    if (val->type == ZENIT_JSON_ARRAY) {
+        return serialize_array(val, out, a);
+    }
+    return serialize_object(val, out, a);
 }
 
 char *zenit_json_value_serialize(const zenit_json_value_t *val) {

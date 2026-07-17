@@ -121,6 +121,37 @@ static int failures = 0;
 #define PASS() do { printf("PASS\n"); } while (0)
 #define FAIL(msg) do { fprintf(stderr, "FAIL: %s\n", msg); failures++; return; } while (0)
 
+/* Trigger encode_utf8 failure — parse string with 63 regular chars + \\u0800
+ * using custom allocator that fails on the 3rd allocation (realloc of buffer).
+ * The doc (alloc #1) and initial 64-byte buffer (alloc #2) succeed, but the
+ * realloc inside buf_grow (alloc #3 from encode_utf8 for 3-byte UTF-8) fails. */
+static void try_escape_oom(void) {
+    char input[128];
+    size_t pos = 0;
+    input[pos++] = '"';
+    for (int i = 0; i < 63; i++) {
+        input[pos++] = 'A';
+    }
+    input[pos++] = '\\';
+    input[pos++] = 'u';
+    input[pos++] = '0';
+    input[pos++] = '8';
+    input[pos++] = '0';
+    input[pos++] = '0';
+    input[pos++] = '"';
+    input[pos] = '\0';
+
+    for (int i = 0; i < 10; i++) {
+        cov_alloc_count = 0;
+        cov_fail_after = i;
+        zenit_json_t *doc = zenit_json_parse_with_length_and_allocator(input, strlen(input), cov_allocator());
+        cov_fail_after = -1;
+        if (doc != NULL) {
+            zenit_json_destroy(doc);
+        }
+    }
+}
+
 /* ─── Test: hit every OOM path in parser ─── */
 
 static void test_oom_parse(void) {
@@ -130,6 +161,7 @@ static void test_oom_parse(void) {
     try_parse_countdown("[1,2,3,4,5,6,7,8,9]", 20);
     try_parse_countdown("{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8,\"i\":9}", 30);
     try_long_string_oom();
+    try_escape_oom();
     PASS();
 }
 
