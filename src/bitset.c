@@ -123,11 +123,6 @@ zenit_result_t zenit_bitset_set(zenit_bitset_t* bs, size_t pos) {
         return r;
     }
 
-    /* Guard against null bits (should not happen if ensure_capacity succeeded) */
-    if (bs->bits == NULL) {
-        return ZENIT_RESULT_ERROR(ZENIT_ERROR_ALLOC);
-    }
-
     /* Compute byte index and bit mask, then set */
     size_t byte = pos / 8;
     unsigned char bit = (unsigned char)(pos % 8);
@@ -147,11 +142,6 @@ zenit_result_t zenit_bitset_clear(zenit_bitset_t* bs, size_t pos) {
         return r;
     }
 
-    /* Guard against null bits (should not happen if ensure_capacity succeeded) */
-    if (bs->bits == NULL) {
-        return ZENIT_RESULT_ERROR(ZENIT_ERROR_ALLOC);
-    }
-
     /* Compute byte index and bit mask, then clear */
     size_t byte = pos / 8;
     unsigned char bit = (unsigned char)(pos % 8);
@@ -169,11 +159,6 @@ zenit_result_t zenit_bitset_toggle(zenit_bitset_t* bs, size_t pos) {
     zenit_result_t r = ensure_capacity(bs, pos);
     if (r.error != ZENIT_OK) {
         return r;
-    }
-
-    /* Guard against null bits (should not happen if ensure_capacity succeeded) */
-    if (bs->bits == NULL) {
-        return ZENIT_RESULT_ERROR(ZENIT_ERROR_ALLOC);
     }
 
     /* Compute byte index and bit mask, then toggle */

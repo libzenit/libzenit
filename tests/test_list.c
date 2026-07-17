@@ -469,6 +469,66 @@ static int test_clear_empty(void) {
     return 0;
 }
 
+static int rev_cb_invoked = 0;
+static int rev_vals[3];
+static int rev_idx;
+
+static void reverse_visit(const void *elem, void *ctx) {
+    (void)ctx;
+    rev_vals[rev_idx++] = *(const int*)elem;
+    rev_cb_invoked++;
+}
+
+/* ─── Test: list iter ─── */
+static int test_list_iter(void) {
+    TEST("list_iter");
+    zenit_list_t *l = zenit_list_create(sizeof(int));
+    ASSERT(l != NULL, "create");
+    int a = 10, b = 20, c = 30;
+    zenit_list_push_back(l, &a);
+    zenit_list_push_back(l, &b);
+    zenit_list_push_back(l, &c);
+    zenit_iter_t it = zenit_list_iter(l);
+    int *p = (int*)zenit_list_iter_next(&it);
+    ASSERT(p != NULL && *p == 10, "first");
+    p = (int*)zenit_list_iter_next(&it);
+    ASSERT(p != NULL && *p == 20, "second");
+    p = (int*)zenit_list_iter_next(&it);
+    ASSERT(p != NULL && *p == 30, "third");
+    p = (int*)zenit_list_iter_next(&it);
+    ASSERT(p == NULL, "past end");
+    /* NULL iter */
+    it = zenit_list_iter(NULL);
+    ASSERT(zenit_list_iter_next(&it) == NULL, "NULL list iter");
+    zenit_list_destroy(l);
+    PASS();
+    return 0;
+}
+
+/* ─── Test: list reverse foreach ─── */
+static int test_list_reverse_foreach(void) {
+    TEST("list_reverse_foreach");
+    zenit_list_t *l = zenit_list_create(sizeof(int));
+    ASSERT(l != NULL, "create");
+    rev_cb_invoked = 0;
+    rev_idx = 0;
+    int a = 10, b = 20, c = 30;
+    zenit_list_push_back(l, &a);
+    zenit_list_push_back(l, &b);
+    zenit_list_push_back(l, &c);
+    zenit_list_reverse_foreach(l, reverse_visit, NULL);
+    ASSERT(rev_cb_invoked == 3, "callback 3 times");
+    ASSERT(rev_vals[0] == 30, "first reverse");
+    ASSERT(rev_vals[1] == 20, "second reverse");
+    ASSERT(rev_vals[2] == 10, "third reverse");
+    /* NULL params */
+    zenit_list_reverse_foreach(NULL, reverse_visit, NULL);
+    zenit_list_reverse_foreach(l, NULL, NULL);
+    zenit_list_destroy(l);
+    PASS();
+    return 0;
+}
+
 int main(void) {
     TEST_ENTRY tests[] = {
         { test_create_destroy,          "create_destroy" },
@@ -496,6 +556,8 @@ int main(void) {
         { test_struct,                  "struct" },
         { test_count_empty_null,        "count_empty_null" },
         { test_clear_empty,             "clear_empty" },
+        { test_list_iter,               "list_iter" },
+        { test_list_reverse_foreach,    "list_reverse_foreach" },
         { 0, 0 }
     };
 

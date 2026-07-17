@@ -140,27 +140,16 @@ zenit_result_t zenit_string_append(zenit_string_t *s, const void *data, size_t l
 
     /* Pop the null terminator */
     char nul;
-    r = zenit_vector_pop(s->vec, &nul);
-    if (r.error != ZENIT_OK) {
-        return r;
-    }
+    zenit_vector_pop(s->vec, &nul);
 
     /* Push each byte — no grow needed since we pre-reserved */
     const unsigned char *bytes = (const unsigned char *)data;
     for (size_t i = 0; i < len; i++) {
-        r = zenit_vector_push(s->vec, &bytes[i]);
-        if (r.error != ZENIT_OK) {
-            /* This should not happen since we reserved, but handle gracefully */
-            zenit_vector_push(s->vec, &nul);
-            return r;
-        }
+        zenit_vector_push(s->vec, &bytes[i]);
     }
 
-    /* Re-add the null terminator — no grow needed */
-    r = push_null(s);
-    if (r.error != ZENIT_OK) {
-        return r;
-    }
+    /* Re-add the null terminator */
+    push_null(s);
 
     return ZENIT_RESULT_OK;
 }
@@ -192,11 +181,7 @@ size_t zenit_string_length(const zenit_string_t *s) {
         return 0;
     }
     size_t count = zenit_vector_count(s->vec);
-    /* The count includes the null terminator, so length = count - 1.
-       An empty string has count == 1 (just the null), so length = 0. */
-    if (count == 0) {
-        return 0;
-    }
+    /* count >= 1 because we always maintain a null terminator */
     return count - 1;
 }
 
@@ -229,23 +214,7 @@ zenit_result_t zenit_string_shrink_to_fit(zenit_string_t *s) {
     if (s == NULL) {
         return ZENIT_RESULT_ERROR(ZENIT_ERROR_NULL);
     }
-    zenit_result_t r = zenit_vector_shrink_to_fit(s->vec);
-    if (r.error != ZENIT_OK) {
-        return r;
-    }
-    /* Ensure the null terminator is still present after shrinking */
-    size_t count = zenit_vector_count(s->vec);
-    if (count == 0) {
-        return push_null(s);
-    }
-    /* The null terminator was already part of the vector's count, so it
-       should be in the buffer.  But we verify by checking the last byte. */
-    const char *buf = (const char *)zenit_vector_get(s->vec, count - 1);
-    if (buf == NULL || buf[0] != '\0') {
-        /* Safety net: re-add null terminator */
-        return push_null(s);
-    }
-    return ZENIT_RESULT_OK;
+    return zenit_vector_shrink_to_fit(s->vec);
 }
 
 int zenit_string_empty(const zenit_string_t *s) {

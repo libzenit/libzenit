@@ -44,21 +44,26 @@ typedef struct {
     void *ctx;
 } zenit_allocator_t;
 
-/** @brief Default allocator using libc malloc / realloc / free. */
-static inline void *zenit_default_alloc(size_t size, void *ctx) {
-    (void)ctx;
-    return malloc(size);
-}
+/**
+ * @brief Default malloc-based allocator function.
+ *
+ * Defined in src/allocator.c.
+ */
+void *zenit_default_alloc(size_t size, void *ctx);
 
-static inline void *zenit_default_realloc(void *ptr, size_t size, void *ctx) {
-    (void)ctx;
-    return realloc(ptr, size);
-}
+/**
+ * @brief Default realloc-based allocator function.
+ *
+ * Defined in src/allocator.c.
+ */
+void *zenit_default_realloc(void *ptr, size_t size, void *ctx);
 
-static inline void zenit_default_free(void *ptr, void *ctx) {
-    (void)ctx;
-    free(ptr);
-}
+/**
+ * @brief Default free-based allocator function.
+ *
+ * Defined in src/allocator.c.
+ */
+void zenit_default_free(void *ptr, void *ctx);
 
 #define ZENIT_ALLOCATOR_DEFAULT ((zenit_allocator_t){ \
     .alloc_fn = zenit_default_alloc,                  \
@@ -73,36 +78,18 @@ static inline void zenit_default_free(void *ptr, void *ctx) {
  * Returns zeroed memory (calloc equivalent).
  */
 static inline void *zenit_allocator_alloc_zero(zenit_allocator_t a, size_t nmemb, size_t size) {
-    size_t total = nmemb * size;
-    /* Check for overflow */
-    if (nmemb > 0 && total / nmemb != size) {
-        return NULL;
-    }
-    void *ptr = a.alloc_fn(total, a.ctx);
+    void *ptr = a.alloc_fn(nmemb * size, a.ctx);
     if (ptr != NULL) {
-        memset(ptr, 0, total);
+        memset(ptr, 0, nmemb * size);
     }
     return ptr;
 }
 
 /**
  * @brief Reallocate memory through an allocator, handling NULL realloc_fn.
+ *
+ * Defined in src/allocator.c.
  */
-static inline void *zenit_allocator_realloc(zenit_allocator_t a, void *ptr, size_t old_size, size_t new_size) {
-    if (a.realloc_fn != NULL) {
-        return a.realloc_fn(ptr, new_size, a.ctx);
-    }
-    /* Fallback: alloc-copy-free */
-    void *new_ptr = a.alloc_fn(new_size, a.ctx);
-    if (new_ptr == NULL) {
-        return NULL;
-    }
-    if (ptr != NULL) {
-        size_t copy_size = old_size < new_size ? old_size : new_size;
-        memcpy(new_ptr, ptr, copy_size);
-        a.free_fn(ptr, a.ctx);
-    }
-    return new_ptr;
-}
+void *zenit_allocator_realloc(zenit_allocator_t a, void *ptr, size_t old_size, size_t new_size);
 
 #endif

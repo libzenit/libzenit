@@ -118,6 +118,32 @@ static int test_push_grow_fail(void) {
     return 0;
 }
 
+/* ─── Test: heap_build realloc fail ─── */
+static int test_build_realloc_fail(void) {
+    printf("  heap_build realloc fail ... ");
+    fflush(stdout);
+
+    zenit_heap_t *heap = zenit_heap_create_with_capacity(sizeof(int), cmp_int, 2);
+    if (heap == NULL) {
+        fprintf(stderr, "FAIL: create failed\n");
+        return 1;
+    }
+
+    int arr[] = {3, 1, 4, 1, 5, 9, 2, 6};
+    malloc_fail_countdown = 0;
+    zenit_result_t r = zenit_heap_build(heap, arr, 8);
+    if (r.error != ZENIT_ERROR_ALLOC) {
+        fprintf(stderr, "FAIL: expected ALLOC, got %d\n", r.error);
+        zenit_heap_destroy(heap);
+        malloc_fail_countdown = -1;
+        return 1;
+    }
+    malloc_fail_countdown = -1;
+    zenit_heap_destroy(heap);
+    printf("PASS\n");
+    return 0;
+}
+
 int main(void) {
     printf("=== test_heap_malloc_fail ===\n");
 
@@ -125,6 +151,7 @@ int main(void) {
     failed += test_create_fail();
     failed += test_create_with_capacity_fail();
     failed += test_push_grow_fail();
+    failed += test_build_realloc_fail();
 
     if (failed != 0) {
         printf("\n%d test(s) FAILED\n", failed);

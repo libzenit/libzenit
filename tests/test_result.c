@@ -15,10 +15,17 @@
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //
 
+#include <libzenit/allocator.h>
 #include <libzenit/result.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+static void *failing_alloc(size_t size, void *ctx) {
+    (void)size; (void)ctx;
+    return NULL;
+}
 
 int main(void) {
     /* Verify every known error code produces a non-empty string */
@@ -34,6 +41,7 @@ int main(void) {
         ZENIT_ERROR_SIZE,
         ZENIT_ERROR_FULL,
         ZENIT_ERROR_EMPTY,
+        ZENIT_ERROR_OVERFLOW,
     };
     size_t n = sizeof(codes) / sizeof(codes[0]);
 
@@ -63,6 +71,48 @@ int main(void) {
     if (err.error != ZENIT_ERROR_NULL) {
         fprintf(stderr, "FAIL: ZENIT_RESULT_ERROR wrong code\n");
         return 1;
+    }
+
+    /* Verify allocator no-realloc fallback path (success and failure) */
+    {
+        zenit_allocator_t no_realloc = {
+            .alloc_fn = zenit_default_alloc,
+            .realloc_fn = NULL,
+            .free_fn = zenit_default_free,
+            .ctx = NULL
+        };
+        void *p = no_realloc.alloc_fn(100, NULL);
+        if (p == NULL) return 1;
+        void *r = zenit_allocator_realloc(no_realloc, p, 100, 200);
+        if (r == NULL) {
+            fprintf(stderr, "FAIL: allocator_realloc fallback should succeed\n");
+            return 1;
+        }
+        no_realloc.free_fn(r, NULL);
+
+        /* Test fallback with realloc-like semantics (ptr=NULL) */
+        void *s = zenit_allocator_realloc(no_realloc, NULL, 0, 64);
+        if (s == NULL) {
+            fprintf(stderr, "FAIL: realloc(NULL, 64) should succeed\n");
+            return 1;
+        }
+        no_realloc.free_fn(s, NULL);
+
+        /* Test fallback allocation failure */
+        {
+            zenit_allocator_t fail = {
+                .alloc_fn = failing_alloc,
+                .realloc_fn = NULL,
+                .free_fn = zenit_default_free,
+                .ctx = NULL
+            };
+            void *t = zenit_allocator_realloc(fail, NULL, 0, 100);
+            if (t != NULL) {
+                fprintf(stderr, "FAIL: realloc with failing alloc should return NULL\n");
+                fail.free_fn(t, fail.ctx);
+                return 1;
+            }
+        }
     }
 
     printf("PASS: result type\n");

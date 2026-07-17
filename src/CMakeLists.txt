@@ -16,6 +16,7 @@
 #
 
 add_library(zenit STATIC
+  allocator.c
   result.c
   version.c
   state.c

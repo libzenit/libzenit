@@ -417,6 +417,32 @@ static int test_query_null(void) {
     return 0;
 }
 
+/* ─── Test: deque iter ─── */
+static int test_deque_iter(void) {
+    TEST("deque_iter");
+    zenit_deque_t *d = zenit_deque_create(sizeof(int));
+    ASSERT(d != NULL, "create");
+    int a = 10, b = 20, c = 30;
+    zenit_deque_push_back(d, &a);
+    zenit_deque_push_back(d, &b);
+    zenit_deque_push_back(d, &c);
+    zenit_iter_t it = zenit_deque_iter(d);
+    int *p = (int*)zenit_deque_iter_next(&it);
+    ASSERT(p != NULL && *p == 10, "first");
+    p = (int*)zenit_deque_iter_next(&it);
+    ASSERT(p != NULL && *p == 20, "second");
+    p = (int*)zenit_deque_iter_next(&it);
+    ASSERT(p != NULL && *p == 30, "third");
+    p = (int*)zenit_deque_iter_next(&it);
+    ASSERT(p == NULL, "past end");
+    /* NULL iter */
+    it = zenit_deque_iter(NULL);
+    ASSERT(zenit_deque_iter_next(&it) == NULL, "NULL deque iter");
+    zenit_deque_destroy(d);
+    PASS();
+    return 0;
+}
+
 int main(void) {
     TEST_ENTRY tests[] = {
         { test_create_destroy,     "create_destroy" },
@@ -438,6 +464,7 @@ int main(void) {
         { test_mixed,              "mixed" },
         { test_struct,             "struct" },
         { test_query_null,         "query_null" },
+        { test_deque_iter,         "deque_iter" },
         { 0, 0 }
     };
     return test_run_all("test_deque", tests);

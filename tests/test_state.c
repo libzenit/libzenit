@@ -94,6 +94,9 @@ int main(void) {
 
     zenit_state_deallocate(state);
 
+    /* NULL deallocate is safe */
+    zenit_state_deallocate(NULL);
+
     printf("PASS: state machine\n");
     return 0;
 }

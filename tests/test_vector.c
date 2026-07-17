@@ -493,6 +493,48 @@ static int test_many_elements(void) {
     return 0;
 }
 
+/* ─── Test: vector iter ─── */
+static int test_vector_iter(void) {
+    zenit_vector_t *v = zenit_vector_create(sizeof(int));
+    if (v == NULL) { FAIL("create"); return 1; }
+    int vals[] = {10, 20, 30};
+    if (zenit_vector_push(v, &vals[0]).error != ZENIT_OK) { FAIL("push 10"); return 1; }
+    if (zenit_vector_push(v, &vals[1]).error != ZENIT_OK) { FAIL("push 20"); return 1; }
+    if (zenit_vector_push(v, &vals[2]).error != ZENIT_OK) { FAIL("push 30"); return 1; }
+    zenit_iter_t it = zenit_vector_iter(v);
+    int *p = (int*)zenit_vector_iter_next(&it);
+    if (p == NULL || *p != 10) { FAIL("first element"); return 1; }
+    p = (int*)zenit_vector_iter_next(&it);
+    if (p == NULL || *p != 20) { FAIL("second element"); return 1; }
+    p = (int*)zenit_vector_iter_next(&it);
+    if (p == NULL || *p != 30) { FAIL("third element"); return 1; }
+    p = (int*)zenit_vector_iter_next(&it);
+    if (p != NULL) { FAIL("past end should be NULL"); return 1; }
+    zenit_vector_destroy(v);
+    return 0;
+}
+
+/* ─── Test: vector iter NULL ─── */
+static int test_vector_iter_null(void) {
+    zenit_iter_t it = zenit_vector_iter(NULL);
+    if (zenit_vector_iter_next(&it) != NULL) { FAIL("NULL iter should return NULL"); return 1; }
+    if (it.is_valid) { FAIL("NULL iter should be invalid"); return 1; }
+    return 0;
+}
+
+/* ─── Test: vector data ─── */
+static int test_vector_data(void) {
+    zenit_vector_t *v = zenit_vector_create(sizeof(int));
+    if (v == NULL) { FAIL("create"); return 1; }
+    if (zenit_vector_data(v) != NULL) { FAIL("empty data should be NULL"); return 1; }
+    int x = 42;
+    zenit_vector_push(v, &x);
+    if (*(int*)zenit_vector_data(v) != 42) { FAIL("data content"); return 1; }
+    if (zenit_vector_data(NULL) != NULL) { FAIL("NULL data should be NULL"); return 1; }
+    zenit_vector_destroy(v);
+    return 0;
+}
+
 int main(void) {
     int ret = 0;
     ret |= test_create_destroy();
@@ -515,6 +557,9 @@ int main(void) {
     ret |= test_edge_cases();
     ret |= test_struct();
     ret |= test_many_elements();
+    ret |= test_vector_iter();
+    ret |= test_vector_iter_null();
+    ret |= test_vector_data();
 
     if (failures > 0 || ret != 0) {
         fprintf(stderr, "FAIL: %d test(s) had errors\n", failures);

@@ -360,6 +360,17 @@ static int test_many_appends(void) {
     return 0;
 }
 
+/* ─── Test: create with allocator ─── */
+static int test_create_with_allocator(void) {
+    TEST("create_with_allocator");
+    zenit_string_t *s = zenit_string_create_with_allocator(ZENIT_ALLOCATOR_DEFAULT);
+    ASSERT(s != NULL, "create_with_allocator");
+    ASSERT(zenit_string_length(s) == 0, "empty");
+    zenit_string_destroy(s);
+    PASS();
+    return 0;
+}
+
 /* ─── Test: large append ─── */
 static int test_large_append(void) {
     TEST("large append");
@@ -408,6 +419,7 @@ int main(void) {
         { test_null_params, "NULL params" },
         { test_many_appends, "many appends" },
         { test_large_append, "large append" },
+        { test_create_with_allocator, "create_with_allocator" },
         { 0, 0 }
     };
     return test_run_all("string", tests);

@@ -282,6 +282,28 @@ static int test_query_null(void) {
     return 0;
 }
 
+/* ─── Test: heap build ─── */
+static int test_heap_build(void) {
+    TEST("heap_build");
+    zenit_heap_t *heap = zenit_heap_create(sizeof(int), cmp_int_max);
+    ASSERT(heap != NULL, "create");
+    int arr[] = {3, 1, 4, 1, 5, 9, 2, 6};
+    zenit_result_t r = zenit_heap_build(heap, arr, 8);
+    ASSERT(r.error == ZENIT_OK, "build ok");
+    ASSERT(zenit_heap_count(heap) == 8, "8 elements");
+    int root = *(int*)zenit_heap_peek(heap);
+    ASSERT(root == 9, "root is max");
+    /* NULL params */
+    ASSERT(zenit_heap_build(NULL, arr, 8).error == ZENIT_ERROR_NULL, "NULL heap");
+    ASSERT(zenit_heap_build(heap, NULL, 8).error == ZENIT_ERROR_NULL, "NULL array");
+    /* Build empty */
+    ASSERT(zenit_heap_build(heap, arr, 0).error == ZENIT_OK, "empty build");
+    ASSERT(zenit_heap_count(heap) == 0, "0 elements after empty build");
+    zenit_heap_destroy(heap);
+    PASS();
+    return 0;
+}
+
 int main(void) {
     TEST_ENTRY tests[] = {
         { test_create_destroy,     "create_destroy" },
@@ -297,6 +319,7 @@ int main(void) {
         { test_many_elements,      "many_elements" },
         { test_struct,             "struct" },
         { test_query_null,         "query_null" },
+        { test_heap_build,         "heap_build" },
         { 0, 0 }
     };
     return test_run_all("test_heap", tests);

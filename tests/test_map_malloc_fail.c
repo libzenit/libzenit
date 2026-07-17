@@ -112,12 +112,45 @@ static void test_insert_fail_rehash_states(void) {
     PASS();
 }
 
+/* ─── Test: map_keys fails on allocation ─── */
+static void test_keys_fail_alloc(void) {
+    TEST("map_keys alloc fail");
+    zenit_map_t *map = zenit_map_create(sizeof(int), sizeof(int));
+    ASSERT(map != NULL, "create");
+    int k = 42, v = 100;
+    ASSERT(zenit_map_insert(map, &k, &v).error == ZENIT_OK, "insert");
+    int *keys = NULL;
+    size_t count = 0;
+    malloc_fail_countdown = 0;
+    zenit_result_t r = zenit_map_keys(map, (void**)&keys, &count);
+    ASSERT(r.error == ZENIT_ERROR_ALLOC, "expected ALLOC");
+    malloc_fail_countdown = -1;
+    zenit_map_destroy(map);
+    PASS();
+}
+
+/* ─── Test: map_values fails on allocation ─── */
+static void test_values_fail_alloc(void) {
+    TEST("map_values alloc fail");
+    zenit_map_t *map = zenit_map_create(sizeof(int), sizeof(int));
+    ASSERT(map != NULL, "create");
+    int k = 42, v = 100;
+    ASSERT(zenit_map_insert(map, &k, &v).error == ZENIT_OK, "insert");
+    int *values = NULL;
+    size_t count = 0;
+    malloc_fail_countdown = 0;
+    zenit_result_t r = zenit_map_values(map, (void**)&values, &count);
+    ASSERT(r.error == ZENIT_ERROR_ALLOC, "expected ALLOC");
+    malloc_fail_countdown = -1;
+    zenit_map_destroy(map);
+    PASS();
+}
+
 /* ─── Main ─── */
 int main(void) {
     printf("hash map malloc-fail tests\n");
     printf("--------------------------\n");
 
-    /* Disable printf buffering so output order is deterministic */
     setvbuf(stdout, NULL, _IONBF, 0);
 
     test_create_fail_handle();
@@ -125,6 +158,8 @@ int main(void) {
     test_create_fail_states();
     test_insert_fail_rehash_slots();
     test_insert_fail_rehash_states();
+    test_keys_fail_alloc();
+    test_values_fail_alloc();
 
     printf("\n%d passed, %d failed, %d total\n",
            passed, failed, passed + failed);

@@ -86,6 +86,7 @@ function(zenit_add_malloc_fail_realloc_test name source)
   add_test(NAME ${name} COMMAND ${name})
 endfunction()
 
+zenit_add_malloc_fail_realloc_test(test_bitset_malloc_fail  test_bitset_malloc_fail.c)
 zenit_add_malloc_fail_realloc_test(test_vector_malloc_fail  test_vector_malloc_fail.c)
 zenit_add_malloc_fail_realloc_test(test_heap_malloc_fail    test_heap_malloc_fail.c)
 zenit_add_malloc_fail_realloc_test(test_deque_malloc_fail   test_deque_malloc_fail.c)
