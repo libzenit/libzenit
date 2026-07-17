@@ -65,23 +65,26 @@ char **zenit_str_split(const char *s, const char *delim, size_t *out_count) {
     if (s == NULL || delim == NULL || out_count == NULL) return NULL;
 
     size_t len = strlen(s);
-
-    size_t tokens = 1;
-    for (size_t i = 0; i < len; i++) {
-        if (strchr(delim, s[i]) != NULL) {
-            tokens++;
-        }
-    }
-
-    char **result = malloc((tokens + 2) * sizeof(char *));
-    if (result == NULL) return NULL;
-
+    size_t cap = 4;
     size_t idx = 0;
     size_t token_start = 0;
+
+    char **result = malloc(cap * sizeof(char *));
+    if (result == NULL) return NULL;
 
     for (size_t i = 0; i <= len; i++) {
         int is_delim = (i < len) && (strchr(delim, s[i]) != NULL);
         if (!is_delim && i != len) continue;
+
+        if (idx + 2 > cap) {
+            cap *= 2;
+            char **tmp = realloc(result, cap * sizeof(char *));
+            if (tmp == NULL) {
+                free_split_result(result, idx);
+                return NULL;
+            }
+            result = tmp;
+        }
 
         size_t tlen = i - token_start;
         char *tok = malloc(tlen + 1);

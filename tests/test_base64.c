@@ -88,39 +88,35 @@ static int test_encode_binary(void) {
 
 static int test_decode_basic(void) {
     size_t len;
-    const unsigned char *dec = zenit_base64_decode("aGVsbG8=", &len);
+    unsigned char *dec = zenit_base64_decode("aGVsbG8=", &len);
     ASSERT(dec != NULL, "decode 'hello' returned NULL");
     ASSERT(len == 5, "decode 'hello' length mismatch");
     ASSERT(memcmp(dec, "hello", 5) == 0, "decode 'hello' content mismatch");
-    free((void *)dec);
+    free(dec);
     return 0;
 }
 
 static int test_decode_no_padding(void) {
     size_t len;
-    const unsigned char *dec = zenit_base64_decode("YWJj", &len);
+    unsigned char *dec = zenit_base64_decode("YWJj", &len);
     ASSERT(dec != NULL, "decode 'abc' returned NULL");
     ASSERT(len == 3, "decode 'abc' length mismatch");
     ASSERT(memcmp(dec, "abc", 3) == 0, "decode 'abc' content mismatch");
-    free((void *)dec);
+    free(dec);
     return 0;
 }
 
 static int test_decode_invalid(void) {
     size_t len;
-    /* Invalid character in d0/d1 */
-    unsigned char *dec = zenit_base64_decode("aGVs!G8=", &len);
+    unsigned char *dec;
+    dec = zenit_base64_decode("aGVs!G8=", &len);
     ASSERT(dec == NULL, "decode invalid d0/d1 should return NULL");
-    /* Invalid character in d2 (not padding) */
     dec = zenit_base64_decode("AA!!", &len);
     ASSERT(dec == NULL, "decode invalid d2 should return NULL");
-    /* Invalid character in d3 (not padding) */
     dec = zenit_base64_decode("AAA!", &len);
     ASSERT(dec == NULL, "decode invalid d3 should return NULL");
-    /* Short input */
     dec = zenit_base64_decode("abc", &len);
     ASSERT(dec == NULL, "decode short input should return NULL");
-    /* Wrong length (not multiple of 4) */
     dec = zenit_base64_decode("abcde", &len);
     ASSERT(dec == NULL, "decode wrong length should return NULL");
     return 0;

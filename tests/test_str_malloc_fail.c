@@ -20,6 +20,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+void *__real_realloc(void *ptr, size_t size);
+void *__wrap_realloc(void *ptr, size_t size) {
+    if (malloc_fail_countdown == 0) {
+        return NULL;
+    }
+    if (malloc_fail_countdown > 0) {
+        malloc_fail_countdown--;
+    }
+    return __real_realloc(ptr, size);
+}
+
 int main(void) {
     int failed = 0;
 
@@ -38,20 +49,29 @@ int main(void) {
         free(parts);
     }
 
-    /* split: token malloc fails after result array succeeded.
-     * "a,b,c" produces 3 tokens. The alloc sequence is:
-     *   1. result array (4 pointers)
-     *   2. "a" (2 bytes)
-     *   3. "b" (2 bytes)
-     *   4. "c" (2 bytes)
-     * With countdown=3, alloc #3 ("b") fails. */
+    /* split: realloc fails during growth */
     {
-        malloc_fail_countdown = 3;
+        malloc_fail_countdown = 4;
         size_t count;
-        char **parts = zenit_str_split("a,b,c", ",", &count);
+        char **parts = zenit_str_split("a,b,c,d,e", ",", &count);
         malloc_fail_countdown = -1;
         if (parts != NULL) {
-            fprintf(stderr, "FAIL: split countdown=3 should return NULL\n");
+            fprintf(stderr, "FAIL: split realloc countdown=4 should return NULL\n");
+            failed++;
+        } else {
+            printf("PASS: split realloc fail\n");
+        }
+        free(parts);
+    }
+
+    /* split: token malloc fails after realloc succeeded */
+    {
+        malloc_fail_countdown = 6;
+        size_t count;
+        char **parts = zenit_str_split("a,b,c,d,e", ",", &count);
+        malloc_fail_countdown = -1;
+        if (parts != NULL) {
+            fprintf(stderr, "FAIL: split token countdown=6 should return NULL\n");
             failed++;
         } else {
             printf("PASS: split token alloc fail\n");

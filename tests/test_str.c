@@ -131,6 +131,22 @@ static int test_split_no_delimiter(void) {
     return 0;
 }
 
+static int test_split_many(void) {
+    /* 10 tokens triggers the realloc path (cap starts at 4) */
+    size_t count;
+    char **parts = zenit_str_split("a,b,c,d,e,f,g,h,i,j", ",", &count);
+    ASSERT(parts != NULL, "split many returned NULL");
+    ASSERT(count == 10, "split many count should be 10");
+    for (size_t i = 0; i < count; i++) {
+        ASSERT(strlen(parts[i]) == 1, "split many part length");
+        ASSERT(parts[i][0] == 'a' + (char)i, "split many part content");
+    }
+    ASSERT(parts[count] == NULL, "split many NULL-terminated");
+    for (size_t i = 0; i < count; i++) free(parts[i]);
+    free(parts);
+    return 0;
+}
+
 static int test_split_null_params(void) {
     size_t count;
     ASSERT(zenit_str_split(NULL, ",", &count) == NULL, "split NULL s");
@@ -203,24 +219,25 @@ static int run_test(const char *name, int (*fn)(void)) {
 int main(void) {
     int failed = 0;
     const int (*tests[])(void) = {
-        test_trim_basic,
-        test_trim_left,
-        test_trim_right,
-        test_trim_none,
-        test_trim_all_whitespace,
-        test_trim_empty,
-        test_trim_null,
-        test_split_basic,
-        test_split_consecutive,
-        test_split_empty,
-        test_split_no_delimiter,
-        test_split_null_params,
-        test_join_basic,
-        test_join_empty_delim,
-        test_join_empty_parts,
-        test_join_zero_count,
-        test_join_one_part,
-        test_join_null_param,
+        &test_trim_basic,
+        &test_trim_left,
+        &test_trim_right,
+        &test_trim_none,
+        &test_trim_all_whitespace,
+        &test_trim_empty,
+        &test_trim_null,
+        &test_split_basic,
+        &test_split_consecutive,
+        &test_split_empty,
+        &test_split_no_delimiter,
+        &test_split_many,
+        &test_split_null_params,
+        &test_join_basic,
+        &test_join_empty_delim,
+        &test_join_empty_parts,
+        &test_join_zero_count,
+        &test_join_one_part,
+        &test_join_null_param,
     };
     const char *names[] = {
         "trim_basic",
@@ -234,6 +251,7 @@ int main(void) {
         "split_consecutive",
         "split_empty",
         "split_no_delimiter",
+        "split_many",
         "split_null_params",
         "join_basic",
         "join_empty_delim",

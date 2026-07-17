@@ -102,4 +102,4 @@ zenit_add_malloc_fail_realloc_test(test_deque_malloc_fail   test_deque_malloc_fa
 zenit_add_malloc_fail_realloc_test(test_string_malloc_fail  test_string_malloc_fail.c)
 zenit_add_malloc_fail_realloc_test(test_json_malloc_fail    test_json_malloc_fail.c)
 zenit_add_malloc_fail_test(test_base64_malloc_fail test_base64_malloc_fail.c)
-zenit_add_malloc_fail_test(test_str_malloc_fail test_str_malloc_fail.c)
+zenit_add_malloc_fail_realloc_test(test_str_malloc_fail test_str_malloc_fail.c)

@@ -86,24 +86,21 @@ static int test_decode_odd_length(void) {
 
 static int test_decode_uppercase(void) {
     size_t len;
-    const unsigned char *dec = zenit_hex_decode("68656C6C6F", &len);
+    unsigned char *dec = zenit_hex_decode("68656C6C6F", &len);
     ASSERT(dec != NULL, "decode uppercase returned NULL");
     ASSERT(len == 5, "decode uppercase length mismatch");
     ASSERT(memcmp(dec, "hello", 5) == 0, "decode uppercase content mismatch");
-    free((void *)dec);
+    free(dec);
     return 0;
 }
 
 static int test_decode_invalid(void) {
     size_t len;
-    {
-        const unsigned char *dec = zenit_hex_decode("6g", &len);
-        ASSERT(dec == NULL, "decode invalid hex should return NULL");
-    }
-    {
-        const unsigned char *dec = zenit_hex_decode("xyz", &len);
-        ASSERT(dec == NULL, "decode invalid odd first char should return NULL");
-    }
+    unsigned char *dec;
+    dec = zenit_hex_decode("6g", &len);
+    ASSERT(dec == NULL, "decode invalid hex should return NULL");
+    dec = zenit_hex_decode("xyz", &len);
+    ASSERT(dec == NULL, "decode invalid odd first char should return NULL");
     return 0;
 }
 
