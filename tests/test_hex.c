@@ -96,7 +96,7 @@ static int test_decode_uppercase(void) {
 
 static int test_decode_invalid(void) {
     size_t len;
-    unsigned char *dec;
+    const unsigned char *dec;
     dec = zenit_hex_decode("6g", &len);
     ASSERT(dec == NULL, "decode invalid hex should return NULL");
     dec = zenit_hex_decode("xyz", &len);

@@ -16,6 +16,7 @@
 //
 
 #include <libzenit/sort.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -88,15 +89,17 @@ void *zenit_binary_search(const void *key, const void *base, size_t count,
                           size_t elem_size, zenit_sort_compare_fn_t compare) {
     if (key == NULL || base == NULL || elem_size == 0 || compare == NULL) return NULL;
 
-    char *b = (char *)base;
+    const unsigned char *b = (const unsigned char *)base;
     size_t lo = 0;
     size_t hi = count;
+    size_t match = (size_t)-1;
 
     while (lo < hi) {
         size_t mid = lo + (hi - lo) / 2;
         int cmp = compare(key, b + mid * elem_size);
         if (cmp == 0) {
-            return b + mid * elem_size;
+            match = mid;
+            break;
         } else if (cmp < 0) {
             hi = mid;
         } else {
@@ -104,5 +107,8 @@ void *zenit_binary_search(const void *key, const void *base, size_t count,
         }
     }
 
+    if (match != (size_t)-1) {
+        return (void *)((uintptr_t)base + match * elem_size);
+    }
     return NULL;
 }

@@ -108,7 +108,7 @@ static int test_decode_no_padding(void) {
 
 static int test_decode_invalid(void) {
     size_t len;
-    unsigned char *dec;
+    const unsigned char *dec;
     dec = zenit_base64_decode("aGVs!G8=", &len);
     ASSERT(dec == NULL, "decode invalid d0/d1 should return NULL");
     dec = zenit_base64_decode("AA!!", &len);
