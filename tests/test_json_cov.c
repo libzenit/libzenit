@@ -147,19 +147,12 @@ static void test_oom_build(void) {
         cov_fail_after = -1;
         if (doc != NULL) {
             /* Try operations that trigger additional allocations */
-            zenit_json_value_t *v = zenit_json_value_null(doc);
-            (void)v;
-            /* If we got here, try more */
-            v = zenit_json_value_bool(doc, 1);
-            (void)v;
-            v = zenit_json_value_number(doc, 1.0);
-            (void)v;
-            v = zenit_json_value_string(doc, "test");
-            (void)v;
-            v = zenit_json_value_array(doc);
-            (void)v;
-            v = zenit_json_value_object(doc);
-            (void)v;
+            { const zenit_json_value_t *v = zenit_json_value_null(doc); (void)v; }
+            { const zenit_json_value_t *v = zenit_json_value_bool(doc, 1); (void)v; }
+            { const zenit_json_value_t *v = zenit_json_value_number(doc, 1.0); (void)v; }
+            { const zenit_json_value_t *v = zenit_json_value_string(doc, "test"); (void)v; }
+            { const zenit_json_value_t *v = zenit_json_value_array(doc); (void)v; }
+            { const zenit_json_value_t *v = zenit_json_value_object(doc); (void)v; }
             zenit_json_destroy(doc);
         }
     }

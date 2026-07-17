@@ -262,7 +262,7 @@ static int parse_unicode_cp(parser_t *p, unsigned int *cp) {
             return 0;
         }
     }
-    p->pos += 3;
+    p->pos += 4;
     return 1;
 }
 
@@ -283,6 +283,41 @@ static int encode_utf8(char **buf, size_t *cap, size_t *len, unsigned int cp, ze
         (*buf)[(*len)++] = (char)(0x80 | (cp & 0x3F));
     }
     return 1;
+}
+
+/* Decode a single-character escape (e.g. 'n' -> '\n').
+ * Returns the decoded character, or -1 if not a simple escape. */
+static int parse_simple_escape(char esc) {
+    switch (esc) {
+        case '"': return '"';
+        case '\\': return '\\';
+        case '/': return '/';
+        case 'b': return '\b';
+        case 'f': return '\f';
+        case 'n': return '\n';
+        case 'r': return '\r';
+        case 't': return '\t';
+        default: return -1;
+    }
+}
+
+/* Parse an escape sequence at p->pos (which must be at the character
+ * AFTER the backslash).  Returns the decoded codepoint on success,
+ * or -1 on error (p->error set).  Handles both simple escapes and \uXXXX. */
+static int parse_escape_seq(parser_t *p, unsigned int *cp) {
+    if (p->pos >= p->end) { p->error = 1; return -1; }
+    int simple = parse_simple_escape(*p->pos);
+    if (simple >= 0) {
+        p->pos++;
+        *cp = (unsigned int)simple;
+        return 1;
+    }
+    if (*p->pos == 'u') {
+        p->pos++;
+        return parse_unicode_cp(p, cp) ? 1 : -1;
+    }
+    p->error = 1;
+    return -1;
 }
 
 static char *parse_string_raw(parser_t *p) {
@@ -311,40 +346,16 @@ static char *parse_string_raw(parser_t *p) {
             continue;
         }
         p->pos++;
-        if (p->pos >= p->end) {
+        unsigned int cp;
+        int ret = parse_escape_seq(p, &cp);
+        if (ret < 0) {
             a.free_fn(buf, a.ctx);
-            p->error = 1;
             return NULL;
         }
-        char esc = *p->pos;
-        switch (esc) {
-            case '"':  if (!buf_grow(&buf, &cap, len, 1, a, p)) { return NULL; } buf[len++] = '"';  break;
-            case '\\': if (!buf_grow(&buf, &cap, len, 1, a, p)) { return NULL; } buf[len++] = '\\'; break;
-            case '/':  if (!buf_grow(&buf, &cap, len, 1, a, p)) { return NULL; } buf[len++] = '/';  break;
-            case 'b':  if (!buf_grow(&buf, &cap, len, 1, a, p)) { return NULL; } buf[len++] = '\b'; break;
-            case 'f':  if (!buf_grow(&buf, &cap, len, 1, a, p)) { return NULL; } buf[len++] = '\f'; break;
-            case 'n':  if (!buf_grow(&buf, &cap, len, 1, a, p)) { return NULL; } buf[len++] = '\n'; break;
-            case 'r':  if (!buf_grow(&buf, &cap, len, 1, a, p)) { return NULL; } buf[len++] = '\r'; break;
-            case 't':  if (!buf_grow(&buf, &cap, len, 1, a, p)) { return NULL; } buf[len++] = '\t'; break;
-            case 'u': {
-                p->pos++;
-                unsigned int cp;
-                if (!parse_unicode_cp(p, &cp)) {
-                    a.free_fn(buf, a.ctx);
-                    return NULL;
-                }
-                if (!encode_utf8(&buf, &cap, &len, cp, a, p)) {
-                    a.free_fn(buf, a.ctx);
-                    return NULL;
-                }
-                break;
-            }
-            default:
-                a.free_fn(buf, a.ctx);
-                p->error = 1;
-                return NULL;
+        if (!encode_utf8(&buf, &cap, &len, cp, a, p)) {
+            a.free_fn(buf, a.ctx);
+            return NULL;
         }
-        p->pos++;
     }
 
     a.free_fn(buf, a.ctx);
@@ -991,34 +1002,32 @@ static int append_char(zenit_string_t *out, char c) {
     return zenit_string_append(out, &c, 1).error == ZENIT_OK ? 1 : 0;
 }
 
+static int serialize_escape_char(unsigned char c, zenit_string_t *out) {
+    switch (c) {
+        case '"':  return append_cstr(out, "\\\"");
+        case '\\': return append_cstr(out, "\\\\");
+        case '\b': return append_cstr(out, "\\b");
+        case '\f': return append_cstr(out, "\\f");
+        case '\n': return append_cstr(out, "\\n");
+        case '\r': return append_cstr(out, "\\r");
+        case '\t': return append_cstr(out, "\\t");
+        default:
+            if (c < 0x20) {
+                char hex[7];
+                snprintf(hex, sizeof(hex), "\\u%04x", c);
+                return append_cstr(out, hex);
+            }
+            return append_char(out, (char)c);
+    }
+}
+
 static int string_escape_into(const char *s, zenit_string_t *out, zenit_allocator_t a) {
     (void)a;
     if (!append_cstr(out, "\"")) { return 0; }
-
     while (*s) {
-        unsigned char c = (unsigned char)*s;
-        switch (c) {
-            case '"':  if (!append_cstr(out, "\\\"")) return 0; break;
-            case '\\': if (!append_cstr(out, "\\\\")) return 0; break;
-            case '\b': if (!append_cstr(out, "\\b")) return 0; break;
-            case '\f': if (!append_cstr(out, "\\f")) return 0; break;
-            case '\n': if (!append_cstr(out, "\\n")) return 0; break;
-            case '\r': if (!append_cstr(out, "\\r")) return 0; break;
-            case '\t': if (!append_cstr(out, "\\t")) return 0; break;
-            default: {
-                if (c < 0x20) {
-                    char hex[7];
-                    snprintf(hex, sizeof(hex), "\\u%04x", c);
-                    if (!append_cstr(out, hex)) return 0;
-                } else if (!append_char(out, (char)c)) {
-                    return 0;
-                }
-                break;
-            }
-        }
+        if (!serialize_escape_char((unsigned char)*s, out)) { return 0; }
         s++;
     }
-
     return append_cstr(out, "\"");
 }
 
@@ -1043,6 +1052,26 @@ static void format_number(double num, char *buf, size_t buf_size) {
     snprintf(buf, buf_size, "%s", best);
 }
 
+static int serialize_array(const zenit_json_value_t *val, zenit_string_t *out, zenit_allocator_t a) {
+    if (!append_cstr(out, "[")) { return 0; }
+    for (size_t i = 0; i < val->arr.count; i++) {
+        if (i > 0 && !append_cstr(out, ",")) { return 0; }
+        if (!value_serialize_into(val->arr.items[i], out, a)) { return 0; }
+    }
+    return append_cstr(out, "]");
+}
+
+static int serialize_object(const zenit_json_value_t *val, zenit_string_t *out, zenit_allocator_t a) {
+    if (!append_cstr(out, "{")) { return 0; }
+    for (size_t i = 0; i < val->obj.count; i++) {
+        if (i > 0 && !append_cstr(out, ",")) { return 0; }
+        if (!string_escape_into(val->obj.keys[i], out, a)) { return 0; }
+        if (!append_cstr(out, ":")) { return 0; }
+        if (!value_serialize_into(val->obj.values[i], out, a)) { return 0; }
+    }
+    return append_cstr(out, "}");
+}
+
 static int value_serialize_into(const zenit_json_value_t *val, zenit_string_t *out, zenit_allocator_t a) {
     if (val == NULL) {
         return append_cstr(out, "null");
@@ -1065,25 +1094,11 @@ static int value_serialize_into(const zenit_json_value_t *val, zenit_string_t *o
         case ZENIT_JSON_STRING:
             return string_escape_into(val->str, out, a);
 
-        case ZENIT_JSON_ARRAY: {
-            if (!append_cstr(out, "[")) { return 0; }
-            for (size_t i = 0; i < val->arr.count; i++) {
-                if (i > 0 && !append_cstr(out, ",")) { return 0; }
-                if (!value_serialize_into(val->arr.items[i], out, a)) { return 0; }
-            }
-            return append_cstr(out, "]");
-        }
+        case ZENIT_JSON_ARRAY:
+            return serialize_array(val, out, a);
 
-        case ZENIT_JSON_OBJECT: {
-            if (!append_cstr(out, "{")) { return 0; }
-            for (size_t i = 0; i < val->obj.count; i++) {
-                if (i > 0 && !append_cstr(out, ",")) { return 0; }
-                if (!string_escape_into(val->obj.keys[i], out, a)) { return 0; }
-                if (!append_cstr(out, ":")) { return 0; }
-                if (!value_serialize_into(val->obj.values[i], out, a)) { return 0; }
-            }
-            return append_cstr(out, "}");
-        }
+        case ZENIT_JSON_OBJECT:
+            return serialize_object(val, out, a);
     }
 
     return 0;
