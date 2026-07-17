@@ -226,6 +226,35 @@ if(CMAKE_C_COMPILER_ID STREQUAL "GNU" OR (CMAKE_C_COMPILER_ID STREQUAL "Clang" A
   add_test(NAME test_set_malloc_fail COMMAND test_set_malloc_fail)
 endif()
 
+add_executable(test_string
+  test_string.c
+)
+
+target_link_libraries(test_string PRIVATE zenit)
+
+if(LIBZENIT_BUILD_COVERAGE)
+  target_compile_options(test_string PRIVATE --coverage -g -O0)
+  target_link_options(test_string PRIVATE --coverage)
+endif()
+
+add_test(NAME test_string COMMAND test_string)
+
+if(CMAKE_C_COMPILER_ID STREQUAL "GNU" OR (CMAKE_C_COMPILER_ID STREQUAL "Clang" AND NOT APPLE))
+  add_executable(test_string_malloc_fail
+    test_string_malloc_fail.c
+  )
+
+  target_link_libraries(test_string_malloc_fail PRIVATE zenit)
+  target_link_options(test_string_malloc_fail PRIVATE -Wl,--wrap=malloc -Wl,--wrap=calloc -Wl,--wrap=realloc)
+
+  if(LIBZENIT_BUILD_COVERAGE)
+    target_compile_options(test_string_malloc_fail PRIVATE --coverage -g -O0)
+    target_link_options(test_string_malloc_fail PRIVATE --coverage)
+  endif()
+
+  add_test(NAME test_string_malloc_fail COMMAND test_string_malloc_fail)
+endif()
+
 add_test(NAME test_libzenit COMMAND test_libzenit)
 
 add_executable(test_list
@@ -314,3 +343,16 @@ if(CMAKE_C_COMPILER_ID STREQUAL "GNU" OR (CMAKE_C_COMPILER_ID STREQUAL "Clang" A
 
   add_test(NAME test_deque_malloc_fail COMMAND test_deque_malloc_fail)
 endif()
+
+add_executable(test_bitset
+  test_bitset.c
+)
+
+target_link_libraries(test_bitset PRIVATE zenit)
+
+if(LIBZENIT_BUILD_COVERAGE)
+  target_compile_options(test_bitset PRIVATE --coverage -g -O0)
+  target_link_options(test_bitset PRIVATE --coverage)
+endif()
+
+add_test(NAME test_bitset COMMAND test_bitset)

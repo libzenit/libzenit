@@ -254,3 +254,30 @@ zenit_result_t zenit_heap_reserve(zenit_heap_t *heap, size_t capacity) {
     }
     return realloc_buffer(heap, capacity);
 }
+
+zenit_result_t zenit_heap_build(zenit_heap_t *heap, const void *array, size_t count) {
+    if (heap == NULL || array == NULL) {
+        return ZENIT_RESULT_ERROR(ZENIT_ERROR_NULL);
+    }
+    if (count == 0) {
+        heap->count = 0;
+        return ZENIT_RESULT_OK;
+    }
+    /* Ensure capacity */
+    if (count > heap->capacity) {
+        zenit_result_t r = realloc_buffer(heap, count);
+        if (r.error != ZENIT_OK) {
+            return r;
+        }
+    }
+    /* Copy elements from the source array */
+    memcpy(heap->buffer, array, count * heap->elem_size);
+    heap->count = count;
+    /* Floyd's heapify: sift-down from the last parent to the root */
+    size_t idx = count / 2;
+    while (idx > 0) {
+        idx--;
+        sift_down(heap, idx);
+    }
+    return ZENIT_RESULT_OK;
+}

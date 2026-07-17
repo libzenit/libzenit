@@ -293,3 +293,26 @@ void zenit_deque_clear(zenit_deque_t *deque) {
     deque->tail = 0;
     deque->count = 0;
 }
+
+zenit_iter_t zenit_deque_iter(const zenit_deque_t *deque) {
+    zenit_iter_t iter;
+    iter.container = (void*)deque;
+    iter.index = 0;
+    iter.count = deque ? deque->count : 0;
+    iter.is_valid = (deque != NULL) ? 1 : 0;
+    iter.internal = NULL;
+    return iter;
+}
+
+void *zenit_deque_iter_next(zenit_iter_t *iter) {
+    if (iter == NULL || !iter->is_valid) {
+        return NULL;
+    }
+    if (iter->index >= iter->count) {
+        return NULL;
+    }
+    const zenit_deque_t *d = (const zenit_deque_t*)iter->container;
+    size_t offset = (d->head + iter->index) % d->capacity;
+    iter->index++;
+    return d->buffer + offset * d->elem_size;
+}

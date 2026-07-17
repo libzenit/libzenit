@@ -24,11 +24,13 @@
 #include <libzenit/arena.h>
 #include <libzenit/benchmark.h>
 #include <libzenit/ring.h>
+#include <libzenit/string.h>
 #include <libzenit/vector.h>
 #include <libzenit/map.h>
 #include <libzenit/set.h>
 #include <libzenit/list.h>
 #include <libzenit/heap.h>
 #include <libzenit/deque.h>
+#include <libzenit/bitset.h>
 
 #endif

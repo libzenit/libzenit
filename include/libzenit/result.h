@@ -18,6 +18,8 @@
 #ifndef LIBZENIT_RESULT_H
 #define LIBZENIT_RESULT_H
 
+#include <stddef.h>
+
 /**
  * @brief Error codes used across all LibZenit modules.
  *
@@ -37,6 +39,7 @@ typedef enum {
     ZENIT_ERROR_SIZE = 8,       /**< Size mismatch (e.g. not divisible by block size) */
     ZENIT_ERROR_FULL = 9,       /**< Buffer or container is full */
     ZENIT_ERROR_EMPTY = 10,     /**< Buffer or container is empty */
+    ZENIT_ERROR_OVERFLOW = 11,  /**< Arithmetic or buffer overflow */
 } zenit_error_t;
 
 /**
@@ -71,5 +74,20 @@ typedef struct {
  * @return A static string (e.g. "null pointer", "allocation failed").
  */
 const char* zenit_error_string(zenit_error_t error);
+
+/**
+ * @brief Generic iterator for containers.
+ *
+ * Provides sequential access to container elements.  Created by the
+ * container's `_iter` function and advanced with the container-specific
+ * `_iter_next` function.
+ */
+typedef struct {
+    void *container;     /**< Owning container (opaque, internal) */
+    size_t index;        /**< Current position (internal) */
+    size_t count;        /**< Total element count snapshot (internal) */
+    int is_valid;        /**< Non-zero if the iterator was successfully initialised */
+    void *internal;      /**< Reserved for container-specific state (list node ptr, etc) */
+} zenit_iter_t;
 
 #endif

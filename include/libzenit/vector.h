@@ -228,4 +228,33 @@ void zenit_vector_clear(zenit_vector_t *vector);
  */
 int zenit_vector_empty(const zenit_vector_t *vector);
 
+/**
+ * @brief Create an iterator for the vector.
+ *
+ * The iterator must be advanced with zenit_vector_iter_next().
+ *
+ * @param vector Vector handle.
+ * @return An iterator (check is_valid).
+ */
+zenit_iter_t zenit_vector_iter(const zenit_vector_t *vector);
+
+/**
+ * @brief Advance a vector iterator to the next element.
+ *
+ * @param iter Iterator created by zenit_vector_iter().
+ * @return Pointer to the element data, or NULL if iteration is complete.
+ */
+void *zenit_vector_iter_next(zenit_iter_t *iter);
+
+/**
+ * @brief Get a direct pointer to the vector's internal element buffer.
+ *
+ * The pointer becomes invalid after any operation that changes the vector's
+ * size or capacity.
+ *
+ * @param vector Vector handle.
+ * @return Pointer to the element buffer, or NULL if @p vector is NULL or empty.
+ */
+void *zenit_vector_data(zenit_vector_t *vector);
+
 #endif

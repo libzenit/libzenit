@@ -358,3 +358,39 @@ void *zenit_list_back(const zenit_list_t *list) {
     }
     return list->tail->data;
 }
+
+zenit_iter_t zenit_list_iter(const zenit_list_t *list) {
+    zenit_iter_t iter;
+    iter.container = (void*)list;
+    iter.index = 0;
+    iter.count = list ? list->count : 0;
+    iter.is_valid = (list != NULL) ? 1 : 0;
+    iter.internal = list ? (void*)list->head : NULL;
+    return iter;
+}
+
+void *zenit_list_iter_next(zenit_iter_t *iter) {
+    if (iter == NULL || !iter->is_valid) {
+        return NULL;
+    }
+    struct list_node *n = (struct list_node*)iter->internal;
+    if (n == NULL) {
+        return NULL;
+    }
+    /* Capture the data pointer before advancing */
+    void *data = n->data;
+    iter->internal = (void*)n->next;
+    iter->index++;
+    return data;
+}
+
+void zenit_list_reverse_foreach(const zenit_list_t *list, zenit_list_visit_fn_t visit, void *ctx) {
+    if (list == NULL || visit == NULL) {
+        return;
+    }
+    struct list_node *n = list->tail;
+    while (n != NULL) {
+        visit(n->data, ctx);
+        n = n->prev;
+    }
+}

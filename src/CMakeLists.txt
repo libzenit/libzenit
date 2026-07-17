@@ -28,6 +28,8 @@ add_library(zenit STATIC
   list.c
   heap.c
   deque.c
+  string.c
+  bitset.c
 )
 
 target_include_directories(zenit

@@ -219,4 +219,22 @@ zenit_result_t zenit_deque_shrink_to_fit(zenit_deque_t *deque);
  */
 void zenit_deque_clear(zenit_deque_t *deque);
 
+/**
+ * @brief Create an iterator for the deque.
+ *
+ * The iterator must be advanced with zenit_deque_iter_next().
+ *
+ * @param deque Deque handle.
+ * @return An iterator (check is_valid).
+ */
+zenit_iter_t zenit_deque_iter(const zenit_deque_t *deque);
+
+/**
+ * @brief Advance a deque iterator to the next element.
+ *
+ * @param iter Iterator created by zenit_deque_iter().
+ * @return Pointer to the element data, or NULL if iteration is complete.
+ */
+void *zenit_deque_iter_next(zenit_iter_t *iter);
+
 #endif

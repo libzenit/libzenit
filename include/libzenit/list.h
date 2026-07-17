@@ -216,4 +216,31 @@ void *zenit_list_front(const zenit_list_t *list);
  */
 void *zenit_list_back(const zenit_list_t *list);
 
+/**
+ * @brief Create an iterator for the list.
+ *
+ * The iterator must be advanced with zenit_list_iter_next().
+ *
+ * @param list List handle.
+ * @return An iterator (check is_valid).
+ */
+zenit_iter_t zenit_list_iter(const zenit_list_t *list);
+
+/**
+ * @brief Advance a list iterator to the next element.
+ *
+ * @param iter Iterator created by zenit_list_iter().
+ * @return Pointer to the element data, or NULL if iteration is complete.
+ */
+void *zenit_list_iter_next(zenit_iter_t *iter);
+
+/**
+ * @brief Iterate over all elements in reverse order (tail to head).
+ *
+ * @param list  List handle.
+ * @param visit Visitor callback (must not be NULL).
+ * @param ctx   Opaque context forwarded to @p visit on every call.
+ */
+void zenit_list_reverse_foreach(const zenit_list_t *list, zenit_list_visit_fn_t visit, void *ctx);
+
 #endif

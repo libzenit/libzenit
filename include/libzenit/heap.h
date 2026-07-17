@@ -185,4 +185,20 @@ void zenit_heap_clear(zenit_heap_t *heap);
  */
 zenit_result_t zenit_heap_reserve(zenit_heap_t *heap, size_t capacity);
 
+/**
+ * @brief Build a heap from an existing array using Floyd's algorithm (O(n)).
+ *
+ * Copies @p count elements from @p array into the heap's internal buffer
+ * (growing if needed) and then heapifies in-place via bottom-up sift_down.
+ * Any existing contents are discarded.
+ *
+ * @param heap  Heap handle.
+ * @param array Pointer to the source array (must not be NULL).
+ * @param count Number of elements to copy.
+ * @return ZENIT_RESULT_OK on success, or an error:
+ *         - ZENIT_ERROR_NULL if @p heap or @p array is NULL
+ *         - ZENIT_ERROR_ALLOC if reallocation fails.
+ */
+zenit_result_t zenit_heap_build(zenit_heap_t *heap, const void *array, size_t count);
+
 #endif

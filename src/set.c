@@ -307,3 +307,54 @@ void zenit_set_foreach(
         }
     }
 }
+
+zenit_iter_t zenit_set_iter(const zenit_set_t *set) {
+    zenit_iter_t iter;
+    iter.container = (void*)set;
+    iter.index = 0;
+    iter.count = set ? set->count : 0;
+    iter.is_valid = (set != NULL) ? 1 : 0;
+    iter.internal = NULL;
+    return iter;
+}
+
+void *zenit_set_iter_next(zenit_iter_t *iter) {
+    if (iter == NULL || !iter->is_valid) {
+        return NULL;
+    }
+    const zenit_set_t *set = (const zenit_set_t*)iter->container;
+    while (iter->index < set->capacity) {
+        size_t idx = iter->index;
+        iter->index++;
+        if (set->states[idx] == HASH_SLOT_OCCUPIED) {
+            return set->slots + idx * set->key_size;
+        }
+    }
+    return NULL;
+}
+
+zenit_result_t zenit_set_to_array(const zenit_set_t *set, void **out_keys, size_t *out_count) {
+    if (set == NULL || out_keys == NULL || out_count == NULL) {
+        return ZENIT_RESULT_ERROR(ZENIT_ERROR_NULL);
+    }
+    *out_keys = NULL;
+    *out_count = 0;
+    if (set->count == 0) {
+        return ZENIT_RESULT_OK;
+    }
+    unsigned char *keys = set->allocator.alloc_fn(set->count * set->key_size, set->allocator.ctx);
+    if (keys == NULL) {
+        return ZENIT_RESULT_ERROR(ZENIT_ERROR_ALLOC);
+    }
+    size_t pos = 0;
+    for (size_t i = 0; i < set->capacity; i++) {
+        if (set->states[i] == HASH_SLOT_OCCUPIED) {
+            const unsigned char *slot = set->slots + i * set->key_size;
+            memcpy(keys + pos * set->key_size, slot, set->key_size);
+            pos++;
+        }
+    }
+    *out_keys = keys;
+    *out_count = pos;
+    return ZENIT_RESULT_OK;
+}
