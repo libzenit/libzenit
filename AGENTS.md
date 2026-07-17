@@ -460,6 +460,7 @@ libzen/
     ├── tests/
     │   ├── CMakeLists.txt
     │   ├── test_malloc_fail.h  # Shared malloc/calloc wrappers for --wrap tests
+    │   ├── test_runner.h       # Shared test runner (macros, globals, test_run_all)
     │   ├── test_result.c       # Error code & macro validation
     │   ├── test_version.c
     │   ├── test_state.c
