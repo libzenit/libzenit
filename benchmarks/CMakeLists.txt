@@ -99,8 +99,14 @@ target_link_libraries(benchmark_bitset PRIVATE zenit)
 add_test(NAME benchmark_bitset COMMAND benchmark_bitset)
 set_tests_properties(benchmark_bitset PROPERTIES LABELS "benchmark")
 
+# JSON throughput
+add_executable(benchmark_json benchmark_json.c)
+target_link_libraries(benchmark_json PRIVATE zenit)
+add_test(NAME benchmark_json COMMAND benchmark_json)
+set_tests_properties(benchmark_json PROPERTIES LABELS "benchmark")
+
 if(LIBZENIT_BUILD_COVERAGE)
-  foreach(tgt benchmark_version benchmark_state benchmark_arena benchmark_ring benchmark_vector benchmark_map benchmark_set benchmark_string benchmark_list benchmark_heap benchmark_deque benchmark_bitset)
+  foreach(tgt benchmark_version benchmark_state benchmark_arena benchmark_ring benchmark_vector benchmark_map benchmark_set benchmark_string benchmark_list benchmark_heap benchmark_deque benchmark_bitset benchmark_json)
     target_compile_options(${tgt} PRIVATE --coverage -g -O0)
     target_link_options(${tgt} PRIVATE --coverage)
   endforeach()
@@ -123,6 +129,7 @@ add_custom_target(benchmark
   COMMAND "$<TARGET_FILE:benchmark_heap>"
   COMMAND "$<TARGET_FILE:benchmark_deque>"
   COMMAND "$<TARGET_FILE:benchmark_bitset>"
+  COMMAND "$<TARGET_FILE:benchmark_json>"
   COMMAND ${CMAKE_COMMAND} -E echo ""
   COMMAND ${CMAKE_COMMAND} -E echo "===== Done ====="
   USES_TERMINAL

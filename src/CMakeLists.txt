@@ -31,6 +31,7 @@ add_library(zenit STATIC
   deque.c
   string.c
   bitset.c
+  json.c
 )
 
 target_include_directories(zenit

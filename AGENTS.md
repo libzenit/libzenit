@@ -457,73 +457,78 @@ Before concluding any work:
 
 ```
 libzen/
-    ├── CMakeLists.txt          # Root build configuration
-    ├── cmake/                  # Custom CMake modules (empty, available for use)
+    ├── CMakeLists.txt              # Root build configuration
+    ├── cmake/                      # Custom CMake modules (empty, available for use)
     ├── include/
-    │   ├── libzenit.h          # Umbrella header
+    │   ├── libzenit.h              # Umbrella header
     │   └── libzenit/
-    │       ├── allocator.h     # Custom allocator interface (zenit_allocator_t)
-    │       ├── result.h        # Error codes & result type
-    │       ├── version.h       # Version API
-    │       ├── state.h         # State machine API
-    │       ├── arena.h         # Arena allocator API
-    │       ├── benchmark.h     # Benchmark framework API
-    │       ├── bitset.h        # Bit set API
-    │       ├── ring.h          # Ring buffer API
-    │       ├── string.h        # String builder API
-    │       ├── vector.h         # Dynamic array API
-    │       ├── map.h           # Hash map API
-    │       ├── set.h           # Hash set API
-    │       ├── list.h          # Doubly linked list API
-    │       ├── heap.h          # Binary heap / priority queue API
-    │       └── deque.h         # Double-ended queue API
+    │       ├── allocator.h         # Custom allocator interface (zenit_allocator_t)
+    │       ├── result.h            # Error codes & result type
+    │       ├── version.h           # Version API
+    │       ├── state.h             # State machine API
+    │       ├── arena.h             # Arena allocator API
+    │       ├── benchmark.h         # Benchmark framework API
+    │       ├── bitset.h            # Bit set API
+    │       ├── json.h              # JSON parser / serializer API
+    │       ├── ring.h              # Ring buffer API
+    │       ├── string.h            # String builder API
+    │       ├── vector.h            # Dynamic array API
+    │       ├── map.h               # Hash map API
+    │       ├── set.h               # Hash set API
+    │       ├── list.h              # Doubly linked list API
+    │       ├── heap.h              # Binary heap / priority queue API
+    │       └── deque.h             # Double-ended queue API
     ├── src/
     │   ├── CMakeLists.txt
-    │   ├── result.c            # Error string conversion
+    │   ├── result.c                # Error string conversion
     │   ├── version.c
     │   ├── state.c
-    │   ├── arena.c             # Arena allocator impl (free-list, bitmap, boundary tags)
-    │   ├── benchmark.c         # Benchmark runner impl (clock_gettime / QueryPerformanceCounter)
-    │   ├── ring.c              # Ring buffer impl (circular FIFO, wrap-around)
-    │   ├── _hash_common.h      # Shared hash table helpers (FNV-1a, slot states, load factor)
-    │   ├── vector.c            # Dynamic array impl (type-erased, 1.5x growth)
-    │   ├── map.c               # Hash map impl (open-addressing, linear probing, FNV-1a)
-    │   ├── set.c               # Hash set impl (open-addressing, linear probing, FNV-1a)
-    │   ├── list.c              # Doubly linked list impl (node-based, prev/next pointers)
-    │   ├── heap.c              # Binary heap impl (contiguous, 1.5x growth, sift-up/down)
-    │   ├── deque.c             # Double-ended queue impl (circular buffer, 1.5x growth)
-    │   ├── string.c            # String builder impl (backed by vector)
-    │   └── bitset.c            # Bit set impl (byte array, auto-grow, popcount)
+    │   ├── arena.c                 # Arena allocator impl (free-list, bitmap, boundary tags)
+    │   ├── benchmark.c             # Benchmark runner impl (clock_gettime / QueryPerformanceCounter)
+    │   ├── ring.c                  # Ring buffer impl (circular FIFO, wrap-around)
+    │   ├── _hash_common.h          # Shared hash table helpers (FNV-1a, slot states, load factor)
+    │   ├── vector.c                # Dynamic array impl (type-erased, 1.5x growth)
+    │   ├── map.c                   # Hash map impl (open-addressing, linear probing, FNV-1a)
+    │   ├── set.c                   # Hash set impl (open-addressing, linear probing, FNV-1a)
+    │   ├── list.c                  # Doubly linked list impl (node-based, prev/next pointers)
+    │   ├── heap.c                  # Binary heap impl (contiguous, 1.5x growth, sift-up/down)
+    │   ├── deque.c                 # Double-ended queue impl (circular buffer, 1.5x growth)
+    │   ├── string.c                # String builder impl (backed by vector)
+    │   ├── bitset.c                # Bit set impl (byte array, auto-grow, popcount)
+    │   └── json.c                  # JSON parser / serializer impl (recursive-descent)
     ├── tests/
-    │   ├── CMakeLists.txt      # 24 test executables (via zenit_add_test helpers)
-    │   ├── test_malloc_fail.h  # Shared malloc/calloc wrappers for --wrap tests
-    │   ├── test_runner.h       # Shared test runner (macros, globals, test_run_all)
-    │   ├── test_result.c       # Error code & macro validation
+    │   ├── CMakeLists.txt          # 27 test executables (via zenit_add_test helpers)
+    │   ├── test_malloc_fail.h      # Shared malloc/calloc wrappers for --wrap tests
+    │   ├── test_runner.h           # Shared test runner (macros, globals, test_run_all)
+    │   ├── test_result.c           # Error code & macro validation
     │   ├── test_version.c
     │   ├── test_state.c
     │   ├── test_state_malloc_fail.c
-    │   ├── test_arena.c        # Arena happy path, edge cases, coalescing, corruption
+    │   ├── test_arena.c            # Arena happy path, edge cases, coalescing, corruption
     │   ├── test_arena_malloc_fail.c  # Malloc/calloc failure via --wrap
-    │   ├── test_ring.c         # Ring buffer happy path, wrap-around, edge cases
+    │   ├── test_ring.c             # Ring buffer happy path, wrap-around, edge cases
     │   ├── test_ring_malloc_fail.c   # Malloc/calloc failure via --wrap
-    │   ├── test_benchmark.c    # Benchmark API validation & coverage
-    │   ├── test_vector.c       # Vector happy path, edge cases, growth
+    │   ├── test_benchmark.c        # Benchmark API validation & coverage
+    │   ├── test_vector.c           # Vector happy path, edge cases, growth
     │   ├── test_vector_malloc_fail.c # Malloc/calloc/realloc failure via --wrap
-    │   ├── test_map.c          # Hash map happy path, edge cases, rehash, foreach
+    │   ├── test_map.c              # Hash map happy path, edge cases, rehash, foreach
     │   ├── test_map_malloc_fail.c    # Malloc/calloc failure via --wrap
-    │   ├── test_set.c          # Hash set happy path, edge cases, rehash, foreach
+    │   ├── test_set.c              # Hash set happy path, edge cases, rehash, foreach
     │   ├── test_set_malloc_fail.c    # Malloc/calloc failure via --wrap
-    │   ├── test_list.c         # Doubly linked list happy path, edge cases, foreach
+    │   ├── test_list.c             # Doubly linked list happy path, edge cases, foreach
     │   ├── test_list_malloc_fail.c   # Malloc/calloc failure via --wrap
-    │   ├── test_heap.c         # Binary heap happy path, push/pop min/max, edge cases
+    │   ├── test_heap.c             # Binary heap happy path, push/pop min/max, edge cases
     │   ├── test_heap_malloc_fail.c   # Malloc/calloc/realloc failure via --wrap
-    │   ├── test_deque.c        # Deque happy path, wrap-around, mixed push/pop
+    │   ├── test_deque.c            # Deque happy path, wrap-around, mixed push/pop
     │   ├── test_deque_malloc_fail.c  # Malloc/calloc/realloc failure via --wrap
-    │   ├── test_string.c       # String builder happy path, edge cases, many appends
+    │   ├── test_string.c           # String builder happy path, edge cases, many appends
     │   ├── test_string_malloc_fail.c # Malloc/calloc/realloc failure via --wrap
-    │   └── test_bitset.c       # Bit set happy path, edge cases, resize, auto-grow
+    │   ├── test_bitset.c           # Bit set happy path, edge cases, resize, auto-grow
+    │   ├── test_json.c             # JSON parser/serializer, all types, round-trip, errors
+    │   ├── test_json_cov.c         # JSON coverage edge cases (control chars, UTF-8, errors)
+    │   └── test_json_malloc_fail.c # Malloc/calloc/realloc failure via --wrap
     ├── benchmarks/
-    │   ├── CMakeLists.txt      # 12 benchmark executables (label: "benchmark")
+    │   ├── CMakeLists.txt          # 13 benchmark executables (label: "benchmark")
     │   ├── benchmark_version.c     # Version call throughput
     │   ├── benchmark_state.c       # State-machine transition throughput
     │   ├── benchmark_arena.c       # Arena allocator throughput (vs malloc baseline)
@@ -535,17 +540,18 @@ libzen/
     │   ├── benchmark_heap.c        # Binary heap throughput (push, push_pop, peek)
     │   ├── benchmark_deque.c       # Deque throughput (push_back, push_front, push_pop)
     │   ├── benchmark_string.c      # String builder throughput (append_cstr, append)
-    │   └── benchmark_bitset.c      # Bit set throughput (set, test, count)
-├── scripts/
-│   ├── checksum.py         # Release checksum generator
-│   └── benchmark_report.py # Benchmark log parser & report generator (BENCHMARK.md + charts)
-├── media/                  # Brand assets (logo)
-│   └── logo.svg            # LibZenit logo (geometric sun)
-├── codecov.yaml            # Codecov configuration
-├── AGENTS.md               # This file
-├── LICENSE                 # AGPL-3.0
-├── README.md
-└── BENCHMARK.md            # Auto-generated CI benchmark report ([skip ci])
+    │   ├── benchmark_bitset.c      # Bit set throughput (set, test, count)
+    │   └── benchmark_json.c        # JSON throughput (parse, serialize, build)
+    ├── scripts/
+    │   ├── checksum.py             # Release checksum generator
+    │   └── benchmark_report.py     # Benchmark log parser & report generator (BENCHMARK.md + charts)
+    ├── media/                      # Brand assets (logo)
+    │   └── logo.svg                # LibZenit logo (geometric sun)
+    ├── codecov.yaml                # Codecov configuration
+    ├── AGENTS.md                   # This file
+    ├── LICENSE                     # AGPL-3.0
+    ├── README.md
+    └── BENCHMARK.md                # Auto-generated CI benchmark report ([skip ci])
 ```
 
 ## 12. Feedback Protocol (AGENTS.md)
