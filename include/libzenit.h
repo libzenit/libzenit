@@ -26,5 +26,6 @@
 #include <libzenit/ring.h>
 #include <libzenit/vector.h>
 #include <libzenit/map.h>
+#include <libzenit/set.h>
 
 #endif

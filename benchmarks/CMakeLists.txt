@@ -63,6 +63,19 @@ target_link_libraries(benchmark_map PRIVATE zenit)
 add_test(NAME benchmark_map COMMAND benchmark_map)
 set_tests_properties(benchmark_map PROPERTIES LABELS "benchmark")
 
+# Hash set throughput
+add_executable(benchmark_set benchmark_set.c)
+target_link_libraries(benchmark_set PRIVATE zenit)
+add_test(NAME benchmark_set COMMAND benchmark_set)
+set_tests_properties(benchmark_set PROPERTIES LABELS "benchmark")
+
+if(LIBZENIT_BUILD_COVERAGE)
+  foreach(tgt benchmark_version benchmark_state benchmark_arena benchmark_ring benchmark_vector benchmark_map benchmark_set)
+    target_compile_options(${tgt} PRIVATE --coverage -g -O0)
+    target_link_options(${tgt} PRIVATE --coverage)
+  endforeach()
+endif()
+
 # Convenience target — runs all benchmarks sequentially
 add_custom_target(benchmark
   COMMAND ${CMAKE_COMMAND} -E echo ""
@@ -74,6 +87,7 @@ add_custom_target(benchmark
   COMMAND "$<TARGET_FILE:benchmark_ring>"
   COMMAND "$<TARGET_FILE:benchmark_vector>"
   COMMAND "$<TARGET_FILE:benchmark_map>"
+  COMMAND "$<TARGET_FILE:benchmark_set>"
   COMMAND ${CMAKE_COMMAND} -E echo ""
   COMMAND ${CMAKE_COMMAND} -E echo "===== Done ====="
   USES_TERMINAL

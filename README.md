@@ -2,7 +2,7 @@
   <img src="media/logo.svg" alt="LibZenit" width="180">
 </p>
 
-Portable C library providing building blocks for systems programming: a **typed result type with error codes**, a **ring buffer**, a **finite-state machine engine**, a **fixed-block arena allocator**, a **benchmark framework**, a **dynamic array (vector)**, and a **version API**.
+Portable C library providing building blocks for systems programming: a **typed result type with error codes**, a **ring buffer**, a **finite-state machine engine**, a **fixed-block arena allocator**, a **benchmark framework**, a **dynamic array (vector)**, a **hash map**, a **hash set**, and a **version API**.
 
 <p align="center">
 <a href="https://github.com/libzenit/libzenit/actions/workflows/ci.yml"><img src="https://github.com/libzenit/libzenit/actions/workflows/ci.yml/badge.svg?branch=master" alt="CI Status"></a>
@@ -220,6 +220,29 @@ Generic type-erased hash map with open-addressing and linear probing. Uses FNV-1
 
 ---
 
+### 8. Hash Set — `include/libzenit/set.h`
+
+Generic type-erased hash set with open-addressing and linear probing. Uses FNV-1a hashing with power-of-2 capacity. Automatically rehashes at 75% load factor. Keys-only counterpart to the hash map.
+
+| Function | Description |
+|---|---|
+| `zenit_set_create(key_size)` | Create empty set (default capacity 16); returns `NULL` on zero key_size or OOM |
+| `zenit_set_create_with_capacity(key_size, capacity)` | Create with specific initial capacity (rounded to power of two); returns `NULL` on invalid params or OOM |
+| `zenit_set_destroy(set)` | Free all memory; NULL-safe |
+| `zenit_set_insert(set, key)` | Insert a key (no-op if already present); returns `ZENIT_ERROR_NULL` / `ZENIT_ERROR_ALLOC` |
+| `zenit_set_remove(set, key)` | Remove key (tombstone); returns `ZENIT_ERROR_NOT_FOUND` if missing |
+| `zenit_set_contains(set, key)` | 1 if present, 0 otherwise |
+| `zenit_set_count(set)` | Number of entries (0 if NULL) |
+| `zenit_set_capacity(set)` | Slot capacity, always power of two (0 if NULL) |
+| `zenit_set_clear(set)` | Remove all entries without shrinking; NULL-safe |
+| `zenit_set_foreach(set, visit, ctx)` | Iterate all keys in unspecified order |
+
+- **Source:** [`src/set.c`](src/set.c)
+- **Tests:** [`tests/test_set.c`](tests/test_set.c) (28 sub-tests: create/destroy, insert/contains, duplicate, remove, tombstone, clear, foreach, rehash, struct keys, all NULL edge cases), [`tests/test_set_malloc_fail.c`](tests/test_set_malloc_fail.c) (5 sub-tests covering malloc/calloc failure via `--wrap`)
+- **Benchmark:** [`benchmarks/benchmark_set.c`](benchmarks/benchmark_set.c) — insert (100K), contains hit/miss (100K), insert rehash (100K), foreach (100K×1K)
+
+---
+
 ## Build Options
 
 | Option | Default | Description |
@@ -250,7 +273,8 @@ libzen/
 │       ├── benchmark.h         # Benchmark framework API
 │       ├── ring.h              # Ring buffer API
 │       ├── vector.h            # Dynamic array API
-│       └── map.h               # Hash map API
+│       ├── map.h               # Hash map API
+│       └── set.h               # Hash set API
 ├── src/
 │   ├── CMakeLists.txt          # Library target: static libzenit
 │   ├── result.c
@@ -260,9 +284,10 @@ libzen/
 │   ├── benchmark.c
 │   ├── ring.c
 │   ├── vector.c
-│   └── map.c
+│   ├── map.c
+│   └── set.c
 ├── tests/
-│   ├── CMakeLists.txt          # 13 test executables
+│   ├── CMakeLists.txt          # 15 test executables
 │   ├── test_malloc_fail.h      # Shared malloc/calloc wrappers
 │   ├── test_result.c           # 11 error codes + macro helpers
 │   ├── test_version.c
@@ -276,15 +301,18 @@ libzen/
 │   ├── test_vector.c           # 20 sub-tests
 │   ├── test_vector_malloc_fail.c # 6 sub-tests
 │   ├── test_map.c              # 34 sub-tests
-│   └── test_map_malloc_fail.c  # 4 sub-tests
+│   ├── test_map_malloc_fail.c  # 4 sub-tests
+│   ├── test_set.c              # 28 sub-tests
+│   └── test_set_malloc_fail.c  # 5 sub-tests
 ├── benchmarks/
-│   ├── CMakeLists.txt          # 6 benchmark executables (label: "benchmark")
+│   ├── CMakeLists.txt          # 7 benchmark executables (label: "benchmark")
 │   ├── benchmark_version.c
 │   ├── benchmark_state.c       # 3 cases (8-state, 1024-state, miss)
 │   ├── benchmark_arena.c       # 7 cases (arena vs malloc)
 │   ├── benchmark_ring.c        # 3 cases (seq 128B, seq 1K, full-miss)
 │   ├── benchmark_vector.c      # 4 cases (seq push, push/pop, insert front, reserve+push)
-│   └── benchmark_map.c         # 5 cases (insert, get hit/miss, rehash, foreach)
+│   ├── benchmark_map.c         # 5 cases (insert, get hit/miss, rehash, foreach)
+│   └── benchmark_set.c         # 5 cases (insert, contains hit/miss, rehash, foreach)
 ├── scripts/
 │   ├── benchmark_report.py     # CI benchmark log → BENCHMARK.md + charts
 │   └── checksum.py             # Release SHA-256 generator

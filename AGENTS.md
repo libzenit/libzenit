@@ -436,8 +436,9 @@ libzen/
     │       ├── arena.h         # Arena allocator API
     │       ├── benchmark.h     # Benchmark framework API
     │       ├── ring.h          # Ring buffer API
-    │       ├── vector.h        # Dynamic array API
-    │       └── map.h           # Hash map API
+│       ├── vector.h         # Dynamic array API
+│       ├── map.h           # Hash map API
+│       └── set.h           # Hash set API
     ├── src/
     │   ├── CMakeLists.txt
     │   ├── result.c            # Error string conversion
@@ -446,8 +447,9 @@ libzen/
     │   ├── arena.c             # Arena allocator impl (free-list, bitmap, boundary tags)
     │   ├── benchmark.c         # Benchmark runner impl (clock_gettime / QueryPerformanceCounter)
     │   ├── ring.c              # Ring buffer impl (circular FIFO, wrap-around)
-    │   ├── vector.c            # Dynamic array impl (type-erased, 1.5x growth)
-    │   └── map.c               # Hash map impl (open-addressing, linear probing, FNV-1a)
+│   ├── vector.c            # Dynamic array impl (type-erased, 1.5x growth)
+│   ├── map.c               # Hash map impl (open-addressing, linear probing, FNV-1a)
+│   └── set.c               # Hash set impl (open-addressing, linear probing, FNV-1a)
     ├── tests/
     │   ├── CMakeLists.txt
     │   ├── test_malloc_fail.h  # Shared malloc/calloc wrappers for --wrap tests
@@ -462,8 +464,10 @@ libzen/
     │   ├── test_benchmark.c    # Benchmark API validation & coverage
     │   ├── test_vector.c       # Vector happy path, edge cases, growth
     │   ├── test_vector_malloc_fail.c # Malloc/calloc/realloc failure via --wrap
-    │   ├── test_map.c          # Hash map happy path, edge cases, rehash, foreach
-    │   └── test_map_malloc_fail.c    # Malloc/calloc failure via --wrap
+│   ├── test_map.c          # Hash map happy path, edge cases, rehash, foreach
+│   ├── test_map_malloc_fail.c    # Malloc/calloc failure via --wrap
+│   ├── test_set.c          # Hash set happy path, edge cases, rehash, foreach
+│   └── test_set_malloc_fail.c    # Malloc/calloc failure via --wrap
 ├── benchmarks/
     │   ├── CMakeLists.txt
     │   ├── benchmark_version.c     # Version call throughput
@@ -471,7 +475,8 @@ libzen/
     │   ├── benchmark_arena.c       # Arena allocator throughput (vs malloc baseline)
     │   ├── benchmark_ring.c        # Ring buffer throughput (seq 128B, 1K, full-miss)
     │   ├── benchmark_vector.c      # Vector throughput (seq push, push/pop, insert front, reserve+push)
-    │   └── benchmark_map.c         # Hash map throughput (insert, get hit/miss, rehash, foreach)
+    │   ├── benchmark_map.c         # Hash map throughput (insert, get hit/miss, rehash, foreach)
+    │   └── benchmark_set.c         # Hash set throughput (insert, contains hit/miss, rehash, foreach)
 ├── scripts/
 │   ├── checksum.py         # Release checksum generator
 │   └── benchmark_report.py # Benchmark log parser & report generator (BENCHMARK.md + charts)

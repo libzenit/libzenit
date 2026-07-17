@@ -24,6 +24,7 @@ add_library(zenit STATIC
   ring.c
   vector.c
   map.c
+  set.c
 )
 
 target_include_directories(zenit
