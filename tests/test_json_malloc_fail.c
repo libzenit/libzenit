@@ -327,6 +327,63 @@ static void test_object_set_key_copy_fail(void) {
     printf("OK\n");
 }
 
+/* Try serialize with many countdown values to hit every OOM path */
+static void test_serialize_fail(void) {
+    printf("  serialize on malloc fail ... ");
+    fflush(stdout);
+
+    int oom_hits = 0;
+    for (int cd = 0; cd < 60; cd++) {
+        malloc_fail_countdown = -1;
+        zenit_json_t *doc = zenit_json_parse("[1,2,3,4,5,6,7,8,9]");
+        if (doc == NULL) { continue; }
+
+        malloc_fail_countdown = cd;
+        char *out = zenit_json_serialize(doc);
+        malloc_fail_countdown = -1;
+
+        if (out == NULL) {
+            oom_hits++;
+        }
+        free(out);
+        zenit_json_destroy(doc);
+    }
+
+    if (oom_hits == 0) {
+        fprintf(stderr, "FAIL: no OOM hit\n");
+        failures++;
+    }
+    printf("OK (%d OOM hits)\n", oom_hits);
+}
+
+static void test_serialize_value_fail(void) {
+    printf("  value serialize on malloc fail ... ");
+    fflush(stdout);
+
+    int oom_hits = 0;
+    for (int cd = 0; cd < 60; cd++) {
+        malloc_fail_countdown = -1;
+        zenit_json_t *doc = zenit_json_parse("[1,2,3,4,5,6,7,8,9]");
+        if (doc == NULL) { continue; }
+
+        malloc_fail_countdown = cd;
+        char *out = zenit_json_value_serialize(zenit_json_root(doc));
+        malloc_fail_countdown = -1;
+
+        if (out == NULL) {
+            oom_hits++;
+        }
+        free(out);
+        zenit_json_destroy(doc);
+    }
+
+    if (oom_hits == 0) {
+        fprintf(stderr, "FAIL: no OOM hit\n");
+        failures++;
+    }
+    printf("OK (%d OOM hits)\n", oom_hits);
+}
+
 int main(void) {
     malloc_fail_countdown = -1;
 
@@ -341,6 +398,8 @@ int main(void) {
     test_object_set_grow_fail();
     test_object_grow_rollback();
     test_object_set_key_copy_fail();
+    test_serialize_fail();
+    test_serialize_value_fail();
 
     malloc_fail_countdown = -1;
 

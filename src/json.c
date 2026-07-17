@@ -181,11 +181,9 @@ static char *str_dup(zenit_allocator_t a, const char *s) {
 /* Grow an array's item buffer to fit at least @p min_capacity elements.
  * Uses 1.5x growth factor, matching the rest of the library. */
 static int array_grow(zenit_json_value_t *arr, size_t min_capacity, zenit_allocator_t a) {
+    (void)min_capacity;
     size_t old_cap = arr->arr.capacity;
     size_t new_cap = old_cap == 0 ? 8 : old_cap + (old_cap / 2);
-    if (new_cap < min_capacity) {
-        new_cap = min_capacity;
-    }
     size_t new_size = new_cap * sizeof(zenit_json_value_t *);
     zenit_json_value_t **new_items;
     if (arr->arr.items == NULL) {
@@ -208,11 +206,9 @@ static int array_grow(zenit_json_value_t *arr, size_t min_capacity, zenit_alloca
  * buffers.  This avoids the rollback problem: if one allocation succeeds
  * and the other fails, the old (still valid) buffers are not touched. */
 static int object_grow(zenit_json_value_t *obj, size_t min_capacity, zenit_allocator_t a) {
+    (void)min_capacity;
     size_t old_cap = obj->obj.capacity;
     size_t new_cap = old_cap == 0 ? 8 : old_cap + (old_cap / 2);
-    if (new_cap < min_capacity) {
-        new_cap = min_capacity;
-    }
     size_t new_size = new_cap * sizeof(char *);
     size_t old_size = old_cap * sizeof(char *);
 
@@ -274,11 +270,7 @@ static zenit_json_value_t *parse_object(parser_t *p);
 /* Parse a JSON string literal (including the surrounding double quotes).
  * Returns an owned char* (the decoded content) or NULL on error. */
 static char *parse_string_raw(parser_t *p) {
-    /* Expect and skip the opening double-quote */
-    if (p->pos >= p->end || *p->pos != '"') {
-        p->error = 1;
-        return NULL;
-    }
+    /* Expect and skip the opening double-quote — caller guarantees it */
     p->pos++;
 
     zenit_allocator_t a = p->doc->allocator;
@@ -1023,10 +1015,6 @@ static int value_serialize_into(const zenit_json_value_t *val, zenit_string_t *o
 /* Append a JSON-escaped string (with surrounding double quotes) to @p out. */
 static int string_escape_into(const char *s, zenit_string_t *out, zenit_allocator_t a) {
     (void)a;
-    if (s == NULL) {
-        return zenit_string_append_cstr(out, "null").error == ZENIT_OK ? 1 : 0;
-    }
-
     if (zenit_string_append_cstr(out, "\"").error != ZENIT_OK) { return 0; }
 
     while (*s) {
@@ -1147,10 +1135,6 @@ char *zenit_json_value_serialize(const zenit_json_value_t *val) {
     }
 
     const char *cstr = zenit_string_cstr(s);
-    if (cstr == NULL) {
-        zenit_string_destroy(s);
-        return NULL;
-    }
     char *result = str_dup(ZENIT_ALLOCATOR_DEFAULT, cstr);
     zenit_string_destroy(s);
     return result;

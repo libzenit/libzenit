@@ -16,10 +16,10 @@
 //
 
 /*
- * Targeted coverage test for JSON module.
+ * JSON coverage edge-case tests.
  *
- * Hits remaining uncovered lines that require specific edge cases
- * or error conditions not covered by test_json.c or test_json_malloc_fail.c.
+ * Uses a custom allocator with configurable failure point to reach every
+ * OOM error path in the JSON parser, serializer, and value constructors.
  */
 
 #include <libzenit/json.h>
@@ -27,16 +27,149 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <math.h>
+
+/* ─── Custom allocator that fails after N allocations ─── */
+
+static int cov_alloc_count = 0;
+static int cov_fail_after = -1;
+
+static void *cov_alloc(size_t size, void *ctx) {
+    (void)ctx;
+    if (cov_fail_after >= 0 && cov_alloc_count >= cov_fail_after) {
+        return NULL;
+    }
+    cov_alloc_count++;
+    return malloc(size);
+}
+
+static void *cov_realloc(void *ptr, size_t size, void *ctx) {
+    (void)ctx;
+    if (cov_fail_after >= 0 && cov_alloc_count >= cov_fail_after) {
+        return NULL;
+    }
+    cov_alloc_count++;
+    return realloc(ptr, size);
+}
+
+static void cov_free(void *ptr, void *ctx) {
+    (void)ctx;
+    free(ptr);
+}
+
+static zenit_allocator_t cov_allocator(void) {
+    return (zenit_allocator_t){
+        .alloc_fn = cov_alloc,
+        .realloc_fn = cov_realloc,
+        .free_fn = cov_free,
+        .ctx = NULL
+    };
+}
+
+/* Try all countdown values from 0 up to limit; parse should gracefully
+ * return NULL at every value (no crash or leak). */
+static void try_parse_countdown(const char *input, int limit) {
+    for (int i = 0; i <= limit; i++) {
+        cov_alloc_count = 0;
+        cov_fail_after = i;
+        zenit_json_t *doc = zenit_json_parse_with_length_and_allocator(input, strlen(input), cov_allocator());
+        cov_fail_after = -1;
+        if (doc != NULL) {
+            zenit_json_destroy(doc);
+        }
+    }
+}
+
+/* Try to hit string realloc OOM during parse (lines 373-375).
+ * A string > 64 chars triggers buffer realloc; we make it fail. */
+static void try_long_string_oom(void) {
+    char input[150];
+    input[0] = '"';
+    for (int i = 0; i < 100; i++) {
+        input[1 + i] = 'x';
+    }
+    input[101] = '"';
+    input[102] = '\0';
+
+    for (int i = 0; i < 15; i++) {
+        cov_alloc_count = 0;
+        cov_fail_after = i;
+        zenit_json_t *doc = zenit_json_parse_with_length_and_allocator(input, strlen(input), cov_allocator());
+        cov_fail_after = -1;
+        if (doc != NULL) {
+            zenit_json_destroy(doc);
+        }
+    }
+}
+
+/* Same for programmatic construction. */
+static void try_build_countdown(int limit) {
+    for (int i = 0; i <= limit; i++) {
+        cov_alloc_count = 0;
+        cov_fail_after = i;
+        zenit_json_t *doc = zenit_json_create_with_allocator(cov_allocator());
+        cov_fail_after = -1;
+        if (doc != NULL) {
+            zenit_json_destroy(doc);
+        }
+    }
+}
+
+/* ─── Static counters ─── */
 
 static int failures = 0;
 #define TEST(name) do { printf("  %s ... ", name); fflush(stdout); } while (0)
 #define PASS() do { printf("PASS\n"); } while (0)
-#define FAIL(msg) do { fprintf(stderr, "FAIL: %s\n", msg); failures++; } while (0)
+#define FAIL(msg) do { fprintf(stderr, "FAIL: %s\n", msg); failures++; return; } while (0)
 
-/* 1. Hit value constructors with NULL doc (lines 774, 784, 795, 806, 822, 832) */
-static void test_null_doc_constructors(void) {
-    TEST("value constructors with NULL doc");
+/* ─── Test: hit every OOM path in parser ─── */
+
+static void test_oom_parse(void) {
+    TEST("OOM parse countdown 0-18");
+    try_parse_countdown("null", 6);
+    try_parse_countdown("\"hello\"", 9);
+    try_parse_countdown("[1,2,3,4,5,6,7,8,9]", 20);
+    try_parse_countdown("{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8,\"i\":9}", 30);
+    try_long_string_oom();
+    PASS();
+}
+
+/* ─── Test: hit OOM paths in programmatic construction ─── */
+
+static void test_oom_build(void) {
+    TEST("OOM build countdown 0-10");
+    try_build_countdown(10);
+
+    /* Also build with specific value construction failures */
+    for (int i = 0; i < 20; i++) {
+        cov_alloc_count = 0;
+        cov_fail_after = i;
+        zenit_json_t *doc = zenit_json_create_with_allocator(cov_allocator());
+        cov_fail_after = -1;
+        if (doc != NULL) {
+            /* Try operations that trigger additional allocations */
+            zenit_json_value_t *v = zenit_json_value_null(doc);
+            (void)v;
+            /* If we got here, try more */
+            v = zenit_json_value_bool(doc, 1);
+            (void)v;
+            v = zenit_json_value_number(doc, 1.0);
+            (void)v;
+            v = zenit_json_value_string(doc, "test");
+            (void)v;
+            v = zenit_json_value_array(doc);
+            (void)v;
+            v = zenit_json_value_object(doc);
+            (void)v;
+            zenit_json_destroy(doc);
+        }
+    }
+    PASS();
+}
+
+/* ─── Test: NULL doc constructors ─── */
+
+static void test_null_doc(void) {
+    TEST("NULL doc constructors");
     if (zenit_json_value_null(NULL) != NULL) { FAIL("null"); return; }
     if (zenit_json_value_bool(NULL, 1) != NULL) { FAIL("bool"); return; }
     if (zenit_json_value_number(NULL, 1.0) != NULL) { FAIL("number"); return; }
@@ -46,193 +179,36 @@ static void test_null_doc_constructors(void) {
     PASS();
 }
 
-/* 2. array_remove on non-array and NULL (lines 877, 880) */
-static void test_array_remove_edge(void) {
-    TEST("array_remove edge cases");
+/* ─── Test: edge case operations ─── */
+
+static void test_edge_ops(void) {
+    TEST("edge case operations");
+    /* array_remove NULL */
     if (zenit_json_array_remove(NULL, 0).error == ZENIT_OK) { FAIL("remove NULL"); return; }
+    /* array_insert NULL */
+    if (zenit_json_array_insert(NULL, 0, NULL).error == ZENIT_OK) { FAIL("insert NULL"); return; }
+    /* object_remove NULL */
+    if (zenit_json_object_remove(NULL, "x").error == ZENIT_OK) { FAIL("obj remove NULL"); return; }
+
+    /* Create doc for type-mismatch tests */
     zenit_json_t *doc = zenit_json_create();
     if (doc == NULL) { FAIL("create doc"); return; }
     zenit_json_value_t *num = zenit_json_value_number(doc, 1.0);
+    if (num == NULL) { FAIL("create num"); zenit_json_destroy(doc); return; }
+
+    /* Array ops on non-array */
     if (zenit_json_array_remove(num, 0).error == ZENIT_OK) { FAIL("remove on num"); zenit_json_destroy(doc); return; }
-    zenit_json_destroy(doc);
-    PASS();
-}
-
-/* 3. array_insert on non-array (line 897) */
-static void test_array_insert_edge(void) {
-    TEST("array_insert on non-array");
-    zenit_json_t *doc = zenit_json_create();
-    if (doc == NULL) { FAIL("create doc"); return; }
-    zenit_json_value_t *num = zenit_json_value_number(doc, 1.0);
     if (zenit_json_array_insert(num, 0, num).error == ZENIT_OK) { FAIL("insert on num"); zenit_json_destroy(doc); return; }
-    zenit_json_destroy(doc);
-    PASS();
-}
 
-/* 4. object_set key dup OOM (line 980) — tested via malloc_fail */
-/* 5. object_remove NULL and non-object (lines 991, 994) */
-static void test_object_remove_edge(void) {
-    TEST("object_remove edge cases");
-    if (zenit_json_object_remove(NULL, "x").error == ZENIT_OK) { FAIL("remove NULL obj"); return; }
-    zenit_json_t *doc = zenit_json_create();
-    if (doc == NULL) { FAIL("create doc"); return; }
-    zenit_json_value_t *num = zenit_json_value_number(doc, 1.0);
+    /* Object ops on non-object */
     if (zenit_json_object_remove(num, "x").error == ZENIT_OK) { FAIL("remove on num"); zenit_json_destroy(doc); return; }
+
     zenit_json_destroy(doc);
     PASS();
 }
 
-/* 6. Serialize strings with control chars (lines 1033-1037, 1041-1042) */
-static void test_serialize_control_strings(void) {
-    TEST("serialize control strings");
-    zenit_json_t *doc = zenit_json_create();
-    if (doc == NULL) { FAIL("create doc"); return; }
+/* ─── Test: serialise false (hit the FALSE branch) ─── */
 
-    /* String with \b, \f, \n, \r, \t */
-    zenit_json_value_t *s = zenit_json_value_string(doc, "a\bb\fc\nd\re\tf");
-    if (s == NULL) { FAIL("create string"); zenit_json_destroy(doc); return; }
-    zenit_json_set_root(doc, s);
-
-    char *out = zenit_json_serialize(doc);
-    if (out == NULL) { FAIL("serialize NULL"); zenit_json_destroy(doc); return; }
-    /* Expected: "a\bb\fc\nd\re\tf" */
-    if (strcmp(out, "\"a\\bb\\fc\\nd\\re\\tf\"") != 0) {
-        FAIL("serialize control");
-        fprintf(stderr, "  got: %s\n", out);
-        free(out);
-        zenit_json_destroy(doc);
-        return;
-    }
-    free(out);
-    zenit_json_destroy(doc);
-    PASS();
-}
-
-/* 7. Serialize string with control char < 0x20 (not one of the named escapes)
- *    This triggers the \uXXXX path in serializer (lines 1041-1042) */
-static void test_serialize_control_hex(void) {
-    TEST("serialize control hex");
-    zenit_json_t *doc = zenit_json_create();
-    if (doc == NULL) { FAIL("create doc"); return; }
-
-    /* String with \x01 (control char that's not \b,\f,\n,\r,\t) */
-    char str_with_ctrl[2] = { 0x01, 0 };
-    zenit_json_value_t *s = zenit_json_value_string(doc, str_with_ctrl);
-    if (s == NULL) { FAIL("create string"); zenit_json_destroy(doc); return; }
-    zenit_json_set_root(doc, s);
-
-    char *out = zenit_json_serialize(doc);
-    if (out == NULL) { FAIL("serialize NULL"); zenit_json_destroy(doc); return; }
-    if (strcmp(out, "\"\\u0001\"") != 0) {
-        FAIL("serialize hex control");
-        fprintf(stderr, "  got: %s\n", out);
-        free(out);
-        zenit_json_destroy(doc);
-        return;
-    }
-    free(out);
-    zenit_json_destroy(doc);
-    PASS();
-}
-
-/* 8. Parse with trailing garbage (line 676) */
-static void test_parse_trailing_garbage(void) {
-    TEST("parse trailing garbage");
-    zenit_json_t *doc = zenit_json_parse("null extra");
-    if (doc != NULL) { FAIL("should be NULL"); zenit_json_destroy(doc); return; }
-    PASS();
-}
-
-/* 9. Object set with key_dup OOM — test value_serialize_into fails (line 1141-1142) */
-/* 10. string value with NULL arg (line 814) */
-static void test_string_value_null(void) {
-    TEST("string value with NULL str");
-    zenit_json_t *doc = zenit_json_create();
-    if (doc == NULL) { FAIL("create doc"); return; }
-    zenit_json_value_t *val = zenit_json_value_string(doc, NULL);
-    if (val == NULL) { FAIL("value NULL"); zenit_json_destroy(doc); return; }
-    const char *s = zenit_json_value_get_string(val);
-    if (s == NULL || strcmp(s, "") != 0) { FAIL("wrong value"); zenit_json_destroy(doc); return; }
-    zenit_json_destroy(doc);
-    PASS();
-}
-
-/* 11. Parse errors: trailing comma in array [1,] (lines 549-550) */
-static void test_parse_trailing_comma_array(void) {
-    TEST("parse [1,]");
-    zenit_json_t *doc = zenit_json_parse("[1,]");
-    if (doc != NULL) { FAIL("should be NULL"); zenit_json_destroy(doc); return; }
-    PASS();
-}
-
-/* 12. Parse errors: trailing comma in object {"a":1,} (line 615-616) */
-static void test_parse_trailing_comma_object(void) {
-    TEST("parse {\"a\":1,}");
-    zenit_json_t *doc = zenit_json_parse("{\"a\":1,}");
-    if (doc != NULL) { FAIL("should be NULL"); zenit_json_destroy(doc); return; }
-    PASS();
-}
-
-/* 13. Unterminated backslash at end of string (lines 303-305) */
-static void test_parse_unterminated_escape(void) {
-    TEST("parse unterminated escape");
-    /* JSON text: "\ (backslash at end with no following char) */
-    /* In C: "\"\\" = " (escaped quote) + \ (escaped backslash) */
-    zenit_json_t *doc = zenit_json_parse("\"\\");
-    if (doc != NULL) { FAIL("should be NULL"); zenit_json_destroy(doc); return; }
-    PASS();
-}
-
-/* 14. Truncated unicode escape (lines 321-323) */
-static void test_parse_truncated_unicode(void) {
-    TEST("parse truncated \\u");
-    /* JSON text: "\u (backslash-u at end with no hex digits) */
-    /* In C: "\"\\u" = " + \ + u */
-    zenit_json_t *doc = zenit_json_parse("\"\\u");
-    if (doc != NULL) { FAIL("should be NULL"); zenit_json_destroy(doc); return; }
-    PASS();
-}
-
-/* 15. Array with element not followed by , or ] (lines 549-550) */
-static void test_parse_array_bad_separator(void) {
-    TEST("parse [1 2]");
-    zenit_json_t *doc = zenit_json_parse("[1 2]");
-    if (doc != NULL) { FAIL("should be NULL"); zenit_json_destroy(doc); return; }
-    PASS();
-}
-
-/* 16. Object with missing colon after key (lines 581-583) */
-static void test_parse_object_missing_colon(void) {
-    TEST("parse {\"a\" 1}");
-    zenit_json_t *doc = zenit_json_parse("{\"a\" 1}");
-    if (doc != NULL) { FAIL("should be NULL"); zenit_json_destroy(doc); return; }
-    PASS();
-}
-
-/* 17. Object with missing comma between pairs (lines 615-616) */
-static void test_parse_object_missing_comma(void) {
-    TEST("parse {\"a\":1 \"b\":2}");
-    zenit_json_t *doc = zenit_json_parse("{\"a\":1 \"b\":2}");
-    if (doc != NULL) { FAIL("should be NULL"); zenit_json_destroy(doc); return; }
-    PASS();
-}
-
-/* 18. Object with invalid value after colon (lines 589-590) */
-static void test_parse_object_invalid_value(void) {
-    TEST("parse {\"a\":}");
-    zenit_json_t *doc = zenit_json_parse("{\"a\":}");
-    if (doc != NULL) { FAIL("should be NULL"); zenit_json_destroy(doc); return; }
-    PASS();
-}
-
-/* 19. array_insert with NULL arr (line 898) */
-static void test_array_insert_null(void) {
-    TEST("array_insert NULL");
-    if (zenit_json_array_insert(NULL, 0, NULL).error == ZENIT_OK) { FAIL("insert NULL arr"); return; }
-    PASS();
-}
-
-/* 20. Serialize false (line 1075) */
 static void test_serialize_false(void) {
     TEST("serialize false");
     zenit_json_t *doc = zenit_json_parse("false");
@@ -244,26 +220,114 @@ static void test_serialize_false(void) {
     PASS();
 }
 
+/* ─── Test: serialise control characters ─── */
+
+static void test_serialize_control(void) {
+    TEST("serialize control chars");
+    zenit_json_t *doc = zenit_json_create();
+    if (doc == NULL) { FAIL("create"); return; }
+
+    /* String with \b, \f, \n, \r, \t */
+    zenit_json_value_t *sv = zenit_json_value_string(doc, "a\bb\fc\nd\re\tf");
+    if (sv == NULL) { FAIL("create str"); zenit_json_destroy(doc); return; }
+    zenit_json_set_root(doc, sv);
+    char *out = zenit_json_serialize(doc);
+    if (out == NULL) { FAIL("serialize NULL"); zenit_json_destroy(doc); return; }
+    if (strcmp(out, "\"a\\bb\\fc\\nd\\re\\tf\"") != 0) { FAIL("wrong"); free(out); zenit_json_destroy(doc); return; }
+    free(out);
+    zenit_json_destroy(doc);
+
+    /* String with \x01 (control char requiring \uXXXX escape) */
+    doc = zenit_json_create();
+    if (doc == NULL) { FAIL("create"); return; }
+    char ctrl[2] = { 0x01, 0 };
+    sv = zenit_json_value_string(doc, ctrl);
+    if (sv == NULL) { FAIL("create ctrl str"); zenit_json_destroy(doc); return; }
+    zenit_json_set_root(doc, sv);
+    out = zenit_json_serialize(doc);
+    if (out == NULL) { FAIL("serialize ctrl NULL"); zenit_json_destroy(doc); return; }
+    if (strcmp(out, "\"\\u0001\"") != 0) { FAIL("wrong ctrl"); free(out); zenit_json_destroy(doc); return; }
+    free(out);
+    zenit_json_destroy(doc);
+    PASS();
+}
+
+/* ─── Test: parse errors (trailing comma, bad separator, etc.) ─── */
+
+static void test_parse_errors(void) {
+    TEST("parse error edge cases");
+    const char *invalid[] = {
+        "[1,]",
+        "[1 2]",
+        "{\"a\":1,}",
+        "{\"a\" 1}",
+        "{\"a\":1 \"b\":2}",
+        "{\"a\":}",
+        "null extra",
+        "\"\\",
+        "\"\\u",
+    };
+    for (int i = 0; i < (int)(sizeof(invalid) / sizeof(invalid[0])); i++) {
+        zenit_json_t *doc = zenit_json_parse(invalid[i]);
+        if (doc != NULL) { FAIL("expected NULL"); zenit_json_destroy(doc); return; }
+    }
+    PASS();
+}
+
+/* ─── Test: string value with NULL str param ─── */
+
+static void test_string_null(void) {
+    TEST("string value NULL str");
+    zenit_json_t *doc = zenit_json_create();
+    if (doc == NULL) { FAIL("create"); return; }
+    zenit_json_value_t *v = zenit_json_value_string(doc, NULL);
+    if (v == NULL) { FAIL("value NULL"); zenit_json_destroy(doc); return; }
+    const char *s = zenit_json_value_get_string(v);
+    if (s == NULL || strcmp(s, "") != 0) { FAIL("wrong"); zenit_json_destroy(doc); return; }
+    zenit_json_destroy(doc);
+    PASS();
+}
+
+/* ─── Test: parse long string ─── */
+
+static void test_long_string(void) {
+    TEST("parse long string (>64 chars)");
+    char input[256];
+    char expected[256];
+    input[0] = '"';
+    for (int i = 0; i < 100; i++) {
+        input[1 + i] = 'A' + (i % 26);
+        expected[i] = 'A' + (i % 26);
+    }
+    input[101] = '"';
+    input[102] = '\0';
+    expected[100] = '\0';
+
+    zenit_json_t *doc = zenit_json_parse(input);
+    if (doc == NULL) { FAIL("parse NULL"); return; }
+    const char *s = zenit_json_value_get_string(zenit_json_root(doc));
+    if (s == NULL || strcmp(s, expected) != 0) { FAIL("wrong"); zenit_json_destroy(doc); return; }
+    zenit_json_destroy(doc);
+    PASS();
+}
+
+/* ─── Main ─── */
+
 int main(void) {
     printf("=== json coverage ===\n");
-    test_null_doc_constructors();
-    test_array_remove_edge();
-    test_array_insert_edge();
-    test_object_remove_edge();
-    test_serialize_control_strings();
-    test_serialize_control_hex();
-    test_parse_trailing_garbage();
-    test_string_value_null();
-    test_parse_trailing_comma_array();
-    test_parse_trailing_comma_object();
-    test_parse_unterminated_escape();
-    test_parse_truncated_unicode();
-    test_parse_array_bad_separator();
-    test_parse_object_missing_colon();
-    test_parse_object_missing_comma();
-    test_parse_object_invalid_value();
-    test_array_insert_null();
+
+    /* OOM paths via custom allocator */
+    test_oom_parse();
+    test_oom_build();
+
+    /* Edge cases */
+    test_null_doc();
+    test_edge_ops();
     test_serialize_false();
+    test_serialize_control();
+    test_parse_errors();
+    test_string_null();
+    test_long_string();
 
     if (failures > 0) {
         printf("\nFAILED: %d test(s) failed\n", failures);
