@@ -16,24 +16,9 @@
 //
 
 #include <libzenit/set.h>
+#include "_hash_common.h"
 #include <stdlib.h>
 #include <string.h>
-
-/* ─── Slot states ───
- * Each slot in the hash table is one of three states:
- *   EMPTY   – never used (initial state)
- *   OCCUPIED – holds a live key
- *   DELETED  – tombstone; key was removed, probe chain continues
- */
-enum { SET_SLOT_EMPTY = 0, SET_SLOT_OCCUPIED = 1, SET_SLOT_DELETED = 2 };
-
-/* Default initial capacity (must be a power of two) */
-#define SET_DEFAULT_CAPACITY 16
-
-/* Load-factor threshold: when (occupied + deleted) > capacity * LIMIT,
- * the table is rehashed.  Stored as a numerator out of 100 to avoid floats. */
-#define SET_LOAD_PERCENT 75
-#define SET_GROWTH_FACTOR 2
 
 /**
  * @brief Internal hash set state.
@@ -49,34 +34,6 @@ struct zenit_set_t {
     size_t count;           /**< Number of live (OCCUPIED) entries */
     size_t deleted;         /**< Number of DELETED (tombstone) slots */
 };
-
-/* ─── Helper: round up to the next power of two ─── */
-static size_t round_pow2(size_t n) {
-    n--;
-    n |= n >> 1;
-    n |= n >> 2;
-    n |= n >> 4;
-    n |= n >> 8;
-    n |= n >> 16;
-#if SIZE_MAX > 0xFFFFFFFFULL
-    n |= n >> 32;
-#endif
-    return n + 1;
-}
-
-/* ─── FNV-1a hash (64-bit) ───
- * Fowler–Noll–Vo hash function, variant 1a.  Operates on raw byte arrays.
- * The result is truncated to size_t on 32-bit platforms.
- */
-static size_t hash_fnv1a(const void *data, size_t len) {
-    size_t h = 14695981039346656037ULL;
-    const unsigned char *bytes = (const unsigned char *)data;
-    for (size_t i = 0; i < len; i++) {
-        h ^= (size_t)bytes[i];
-        h *= 1099511628211ULL;
-    }
-    return h;
-}
 
 /* ─── Probe: walk the slot array looking for a key ───
  * Returns the slot state (OCCUPIED, DELETED, or EMPTY) and writes the slot
@@ -101,16 +58,16 @@ static int probe_slot(
     while (1) {
         unsigned char state = set->states[index];
 
-        if (state == SET_SLOT_EMPTY) {
+        if (state == HASH_SLOT_EMPTY) {
             if (found_deleted) {
                 *out_index = first_deleted;
-                return SET_SLOT_DELETED;
+                return HASH_SLOT_DELETED;
             }
             *out_index = index;
-            return SET_SLOT_EMPTY;
+            return HASH_SLOT_EMPTY;
         }
 
-        if (state == SET_SLOT_DELETED) {
+        if (state == HASH_SLOT_DELETED) {
             if (!found_deleted) {
                 first_deleted = index;
                 found_deleted = 1;
@@ -123,7 +80,7 @@ static int probe_slot(
         const unsigned char *slot = set->slots + index * set->key_size;
         if (memcmp(slot, key, set->key_size) == 0) {
             *out_index = index;
-            return SET_SLOT_OCCUPIED;
+            return HASH_SLOT_OCCUPIED;
         }
 
         index = (index + 1) & mask;
@@ -156,19 +113,19 @@ static zenit_result_t rehash(zenit_set_t *set, size_t new_capacity) {
 
     size_t mask = new_capacity - 1;
     for (size_t i = 0; i < old_capacity; i++) {
-        if (old_states[i] == SET_SLOT_OCCUPIED) {
+        if (old_states[i] == HASH_SLOT_OCCUPIED) {
             const unsigned char *old_slot = old_slots + i * set->key_size;
 
             size_t hash = hash_fnv1a(old_slot, set->key_size);
             size_t index = hash & mask;
 
-            while (set->states[index] == SET_SLOT_OCCUPIED) {
+            while (set->states[index] == HASH_SLOT_OCCUPIED) {
                 index = (index + 1) & mask;
             }
 
             unsigned char *dest = set->slots + index * set->key_size;
             memcpy(dest, old_slot, set->key_size);
-            set->states[index] = SET_SLOT_OCCUPIED;
+            set->states[index] = HASH_SLOT_OCCUPIED;
             set->count++;
         }
     }
@@ -184,8 +141,8 @@ static zenit_result_t rehash(zenit_set_t *set, size_t new_capacity) {
 /* ─── Ensure load factor is below threshold; rehash if needed ─── */
 static zenit_result_t ensure_load(zenit_set_t *set) {
     size_t used = set->count + set->deleted;
-    if (used * 100 > set->capacity * SET_LOAD_PERCENT) {
-        size_t new_cap = set->capacity * SET_GROWTH_FACTOR;
+    if (used * 100 > set->capacity * HASH_LOAD_PERCENT) {
+        size_t new_cap = set->capacity * HASH_GROWTH_FACTOR;
         return rehash(set, new_cap);
     }
     return ZENIT_RESULT_OK;
@@ -194,7 +151,7 @@ static zenit_result_t ensure_load(zenit_set_t *set) {
 /* ─── Public API ─── */
 
 zenit_set_t *zenit_set_create(size_t key_size) {
-    return zenit_set_create_with_capacity(key_size, SET_DEFAULT_CAPACITY);
+    return zenit_set_create_with_capacity(key_size, HASH_DEFAULT_CAPACITY);
 }
 
 zenit_set_t *zenit_set_create_with_capacity(size_t key_size, size_t capacity) {
@@ -252,17 +209,17 @@ zenit_result_t zenit_set_insert(zenit_set_t *set, const void *key) {
     size_t index = 0;
     int state = probe_slot(set, key, &index);
 
-    if (state == SET_SLOT_OCCUPIED) {
+    if (state == HASH_SLOT_OCCUPIED) {
         /* Key already exists — no-op */
         return ZENIT_RESULT_OK;
     }
 
     unsigned char *dest = set->slots + index * set->key_size;
     memcpy(dest, key, set->key_size);
-    set->states[index] = SET_SLOT_OCCUPIED;
+    set->states[index] = HASH_SLOT_OCCUPIED;
     set->count++;
 
-    if (state == SET_SLOT_DELETED) {
+    if (state == HASH_SLOT_DELETED) {
         set->deleted--;
     }
 
@@ -277,11 +234,11 @@ zenit_result_t zenit_set_remove(zenit_set_t *set, const void *key) {
     size_t index = 0;
     int state = probe_slot(set, key, &index);
 
-    if (state != SET_SLOT_OCCUPIED) {
+    if (state != HASH_SLOT_OCCUPIED) {
         return ZENIT_RESULT_ERROR(ZENIT_ERROR_NOT_FOUND);
     }
 
-    set->states[index] = SET_SLOT_DELETED;
+    set->states[index] = HASH_SLOT_DELETED;
     set->count--;
     set->deleted++;
 
@@ -294,7 +251,7 @@ int zenit_set_contains(const zenit_set_t *set, const void *key) {
     }
 
     size_t index = 0;
-    return probe_slot(set, key, &index) == SET_SLOT_OCCUPIED ? 1 : 0;
+    return probe_slot(set, key, &index) == HASH_SLOT_OCCUPIED ? 1 : 0;
 }
 
 size_t zenit_set_count(const zenit_set_t *set) {
@@ -315,7 +272,7 @@ void zenit_set_clear(zenit_set_t *set) {
     if (set == NULL) {
         return;
     }
-    memset(set->states, SET_SLOT_EMPTY, set->capacity);
+    memset(set->states, HASH_SLOT_EMPTY, set->capacity);
     set->count = 0;
     set->deleted = 0;
 }
@@ -328,7 +285,7 @@ void zenit_set_foreach(
     }
 
     for (size_t i = 0; i < set->capacity; i++) {
-        if (set->states[i] == SET_SLOT_OCCUPIED) {
+        if (set->states[i] == HASH_SLOT_OCCUPIED) {
             const unsigned char *slot = set->slots + i * set->key_size;
             visit(slot, ctx);
         }
