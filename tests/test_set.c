@@ -272,7 +272,6 @@ static int test_insert_multiple(void) {
     zenit_set_t *set = zenit_set_create(sizeof(int));
     ASSERT(set != NULL, "expected non-NULL set");
 
-    int seen[10] = {0};
     for (int i = 0; i < 10; i++) {
         ASSERT(zenit_set_insert(set, &i).error == ZENIT_OK, "insert");
     }
