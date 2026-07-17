@@ -16,9 +16,9 @@
 //
 
 #include <libzenit/map.h>
-#include "_hash_common.h"
-#include <stdlib.h>
+#include <libzenit/allocator.h>
 #include <string.h>
+#include "_hash_common.h"
 
 /**
  * @brief Internal hash map state.
@@ -36,6 +36,7 @@ struct zenit_map_t {
     size_t capacity;        /**< Total number of slots (always a power of two) */
     size_t count;           /**< Number of live (OCCUPIED) entries */
     size_t deleted;         /**< Number of DELETED (tombstone) slots */
+    zenit_allocator_t allocator; /**< Allocator used for all memory operations */
 };
 
 /* ─── Probe: walk the slot array looking for a key ───
@@ -99,15 +100,15 @@ static zenit_result_t rehash(zenit_map_t *map, size_t new_capacity) {
     /* new_capacity must be a power of two (caller ensures this) */
 
     /* Allocate new slot array */
-    unsigned char *new_slots = calloc(new_capacity, map->slot_size);
+    unsigned char *new_slots = zenit_allocator_alloc_zero(map->allocator, new_capacity, map->slot_size);
     if (new_slots == NULL) {
         return ZENIT_RESULT_ERROR(ZENIT_ERROR_ALLOC);
     }
 
-    /* Allocate new state array — calloc gives all EMPTY (0) */
-    unsigned char *new_states = calloc(new_capacity, 1);
+    /* Allocate new state array — zenit_allocator_alloc_zero gives all EMPTY (0) */
+    unsigned char *new_states = zenit_allocator_alloc_zero(map->allocator, new_capacity, 1);
     if (new_states == NULL) {
-        free(new_slots);
+        map->allocator.free_fn(new_slots, map->allocator.ctx);
         return ZENIT_RESULT_ERROR(ZENIT_ERROR_ALLOC);
     }
 
@@ -152,8 +153,8 @@ static zenit_result_t rehash(zenit_map_t *map, size_t new_capacity) {
     }
 
     /* Free the old arrays */
-    free(old_slots);
-    free(old_states);
+    map->allocator.free_fn(old_slots, map->allocator.ctx);
+    map->allocator.free_fn(old_states, map->allocator.ctx);
 
     /* Verify we re-inserted every entry (defensive) */
     (void)old_count;
@@ -184,6 +185,22 @@ zenit_map_t *zenit_map_create(size_t key_size, size_t value_size) {
 zenit_map_t *zenit_map_create_with_capacity(
     size_t key_size, size_t value_size, size_t capacity
 ) {
+    return zenit_map_create_with_capacity_and_allocator(
+        key_size, value_size, capacity, ZENIT_ALLOCATOR_DEFAULT
+    );
+}
+
+zenit_map_t *zenit_map_create_with_allocator(
+    size_t key_size, size_t value_size, zenit_allocator_t allocator
+) {
+    return zenit_map_create_with_capacity_and_allocator(
+        key_size, value_size, HASH_DEFAULT_CAPACITY, allocator
+    );
+}
+
+zenit_map_t *zenit_map_create_with_capacity_and_allocator(
+    size_t key_size, size_t value_size, size_t capacity, zenit_allocator_t allocator
+) {
     /* Validate parameters */
     if (key_size == 0 || value_size == 0 || capacity == 0) {
         return NULL;
@@ -193,7 +210,7 @@ zenit_map_t *zenit_map_create_with_capacity(
     size_t cap = round_pow2(capacity);
 
     /* Allocate the handle */
-    zenit_map_t *map = malloc(sizeof(zenit_map_t));
+    zenit_map_t *map = allocator.alloc_fn(sizeof(zenit_map_t), allocator.ctx);
     if (map == NULL) {
         return NULL;
     }
@@ -205,19 +222,20 @@ zenit_map_t *zenit_map_create_with_capacity(
     map->capacity = cap;
     map->count = 0;
     map->deleted = 0;
+    map->allocator = allocator;
 
-    /* Allocate slot array — calloc so all bytes are zeroed */
-    map->slots = calloc(cap, map->slot_size);
+    /* Allocate slot array — alloc_zero so all bytes are zeroed */
+    map->slots = zenit_allocator_alloc_zero(allocator, cap, map->slot_size);
     if (map->slots == NULL) {
-        free(map);
+        allocator.free_fn(map, allocator.ctx);
         return NULL;
     }
 
-    /* Allocate state array — calloc gives all HASH_SLOT_EMPTY (0) */
-    map->states = calloc(cap, 1);
+    /* Allocate state array — alloc_zero gives all HASH_SLOT_EMPTY (0) */
+    map->states = zenit_allocator_alloc_zero(allocator, cap, 1);
     if (map->states == NULL) {
-        free(map->slots);
-        free(map);
+        allocator.free_fn(map->slots, allocator.ctx);
+        allocator.free_fn(map, allocator.ctx);
         return NULL;
     }
 
@@ -229,9 +247,9 @@ void zenit_map_destroy(zenit_map_t *map) {
         return;
     }
     /* Free the slot and state arrays, then the handle itself */
-    free(map->slots);
-    free(map->states);
-    free(map);
+    map->allocator.free_fn(map->slots, map->allocator.ctx);
+    map->allocator.free_fn(map->states, map->allocator.ctx);
+    map->allocator.free_fn(map, map->allocator.ctx);
 }
 
 zenit_result_t zenit_map_insert(

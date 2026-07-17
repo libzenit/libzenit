@@ -16,6 +16,7 @@
 //
 
 #include <libzenit/vector.h>
+#include <libzenit/allocator.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -35,6 +36,7 @@ struct zenit_vector_t {
     size_t elem_size;      /**< Size in bytes of one element */
     size_t count;          /**< Number of elements stored */
     size_t capacity;       /**< Number of element slots allocated */
+    zenit_allocator_t allocator; /**< Memory allocator */
 };
 
 /**
@@ -46,15 +48,17 @@ struct zenit_vector_t {
  * @return ZENIT_RESULT_OK or ZENIT_ERROR_ALLOC.
  */
 static zenit_result_t realloc_buffer(zenit_vector_t *vector, size_t new_cap) {
+    zenit_allocator_t a = vector->allocator;
+
     /* If we are asked to shrink to zero, free the buffer */
     if (new_cap == 0) {
-        free(vector->buffer);
+        a.free_fn(vector->buffer, a.ctx);
         vector->buffer = NULL;
         vector->capacity = 0;
         return ZENIT_RESULT_OK;
     }
 
-    unsigned char *new_buf = realloc(vector->buffer, new_cap * vector->elem_size);
+    unsigned char *new_buf = zenit_allocator_realloc(a, vector->buffer, vector->capacity * vector->elem_size, new_cap * vector->elem_size);
     if (new_buf == NULL) {
         /* Old buffer is still valid; caller may retry with smaller capacity */
         return ZENIT_RESULT_ERROR(ZENIT_ERROR_ALLOC);
@@ -85,14 +89,14 @@ static zenit_result_t grow(zenit_vector_t *vector, size_t min_capacity) {
     return realloc_buffer(vector, new_cap);
 }
 
-zenit_vector_t *zenit_vector_create(size_t elem_size) {
+zenit_vector_t *zenit_vector_create_with_allocator(size_t elem_size, zenit_allocator_t allocator) {
     /* Element size must be positive — zero would break all operations */
     if (elem_size == 0) {
         return NULL;
     }
 
-    /* Allocate the handle */
-    zenit_vector_t *vector = malloc(sizeof(zenit_vector_t));
+    /* Allocate the handle using the custom allocator */
+    zenit_vector_t *vector = allocator.alloc_fn(sizeof(zenit_vector_t), allocator.ctx);
     if (vector == NULL) {
         return NULL;
     }
@@ -102,34 +106,44 @@ zenit_vector_t *zenit_vector_create(size_t elem_size) {
     vector->elem_size = elem_size;
     vector->count = 0;
     vector->capacity = 0;
+    vector->allocator = allocator;
 
     return vector;
 }
 
-zenit_vector_t *zenit_vector_create_with_capacity(size_t elem_size, size_t capacity) {
+zenit_vector_t *zenit_vector_create(size_t elem_size) {
+    return zenit_vector_create_with_allocator(elem_size, ZENIT_ALLOCATOR_DEFAULT);
+}
+
+zenit_vector_t *zenit_vector_create_with_capacity_and_allocator(size_t elem_size, size_t capacity, zenit_allocator_t allocator) {
     /* Reject zero for either parameter */
     if (elem_size == 0 || capacity == 0) {
         return NULL;
     }
 
-    /* Allocate the handle */
-    zenit_vector_t *vector = malloc(sizeof(zenit_vector_t));
+    /* Allocate the handle using the custom allocator */
+    zenit_vector_t *vector = allocator.alloc_fn(sizeof(zenit_vector_t), allocator.ctx);
     if (vector == NULL) {
         return NULL;
     }
 
     /* Pre-allocate the element buffer */
-    vector->buffer = malloc(capacity * elem_size);
+    vector->buffer = allocator.alloc_fn(capacity * elem_size, allocator.ctx);
     if (vector->buffer == NULL) {
-        free(vector);
+        allocator.free_fn(vector, allocator.ctx);
         return NULL;
     }
 
     vector->elem_size = elem_size;
     vector->count = 0;
     vector->capacity = capacity;
+    vector->allocator = allocator;
 
     return vector;
+}
+
+zenit_vector_t *zenit_vector_create_with_capacity(size_t elem_size, size_t capacity) {
+    return zenit_vector_create_with_capacity_and_allocator(elem_size, capacity, ZENIT_ALLOCATOR_DEFAULT);
 }
 
 void zenit_vector_destroy(zenit_vector_t *vector) {
@@ -137,8 +151,9 @@ void zenit_vector_destroy(zenit_vector_t *vector) {
         return;
     }
     /* Free the element buffer first, then the handle */
-    free(vector->buffer);
-    free(vector);
+    zenit_allocator_t a = vector->allocator;
+    a.free_fn(vector->buffer, a.ctx);
+    a.free_fn(vector, a.ctx);
 }
 
 zenit_result_t zenit_vector_push(zenit_vector_t *vector, const void *elem) {
@@ -164,7 +179,6 @@ zenit_result_t zenit_vector_push(zenit_vector_t *vector, const void *elem) {
 }
 
 zenit_result_t zenit_vector_pop(zenit_vector_t *vector, void *out_elem) {
-    /* Validate preconditions */
     if (vector == NULL || out_elem == NULL) {
         return ZENIT_RESULT_ERROR(ZENIT_ERROR_NULL);
     }
@@ -172,7 +186,6 @@ zenit_result_t zenit_vector_pop(zenit_vector_t *vector, void *out_elem) {
         return ZENIT_RESULT_ERROR(ZENIT_ERROR_EMPTY);
     }
 
-    /* Decrement count first so we read from the last stored element */
     vector->count--;
     const unsigned char *src = vector->buffer + vector->count * vector->elem_size;
     memcpy(out_elem, src, vector->elem_size);
@@ -181,7 +194,6 @@ zenit_result_t zenit_vector_pop(zenit_vector_t *vector, void *out_elem) {
 }
 
 zenit_result_t zenit_vector_insert(zenit_vector_t *vector, size_t index, const void *elem) {
-    /* Validate preconditions */
     if (vector == NULL || elem == NULL) {
         return ZENIT_RESULT_ERROR(ZENIT_ERROR_NULL);
     }
@@ -189,7 +201,6 @@ zenit_result_t zenit_vector_insert(zenit_vector_t *vector, size_t index, const v
         return ZENIT_RESULT_ERROR(ZENIT_ERROR_PARAM);
     }
 
-    /* Grow if full */
     if (vector->count == vector->capacity) {
         zenit_result_t r = grow(vector, vector->count + 1);
         if (r.error != ZENIT_OK) {
@@ -197,7 +208,6 @@ zenit_result_t zenit_vector_insert(zenit_vector_t *vector, size_t index, const v
         }
     }
 
-    /* Shift elements from index onward to the right by one slot */
     if (index < vector->count) {
         unsigned char *dest = vector->buffer + (index + 1) * vector->elem_size;
         const unsigned char *src = vector->buffer + index * vector->elem_size;
@@ -205,7 +215,6 @@ zenit_result_t zenit_vector_insert(zenit_vector_t *vector, size_t index, const v
         memmove(dest, src, bytes);
     }
 
-    /* Write the new element at the vacated position */
     unsigned char *dest = vector->buffer + index * vector->elem_size;
     memcpy(dest, elem, vector->elem_size);
     vector->count++;
@@ -214,7 +223,6 @@ zenit_result_t zenit_vector_insert(zenit_vector_t *vector, size_t index, const v
 }
 
 zenit_result_t zenit_vector_remove(zenit_vector_t *vector, size_t index, void *out_elem) {
-    /* Validate preconditions */
     if (vector == NULL || out_elem == NULL) {
         return ZENIT_RESULT_ERROR(ZENIT_ERROR_NULL);
     }
@@ -222,11 +230,9 @@ zenit_result_t zenit_vector_remove(zenit_vector_t *vector, size_t index, void *o
         return ZENIT_RESULT_ERROR(ZENIT_ERROR_PARAM);
     }
 
-    /* Copy the element to be removed into out_elem */
     const unsigned char *src = vector->buffer + index * vector->elem_size;
     memcpy(out_elem, src, vector->elem_size);
 
-    /* Shift remaining elements left by one slot */
     if (index + 1 < vector->count) {
         unsigned char *dest = vector->buffer + index * vector->elem_size;
         const unsigned char *src_shift = vector->buffer + (index + 1) * vector->elem_size;
@@ -246,8 +252,6 @@ void *zenit_vector_get(const zenit_vector_t *vector, size_t index) {
     if (index >= vector->count) {
         return NULL;
     }
-
-    /* Return a direct pointer into the internal buffer */
     return vector->buffer + index * vector->elem_size;
 }
 
@@ -283,12 +287,9 @@ zenit_result_t zenit_vector_reserve(zenit_vector_t *vector, size_t capacity) {
     if (vector == NULL) {
         return ZENIT_RESULT_ERROR(ZENIT_ERROR_NULL);
     }
-
-    /* No-op if already large enough */
     if (capacity <= vector->capacity) {
         return ZENIT_RESULT_OK;
     }
-
     return realloc_buffer(vector, capacity);
 }
 
@@ -296,13 +297,9 @@ zenit_result_t zenit_vector_shrink_to_fit(zenit_vector_t *vector) {
     if (vector == NULL) {
         return ZENIT_RESULT_ERROR(ZENIT_ERROR_NULL);
     }
-
-    /* Nothing to do if count already equals capacity */
     if (vector->count == vector->capacity) {
         return ZENIT_RESULT_OK;
     }
-
-    /* Reallocate to exactly count slots (or free if count is 0) */
     return realloc_buffer(vector, vector->count);
 }
 
@@ -310,7 +307,6 @@ void zenit_vector_clear(zenit_vector_t *vector) {
     if (vector == NULL) {
         return;
     }
-    /* Reset count; buffer and capacity remain unchanged */
     vector->count = 0;
 }
 

@@ -16,9 +16,9 @@
 //
 
 #include <libzenit/set.h>
-#include "_hash_common.h"
-#include <stdlib.h>
+#include <libzenit/allocator.h>
 #include <string.h>
+#include "_hash_common.h"
 
 /**
  * @brief Internal hash set state.
@@ -33,6 +33,7 @@ struct zenit_set_t {
     size_t capacity;        /**< Total number of slots (always a power of two) */
     size_t count;           /**< Number of live (OCCUPIED) entries */
     size_t deleted;         /**< Number of DELETED (tombstone) slots */
+    zenit_allocator_t allocator; /**< Allocator used for all memory operations */
 };
 
 /* ─── Probe: walk the slot array looking for a key ───
@@ -89,14 +90,14 @@ static int probe_slot(
 
 /* ─── Rehash: grow the table and re-insert all live entries ─── */
 static zenit_result_t rehash(zenit_set_t *set, size_t new_capacity) {
-    unsigned char *new_slots = calloc(new_capacity, set->key_size);
+    unsigned char *new_slots = zenit_allocator_alloc_zero(set->allocator, new_capacity, set->key_size);
     if (new_slots == NULL) {
         return ZENIT_RESULT_ERROR(ZENIT_ERROR_ALLOC);
     }
 
-    unsigned char *new_states = calloc(new_capacity, 1);
+    unsigned char *new_states = zenit_allocator_alloc_zero(set->allocator, new_capacity, 1);
     if (new_states == NULL) {
-        free(new_slots);
+        set->allocator.free_fn(new_slots, set->allocator.ctx);
         return ZENIT_RESULT_ERROR(ZENIT_ERROR_ALLOC);
     }
 
@@ -130,8 +131,8 @@ static zenit_result_t rehash(zenit_set_t *set, size_t new_capacity) {
         }
     }
 
-    free(old_slots);
-    free(old_states);
+    set->allocator.free_fn(old_slots, set->allocator.ctx);
+    set->allocator.free_fn(old_states, set->allocator.ctx);
 
     (void)old_count;
 
@@ -155,13 +156,27 @@ zenit_set_t *zenit_set_create(size_t key_size) {
 }
 
 zenit_set_t *zenit_set_create_with_capacity(size_t key_size, size_t capacity) {
+    return zenit_set_create_with_capacity_and_allocator(
+        key_size, capacity, ZENIT_ALLOCATOR_DEFAULT
+    );
+}
+
+zenit_set_t *zenit_set_create_with_allocator(size_t key_size, zenit_allocator_t allocator) {
+    return zenit_set_create_with_capacity_and_allocator(
+        key_size, HASH_DEFAULT_CAPACITY, allocator
+    );
+}
+
+zenit_set_t *zenit_set_create_with_capacity_and_allocator(
+    size_t key_size, size_t capacity, zenit_allocator_t allocator
+) {
     if (key_size == 0 || capacity == 0) {
         return NULL;
     }
 
     size_t cap = round_pow2(capacity);
 
-    zenit_set_t *set = malloc(sizeof(zenit_set_t));
+    zenit_set_t *set = allocator.alloc_fn(sizeof(zenit_set_t), allocator.ctx);
     if (set == NULL) {
         return NULL;
     }
@@ -170,17 +185,18 @@ zenit_set_t *zenit_set_create_with_capacity(size_t key_size, size_t capacity) {
     set->capacity = cap;
     set->count = 0;
     set->deleted = 0;
+    set->allocator = allocator;
 
-    set->slots = calloc(cap, key_size);
+    set->slots = zenit_allocator_alloc_zero(allocator, cap, key_size);
     if (set->slots == NULL) {
-        free(set);
+        allocator.free_fn(set, allocator.ctx);
         return NULL;
     }
 
-    set->states = calloc(cap, 1);
+    set->states = zenit_allocator_alloc_zero(allocator, cap, 1);
     if (set->states == NULL) {
-        free(set->slots);
-        free(set);
+        allocator.free_fn(set->slots, allocator.ctx);
+        allocator.free_fn(set, allocator.ctx);
         return NULL;
     }
 
@@ -191,9 +207,9 @@ void zenit_set_destroy(zenit_set_t *set) {
     if (set == NULL) {
         return;
     }
-    free(set->slots);
-    free(set->states);
-    free(set);
+    set->allocator.free_fn(set->slots, set->allocator.ctx);
+    set->allocator.free_fn(set->states, set->allocator.ctx);
+    set->allocator.free_fn(set, set->allocator.ctx);
 }
 
 zenit_result_t zenit_set_insert(zenit_set_t *set, const void *key) {

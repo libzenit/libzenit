@@ -18,6 +18,7 @@
 #ifndef LIBZENIT_HEAP_H
 #define LIBZENIT_HEAP_H
 
+#include <libzenit/allocator.h>
 #include <libzenit/result.h>
 #include <stddef.h>
 
@@ -67,6 +68,29 @@ zenit_heap_t *zenit_heap_create(size_t elem_size, zenit_heap_compare_fn_t compar
  * @return Opaque handle, or NULL on invalid parameters or allocation failure.
  */
 zenit_heap_t *zenit_heap_create_with_capacity(size_t elem_size, zenit_heap_compare_fn_t compare, size_t capacity);
+
+/**
+ * @brief Create an empty heap with a custom allocator.
+ *
+ * Default initial capacity (8).
+ *
+ * @param elem_size Size in bytes of each element.
+ * @param compare   Comparator function (must not be NULL).
+ * @param allocator Custom allocator to use for all memory operations.
+ * @return Opaque handle, or NULL on invalid parameters or allocation failure.
+ */
+zenit_heap_t *zenit_heap_create_with_allocator(size_t elem_size, zenit_heap_compare_fn_t compare, zenit_allocator_t allocator);
+
+/**
+ * @brief Create an empty heap with a specific initial capacity and a custom allocator.
+ *
+ * @param elem_size Size in bytes of each element.
+ * @param compare   Comparator function (must not be NULL).
+ * @param capacity  Initial number of element slots to allocate (> 0).
+ * @param allocator Custom allocator to use for all memory operations.
+ * @return Opaque handle, or NULL on invalid parameters or allocation failure.
+ */
+zenit_heap_t *zenit_heap_create_with_capacity_and_allocator(size_t elem_size, zenit_heap_compare_fn_t compare, size_t capacity, zenit_allocator_t allocator);
 
 /**
  * @brief Destroy a heap and free all owned memory.

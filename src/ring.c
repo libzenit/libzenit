@@ -16,6 +16,7 @@
 //
 
 #include <libzenit/ring.h>
+#include <libzenit/allocator.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -32,6 +33,7 @@ struct zenit_ring_t {
     size_t head;           /**< Next write offset (0 … capacity-1) */
     size_t tail;           /**< Next read offset  (0 … capacity-1) */
     size_t count;          /**< Number of bytes currently stored */
+    zenit_allocator_t allocator; /**< Custom allocator used for this instance */
 };
 
 /**
@@ -41,22 +43,36 @@ struct zenit_ring_t {
  * Returns NULL if either allocation fails or capacity == 0.
  */
 zenit_ring_t *zenit_ring_create(size_t capacity) {
+    /* Delegate to the with-allocator variant using the default allocator */
+    return zenit_ring_create_with_allocator(capacity, ZENIT_ALLOCATOR_DEFAULT);
+}
+
+/**
+ * @brief Create a ring buffer with a custom allocator.
+ *
+ * Allocates the handle and the internal byte array via the provided allocator.
+ * Returns NULL if either allocation fails or capacity == 0.
+ */
+zenit_ring_t *zenit_ring_create_with_allocator(size_t capacity, zenit_allocator_t allocator) {
     /* Capacity must be at least 1 — zero makes no sense for a buffer */
     if (capacity == 0) {
         return NULL;
     }
 
-    /* Allocate the handle */
-    zenit_ring_t *ring = malloc(sizeof(zenit_ring_t));
+    /* Allocate the handle — use the allocator directly, not the struct field */
+    zenit_ring_t *ring = allocator.alloc_fn(sizeof(zenit_ring_t), allocator.ctx);
     if (ring == NULL) {
         return NULL;
     }
 
-    /* Allocate the byte storage — calloc so it is zeroed initially */
-    ring->buffer = calloc(1, capacity);
+    /* Store the allocator so destroy uses the correct free function */
+    ring->allocator = allocator;
+
+    /* Allocate the byte storage — use alloc_zero so it is zeroed initially */
+    ring->buffer = zenit_allocator_alloc_zero(allocator, 1, capacity);
     if (ring->buffer == NULL) {
-        /* Handle allocation failed — free the handle we just allocated */
-        free(ring);
+        /* Buffer allocation failed — free the handle we just allocated */
+        allocator.free_fn(ring, allocator.ctx);
         return NULL;
     }
 
@@ -80,9 +96,11 @@ void zenit_ring_destroy(zenit_ring_t *ring) {
     if (ring == NULL) {
         return;
     }
+    /* Read the allocator before freeing — we need it to free the buffer and handle */
+    zenit_allocator_t a = ring->allocator;
     /* Free the byte array first, then the handle */
-    free(ring->buffer);
-    free(ring);
+    a.free_fn(ring->buffer, a.ctx);
+    a.free_fn(ring, a.ctx);
 }
 
 /**

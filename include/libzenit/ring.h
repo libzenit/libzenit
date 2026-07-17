@@ -18,6 +18,7 @@
 #ifndef LIBZENIT_RING_H
 #define LIBZENIT_RING_H
 
+#include <libzenit/allocator.h>
 #include <libzenit/result.h>
 #include <stddef.h>
 
@@ -42,6 +43,17 @@ typedef struct zenit_ring_t zenit_ring_t;
  * @return Opaque handle, or NULL on allocation failure or invalid capacity.
  */
 zenit_ring_t *zenit_ring_create(size_t capacity);
+
+/**
+ * @brief Create a ring buffer with a custom allocator.
+ *
+ * @p capacity must be > 0.
+ *
+ * @param capacity  Maximum number of bytes the buffer can hold.
+ * @param allocator Custom allocator to use for all internal memory.
+ * @return Opaque handle, or NULL on allocation failure or invalid capacity.
+ */
+zenit_ring_t *zenit_ring_create_with_allocator(size_t capacity, zenit_allocator_t allocator);
 
 /**
  * @brief Destroy a ring buffer and free its memory.

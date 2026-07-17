@@ -16,6 +16,7 @@
 //
 
 #include <libzenit/deque.h>
+#include <libzenit/allocator.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -24,11 +25,7 @@
 /* Growth factor = 1.5x */
 #define DEQUE_GROWTH_FACTOR(num) ((num) + (num) / 2)
 
-/* ─── Internal deque state ───
- * Uses a contiguous circular buffer.  head points to the front element;
- * tail points to the slot one past the last element.  Both wrap modulo
- * capacity.  When head == tail the deque is empty.
- */
+/* ─── Internal deque state ─── */
 struct zenit_deque_t {
     unsigned char *buffer;  /**< Element storage (capacity × elem_size bytes) */
     size_t elem_size;       /**< Size in bytes of one element */
@@ -36,15 +33,24 @@ struct zenit_deque_t {
     size_t capacity;        /**< Number of element slots allocated */
     size_t head;            /**< Index (in element units) of the front element */
     size_t tail;            /**< Index (in element units) one past the last element */
+    zenit_allocator_t allocator; /**< Memory allocator */
 };
 
-/* ─── Helper: reallocate the internal buffer to a new capacity ───
- * This is more involved than a simple realloc because the elements may
- * wrap around in the circular buffer.  We linearise them so that head
- * becomes 0 and tail becomes count.
- */
+/* ─── Helper: reallocate the internal buffer to a new capacity ─── */
 static zenit_result_t realloc_buffer(zenit_deque_t *deque, size_t new_cap) {
-    unsigned char *new_buf = malloc(new_cap * deque->elem_size);
+    zenit_allocator_t a = deque->allocator;
+
+    /* If shrinking to zero, free the buffer */
+    if (new_cap == 0) {
+        a.free_fn(deque->buffer, a.ctx);
+        deque->buffer = NULL;
+        deque->capacity = 0;
+        deque->head = 0;
+        deque->tail = 0;
+        return ZENIT_RESULT_OK;
+    }
+
+    unsigned char *new_buf = a.alloc_fn(new_cap * deque->elem_size, a.ctx);
     if (new_buf == NULL) {
         return ZENIT_RESULT_ERROR(ZENIT_ERROR_ALLOC);
     }
@@ -58,7 +64,7 @@ static zenit_result_t realloc_buffer(zenit_deque_t *deque, size_t new_cap) {
         memcpy(new_buf + i * es, deque->buffer + src_idx * es, es);
     }
 
-    free(deque->buffer);
+    a.free_fn(deque->buffer, a.ctx);
     deque->buffer = new_buf;
     deque->capacity = new_cap;
     deque->head = 0;
@@ -80,23 +86,27 @@ static zenit_result_t grow(zenit_deque_t *deque, size_t min_capacity) {
 
 /* ─── Public API ─── */
 
-zenit_deque_t *zenit_deque_create(size_t elem_size) {
-    return zenit_deque_create_with_capacity(elem_size, DEQUE_DEFAULT_CAPACITY);
+zenit_deque_t *zenit_deque_create_with_allocator(size_t elem_size, zenit_allocator_t allocator) {
+    return zenit_deque_create_with_capacity_and_allocator(elem_size, DEQUE_DEFAULT_CAPACITY, allocator);
 }
 
-zenit_deque_t *zenit_deque_create_with_capacity(size_t elem_size, size_t capacity) {
+zenit_deque_t *zenit_deque_create(size_t elem_size) {
+    return zenit_deque_create_with_allocator(elem_size, ZENIT_ALLOCATOR_DEFAULT);
+}
+
+zenit_deque_t *zenit_deque_create_with_capacity_and_allocator(size_t elem_size, size_t capacity, zenit_allocator_t allocator) {
     if (elem_size == 0 || capacity == 0) {
         return NULL;
     }
 
-    zenit_deque_t *deque = malloc(sizeof(zenit_deque_t));
+    zenit_deque_t *deque = allocator.alloc_fn(sizeof(zenit_deque_t), allocator.ctx);
     if (deque == NULL) {
         return NULL;
     }
 
-    deque->buffer = malloc(capacity * elem_size);
+    deque->buffer = allocator.alloc_fn(capacity * elem_size, allocator.ctx);
     if (deque->buffer == NULL) {
-        free(deque);
+        allocator.free_fn(deque, allocator.ctx);
         return NULL;
     }
 
@@ -105,16 +115,22 @@ zenit_deque_t *zenit_deque_create_with_capacity(size_t elem_size, size_t capacit
     deque->capacity = capacity;
     deque->head = 0;
     deque->tail = 0;
+    deque->allocator = allocator;
 
     return deque;
+}
+
+zenit_deque_t *zenit_deque_create_with_capacity(size_t elem_size, size_t capacity) {
+    return zenit_deque_create_with_capacity_and_allocator(elem_size, capacity, ZENIT_ALLOCATOR_DEFAULT);
 }
 
 void zenit_deque_destroy(zenit_deque_t *deque) {
     if (deque == NULL) {
         return;
     }
-    free(deque->buffer);
-    free(deque);
+    zenit_allocator_t a = deque->allocator;
+    a.free_fn(deque->buffer, a.ctx);
+    a.free_fn(deque, a.ctx);
 }
 
 zenit_result_t zenit_deque_push_front(zenit_deque_t *deque, const void *elem) {
@@ -129,7 +145,6 @@ zenit_result_t zenit_deque_push_front(zenit_deque_t *deque, const void *elem) {
         }
     }
 
-    /* Move head backward (wrap around) */
     if (deque->head == 0) {
         deque->head = deque->capacity - 1;
     } else {
@@ -189,7 +204,6 @@ zenit_result_t zenit_deque_pop_back(zenit_deque_t *deque, void *out_elem) {
         return ZENIT_RESULT_ERROR(ZENIT_ERROR_EMPTY);
     }
 
-    /* Move tail backward */
     if (deque->tail == 0) {
         deque->tail = deque->capacity - 1;
     } else {
@@ -268,7 +282,6 @@ zenit_result_t zenit_deque_shrink_to_fit(zenit_deque_t *deque) {
     if (deque->count == deque->capacity) {
         return ZENIT_RESULT_OK;
     }
-    /* realloc_buffer with count will linearise and shrink */
     return realloc_buffer(deque, deque->count);
 }
 

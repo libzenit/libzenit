@@ -18,6 +18,7 @@
 #ifndef LIBZENIT_ARENA_H
 #define LIBZENIT_ARENA_H
 
+#include <libzenit/allocator.h>
 #include <libzenit/result.h>
 #include <stddef.h>
 
@@ -63,6 +64,16 @@ typedef struct {
  * @return Arena handle, or NULL on invalid parameters or allocation failure.
  */
 zenit_arena_t *zenit_arena_create(size_t total_size, size_t block_size);
+
+/**
+ * @brief Create a fixed-block arena with a custom allocator.
+ *
+ * @param total_size Total memory to manage (must be > 0).
+ * @param block_size Size of each block (must be > 0).
+ * @param allocator  Custom allocator for the arena's metadata.
+ * @return Arena handle, or NULL on invalid parameters or allocation failure.
+ */
+zenit_arena_t *zenit_arena_create_with_allocator(size_t total_size, size_t block_size, zenit_allocator_t allocator);
 
 /**
  * @brief Destroy an arena, freeing all memory.

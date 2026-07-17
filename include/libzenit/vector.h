@@ -18,6 +18,7 @@
 #ifndef LIBZENIT_VECTOR_H
 #define LIBZENIT_VECTOR_H
 
+#include <libzenit/allocator.h>
 #include <libzenit/result.h>
 #include <stddef.h>
 
@@ -50,6 +51,28 @@ zenit_vector_t *zenit_vector_create(size_t elem_size);
  * @return Opaque handle, or NULL on invalid parameters or allocation failure.
  */
 zenit_vector_t *zenit_vector_create_with_capacity(size_t elem_size, size_t capacity);
+
+/**
+ * @brief Create an empty vector with a custom allocator.
+ *
+ * The allocator is used for all memory operations (handle, buffer,
+ * grow, shrink, destroy).
+ *
+ * @param elem_size Size in bytes of each element.
+ * @param allocator Custom allocator to use for all memory operations.
+ * @return Opaque handle, or NULL on invalid parameter or allocation failure.
+ */
+zenit_vector_t *zenit_vector_create_with_allocator(size_t elem_size, zenit_allocator_t allocator);
+
+/**
+ * @brief Create an empty vector with a specific initial capacity and a custom allocator.
+ *
+ * @param elem_size Size in bytes of each element.
+ * @param capacity  Initial number of element slots to allocate.
+ * @param allocator Custom allocator to use for all memory operations.
+ * @return Opaque handle, or NULL on invalid parameters or allocation failure.
+ */
+zenit_vector_t *zenit_vector_create_with_capacity_and_allocator(size_t elem_size, size_t capacity, zenit_allocator_t allocator);
 
 /**
  * @brief Destroy a vector and free all owned memory.

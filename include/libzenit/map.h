@@ -18,6 +18,7 @@
 #ifndef LIBZENIT_MAP_H
 #define LIBZENIT_MAP_H
 
+#include <libzenit/allocator.h>
 #include <libzenit/result.h>
 #include <stddef.h>
 
@@ -54,6 +55,36 @@ zenit_map_t *zenit_map_create(size_t key_size, size_t value_size);
  */
 zenit_map_t *zenit_map_create_with_capacity(
     size_t key_size, size_t value_size, size_t capacity
+);
+
+/**
+ * @brief Create a hash map with a custom memory allocator.
+ *
+ * Same as zenit_map_create() but uses @p allocator for all memory operations.
+ *
+ * @param key_size   Size in bytes of each key element.
+ * @param value_size Size in bytes of each value element.
+ * @param allocator  Custom allocator (use ZENIT_ALLOCATOR_DEFAULT for libc).
+ * @return Opaque handle, or NULL on invalid parameters or allocation failure.
+ */
+zenit_map_t *zenit_map_create_with_allocator(
+    size_t key_size, size_t value_size, zenit_allocator_t allocator
+);
+
+/**
+ * @brief Create a hash map with initial capacity and a custom allocator.
+ *
+ * Same as zenit_map_create_with_capacity() but uses @p allocator for all
+ * memory operations.
+ *
+ * @param key_size   Size in bytes of each key element.
+ * @param value_size Size in bytes of each value element.
+ * @param capacity   Minimum initial slot count (> 0).
+ * @param allocator  Custom allocator (use ZENIT_ALLOCATOR_DEFAULT for libc).
+ * @return Opaque handle, or NULL on invalid parameters or allocation failure.
+ */
+zenit_map_t *zenit_map_create_with_capacity_and_allocator(
+    size_t key_size, size_t value_size, size_t capacity, zenit_allocator_t allocator
 );
 
 /**

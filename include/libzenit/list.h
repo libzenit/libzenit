@@ -18,6 +18,7 @@
 #ifndef LIBZENIT_LIST_H
 #define LIBZENIT_LIST_H
 
+#include <libzenit/allocator.h>
 #include <libzenit/result.h>
 #include <stddef.h>
 
@@ -48,6 +49,17 @@ typedef void (*zenit_list_visit_fn_t)(const void *elem, void *ctx);
  * @return Opaque handle, or NULL on invalid parameter or allocation failure.
  */
 zenit_list_t *zenit_list_create(size_t elem_size);
+
+/**
+ * @brief Create an empty linked list with a custom memory allocator.
+ *
+ * Same as zenit_list_create() but uses @p allocator for all memory operations.
+ *
+ * @param elem_size Size in bytes of each element.
+ * @param allocator Custom allocator (use ZENIT_ALLOCATOR_DEFAULT for libc).
+ * @return Opaque handle, or NULL on invalid parameter or allocation failure.
+ */
+zenit_list_t *zenit_list_create_with_allocator(size_t elem_size, zenit_allocator_t allocator);
 
 /**
  * @brief Destroy a linked list and free all nodes.

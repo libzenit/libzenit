@@ -16,6 +16,7 @@
 //
 
 #include <libzenit/state.h>
+#include <libzenit/allocator.h>
 #include <stdlib.h>
 
 /**
@@ -28,6 +29,7 @@ struct zenit_state_t {
     const zenit_state_transition_t *table; /**< Transition rules — NOT owned here */
     size_t count;                          /**< Number of rules in @p table */
     int current;                           /**< Current state value */
+    zenit_allocator_t allocator;           /**< Custom allocator used for this instance */
 };
 
 /**
@@ -43,12 +45,33 @@ zenit_state_t *zenit_state_allocate(
     size_t count,
     int initial_state
 ) {
-    /* Allocate heap memory for the opaque struct */
-    zenit_state_t *state = malloc(sizeof(zenit_state_t));
-    /* If malloc returned NULL there is nothing we can do — propagate the failure */
+    /* Delegate to the with-allocator variant using the default allocator */
+    return zenit_state_allocate_with_allocator(table, count, initial_state, ZENIT_ALLOCATOR_DEFAULT);
+}
+
+/**
+ * @brief Allocate and initialise a state machine with a custom allocator.
+ *
+ * @param table         Caller-owned transition array (must outlive the machine).
+ * @param count         Number of entries in @p table.
+ * @param initial_state State the machine should start in.
+ * @param allocator     Custom allocator for all internal memory.
+ * @return Opaque handle or NULL on allocation failure.
+ */
+zenit_state_t *zenit_state_allocate_with_allocator(
+    const zenit_state_transition_t *table,
+    size_t count,
+    int initial_state,
+    zenit_allocator_t allocator
+) {
+    /* Allocate heap memory for the opaque struct — use the allocator directly */
+    zenit_state_t *state = allocator.alloc_fn(sizeof(zenit_state_t), allocator.ctx);
+    /* If allocation returned NULL there is nothing we can do — propagate the failure */
     if (state == NULL) {
         return NULL;
     }
+    /* Store the allocator so deallocation uses the correct free function */
+    state->allocator = allocator;
     /* Stash the pointer to the caller's transition table (we do NOT copy it) */
     state->table = table;
     /* Remember how many rules we must scan on each event */
@@ -105,6 +128,11 @@ int zenit_get_last_state(const zenit_state_t *state) {
  * @param state Handle to free (NULL is accepted and ignored).
  */
 void zenit_state_deallocate(zenit_state_t *state) {
-    /* free() is specified to do nothing when passed NULL; the guard is implicit */
-    free(state);
+    /* NULL check: we need to dereference state to read the allocator */
+    if (state == NULL) {
+        return;
+    }
+    /* Read the allocator before freeing — we need it to free the handle itself */
+    zenit_allocator_t a = state->allocator;
+    a.free_fn(state, a.ctx);
 }
