@@ -16,7 +16,7 @@
 //
 
 #include <libzenit/arena.h>
-#include <stdlib.h>
+#include <libzenit/allocator.h>
 #include <string.h>
 
 /* ─── Block state machine ───
@@ -56,6 +56,7 @@ struct zenit_arena_t {
     unsigned char *memory;
     unsigned char *bitmap;
     size_t bitmap_size;
+    zenit_allocator_t allocator;
 };
 
 /* ─── Usable arena ─── */
@@ -124,34 +125,40 @@ static int bitmap_find_contiguous(
 /* ─── Arena API ─── */
 
 zenit_arena_t *zenit_arena_create(size_t total_size, size_t block_size) {
+    /* Delegate to the with-allocator variant using the default allocator */
+    return zenit_arena_create_with_allocator(total_size, block_size, ZENIT_ALLOCATOR_DEFAULT);
+}
+
+zenit_arena_t *zenit_arena_create_with_allocator(size_t total_size, size_t block_size, zenit_allocator_t allocator) {
     /* Validate that parameters are sane and evenly divisible */
     if (total_size == 0 || block_size == 0 || total_size % block_size != 0) {
         return NULL;
     }
 
     /* Allocate the arena handle */
-    zenit_arena_t *arena = malloc(sizeof(zenit_arena_t));
+    zenit_arena_t *arena = allocator.alloc_fn(sizeof(zenit_arena_t), allocator.ctx);
     if (arena == NULL) {
         return NULL;
     }
 
+    arena->allocator = allocator;
     arena->total_size = total_size;
     arena->block_size = block_size;
     arena->block_count = total_size / block_size;
     arena->bitmap_size = (arena->block_count + 7) / 8;
 
-    /* Allocate the raw memory pool — calloc so it is zeroed */
-    arena->memory = calloc(1, total_size);
+    /* Allocate the raw memory pool — zeroed */
+    arena->memory = zenit_allocator_alloc_zero(allocator, 1, total_size);
     if (arena->memory == NULL) {
-        free(arena);
+        allocator.free_fn(arena, allocator.ctx);
         return NULL;
     }
 
-    /* Allocate the bitmap — calloc so all bits start at 0 (FREE) */
-    arena->bitmap = calloc(1, arena->bitmap_size);
+    /* Allocate the bitmap — zeroed so all bits start at 0 (FREE) */
+    arena->bitmap = zenit_allocator_alloc_zero(allocator, 1, arena->bitmap_size);
     if (arena->bitmap == NULL) {
-        free(arena->memory);
-        free(arena);
+        allocator.free_fn(arena->memory, allocator.ctx);
+        allocator.free_fn(arena, allocator.ctx);
         return NULL;
     }
 
@@ -162,9 +169,10 @@ void zenit_arena_destroy(zenit_arena_t *arena) {
     if (arena == NULL) {
         return;
     }
-    free(arena->bitmap);
-    free(arena->memory);
-    free(arena);
+    zenit_allocator_t a = arena->allocator;
+    a.free_fn(arena->bitmap, a.ctx);
+    a.free_fn(arena->memory, a.ctx);
+    a.free_fn(arena, a.ctx);
 }
 
 zenit_usable_arena_t *zenit_arena_acquire(zenit_arena_t *arena, size_t size) {
@@ -186,7 +194,7 @@ zenit_usable_arena_t *zenit_arena_acquire(zenit_arena_t *arena, size_t size) {
     }
 
     /* Allocate usable arena handle */
-    zenit_usable_arena_t *ua = malloc(sizeof(zenit_usable_arena_t));
+    zenit_usable_arena_t *ua = arena->allocator.alloc_fn(sizeof(zenit_usable_arena_t), arena->allocator.ctx);
     if (ua == NULL) {
         /* Roll back bitmap changes */
         for (size_t i = start; i < start + needed; i++) {
@@ -246,7 +254,7 @@ zenit_result_t zenit_arena_release(zenit_arena_t *arena, zenit_usable_arena_t *u
     }
 
     /* Release the usable arena handle */
-    free(ua);
+    arena->allocator.free_fn(ua, arena->allocator.ctx);
     return ZENIT_RESULT_OK;
 }
 

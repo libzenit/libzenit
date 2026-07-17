@@ -16,6 +16,7 @@
 //
 
 #include <libzenit/heap.h>
+#include <libzenit/allocator.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -24,22 +25,18 @@
 /* Growth factor = 1.5x */
 #define HEAP_GROWTH_FACTOR(num) ((num) + (num) / 2)
 
-/* ─── Internal heap state ───
- * Elements are stored in a contiguous buffer.  The heap property is
- * maintained by sift-up (push) and sift-down (pop) operations using
- * the user-provided comparator.
- */
+/* ─── Internal heap state ─── */
 struct zenit_heap_t {
     unsigned char *buffer;                     /**< Element storage */
     size_t elem_size;                          /**< Size in bytes of one element */
     size_t count;                              /**< Number of elements stored */
     size_t capacity;                           /**< Number of element slots allocated */
     zenit_heap_compare_fn_t compare;           /**< Comparator for heap ordering */
+    zenit_allocator_t allocator;               /**< Memory allocator */
 };
 
 /* ─── Helper: swap two elements in the buffer by index ─── */
 static void swap_elements(unsigned char *buf, size_t elem_size, size_t i, size_t j) {
-    /* For small fixed sizes we could use inline, but memcpy is safe */
     unsigned char *a = buf + i * elem_size;
     unsigned char *b = buf + j * elem_size;
     size_t n = elem_size;
@@ -58,7 +55,6 @@ static void sift_up(zenit_heap_t *heap, size_t idx) {
     while (idx > 0) {
         size_t parent = (idx - 1) / 2;
 
-        /* If the child is not higher priority than the parent, stop */
         if (heap->compare(buf + idx * es, buf + parent * es) <= 0) {
             break;
         }
@@ -97,7 +93,9 @@ static void sift_down(zenit_heap_t *heap, size_t idx) {
 
 /* ─── Helper: reallocate the internal buffer to a new capacity ─── */
 static zenit_result_t realloc_buffer(zenit_heap_t *heap, size_t new_cap) {
-    unsigned char *new_buf = realloc(heap->buffer, new_cap * heap->elem_size);
+    zenit_allocator_t a = heap->allocator;
+
+    unsigned char *new_buf = zenit_allocator_realloc(a, heap->buffer, heap->capacity * heap->elem_size, new_cap * heap->elem_size);
     if (new_buf == NULL) {
         return ZENIT_RESULT_ERROR(ZENIT_ERROR_ALLOC);
     }
@@ -120,25 +118,29 @@ static zenit_result_t grow(zenit_heap_t *heap, size_t min_capacity) {
 
 /* ─── Public API ─── */
 
-zenit_heap_t *zenit_heap_create(size_t elem_size, zenit_heap_compare_fn_t compare) {
-    return zenit_heap_create_with_capacity(elem_size, compare, HEAP_DEFAULT_CAPACITY);
+zenit_heap_t *zenit_heap_create_with_allocator(size_t elem_size, zenit_heap_compare_fn_t compare, zenit_allocator_t allocator) {
+    return zenit_heap_create_with_capacity_and_allocator(elem_size, compare, HEAP_DEFAULT_CAPACITY, allocator);
 }
 
-zenit_heap_t *zenit_heap_create_with_capacity(
-    size_t elem_size, zenit_heap_compare_fn_t compare, size_t capacity
+zenit_heap_t *zenit_heap_create(size_t elem_size, zenit_heap_compare_fn_t compare) {
+    return zenit_heap_create_with_allocator(elem_size, compare, ZENIT_ALLOCATOR_DEFAULT);
+}
+
+zenit_heap_t *zenit_heap_create_with_capacity_and_allocator(
+    size_t elem_size, zenit_heap_compare_fn_t compare, size_t capacity, zenit_allocator_t allocator
 ) {
     if (elem_size == 0 || compare == NULL || capacity == 0) {
         return NULL;
     }
 
-    zenit_heap_t *heap = malloc(sizeof(zenit_heap_t));
+    zenit_heap_t *heap = allocator.alloc_fn(sizeof(zenit_heap_t), allocator.ctx);
     if (heap == NULL) {
         return NULL;
     }
 
-    heap->buffer = malloc(capacity * elem_size);
+    heap->buffer = allocator.alloc_fn(capacity * elem_size, allocator.ctx);
     if (heap->buffer == NULL) {
-        free(heap);
+        allocator.free_fn(heap, allocator.ctx);
         return NULL;
     }
 
@@ -146,16 +148,24 @@ zenit_heap_t *zenit_heap_create_with_capacity(
     heap->compare = compare;
     heap->count = 0;
     heap->capacity = capacity;
+    heap->allocator = allocator;
 
     return heap;
+}
+
+zenit_heap_t *zenit_heap_create_with_capacity(
+    size_t elem_size, zenit_heap_compare_fn_t compare, size_t capacity
+) {
+    return zenit_heap_create_with_capacity_and_allocator(elem_size, compare, capacity, ZENIT_ALLOCATOR_DEFAULT);
 }
 
 void zenit_heap_destroy(zenit_heap_t *heap) {
     if (heap == NULL) {
         return;
     }
-    free(heap->buffer);
-    free(heap);
+    zenit_allocator_t a = heap->allocator;
+    a.free_fn(heap->buffer, a.ctx);
+    a.free_fn(heap, a.ctx);
 }
 
 zenit_result_t zenit_heap_push(zenit_heap_t *heap, const void *elem) {
@@ -187,10 +197,8 @@ zenit_result_t zenit_heap_pop(zenit_heap_t *heap, void *out_elem) {
         return ZENIT_RESULT_ERROR(ZENIT_ERROR_EMPTY);
     }
 
-    /* Copy the root element to out_elem */
     memcpy(out_elem, heap->buffer, heap->elem_size);
 
-    /* Move the last element to the root and sift down */
     heap->count--;
     if (heap->count > 0) {
         memcpy(heap->buffer,
@@ -245,4 +253,31 @@ zenit_result_t zenit_heap_reserve(zenit_heap_t *heap, size_t capacity) {
         return ZENIT_RESULT_OK;
     }
     return realloc_buffer(heap, capacity);
+}
+
+zenit_result_t zenit_heap_build(zenit_heap_t *heap, const void *array, size_t count) {
+    if (heap == NULL || array == NULL) {
+        return ZENIT_RESULT_ERROR(ZENIT_ERROR_NULL);
+    }
+    if (count == 0) {
+        heap->count = 0;
+        return ZENIT_RESULT_OK;
+    }
+    /* Ensure capacity */
+    if (count > heap->capacity) {
+        zenit_result_t r = realloc_buffer(heap, count);
+        if (r.error != ZENIT_OK) {
+            return r;
+        }
+    }
+    /* Copy elements from the source array */
+    memcpy(heap->buffer, array, count * heap->elem_size);
+    heap->count = count;
+    /* Floyd's heapify: sift-down from the last parent to the root */
+    size_t idx = count / 2;
+    while (idx > 0) {
+        idx--;
+        sift_down(heap, idx);
+    }
+    return ZENIT_RESULT_OK;
 }

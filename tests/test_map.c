@@ -578,7 +578,135 @@ static int test_count_ops(void) {
     return 0;
 }
 
-/* ─── Main ─── */
+/* ─── Test: map iter ─── */
+static int test_map_iter(void) {
+    TEST("map_iter");
+    zenit_map_t *m = zenit_map_create(sizeof(int), sizeof(int));
+    ASSERT(m != NULL, "create");
+    int k1 = 1;
+    int v1 = 100;
+    int k2 = 2;
+    int v2 = 200;
+    zenit_map_insert(m, &k1, &v1);
+    zenit_map_insert(m, &k2, &v2);
+    zenit_iter_t it = zenit_map_iter(m);
+    int found = 0;
+    void *key;
+    while ((key = zenit_map_iter_next(&it)) != NULL) {
+        int kv = *(int*)key;
+        ASSERT(kv == 1 || kv == 2, "valid key");
+        found++;
+    }
+    ASSERT(found == 2, "got both keys");
+    /* NULL iter test */
+    it = zenit_map_iter(NULL);
+    ASSERT(zenit_map_iter_next(&it) == NULL, "NULL map iter");
+    zenit_map_destroy(m);
+    PASS();
+    return 0;
+}
+
+/* ─── Test: map keys ─── */
+static int test_map_keys(void) {
+    TEST("map_keys");
+    zenit_map_t *m = zenit_map_create(sizeof(int), sizeof(int));
+    ASSERT(m != NULL, "create");
+    int k1 = 1;
+    int v1 = 100;
+    int k2 = 2;
+    int v2 = 200;
+    zenit_map_insert(m, &k1, &v1);
+    zenit_map_insert(m, &k2, &v2);
+    int *keys = NULL;
+    size_t count = 0;
+    zenit_result_t r = zenit_map_keys(m, (void**)&keys, &count);
+    ASSERT(r.error == ZENIT_OK, "keys ok");
+    ASSERT(count == 2, "2 keys");
+    ASSERT(keys != NULL, "keys allocated");
+    /* keys should be 1 and 2 in some order */
+    int found1 = 0;
+    int found2 = 0;
+    for (size_t i = 0; i < count; i++) {
+        if (keys[i] == 1) found1 = 1;
+        if (keys[i] == 2) found2 = 1;
+    }
+    ASSERT(found1 && found2, "correct keys");
+    free(keys);
+    /* NULL params */
+    ASSERT(zenit_map_keys(NULL, (void**)&keys, &count).error == ZENIT_ERROR_NULL, "NULL map");
+    ASSERT(zenit_map_keys(m, NULL, &count).error == ZENIT_ERROR_NULL, "NULL out_keys");
+    ASSERT(zenit_map_keys(m, (void**)&keys, NULL).error == ZENIT_ERROR_NULL, "NULL out_count");
+    /* Empty map */
+    zenit_map_t *empty = zenit_map_create(sizeof(int), sizeof(int));
+    ASSERT(empty != NULL, "empty create");
+    keys = NULL; count = 99;
+    r = zenit_map_keys(empty, (void**)&keys, &count);
+    ASSERT(r.error == ZENIT_OK, "empty keys ok");
+    ASSERT(count == 0, "0 keys");
+    ASSERT(keys == NULL, "NULL keys for empty");
+    zenit_map_destroy(empty);
+    zenit_map_destroy(m);
+    PASS();
+    return 0;
+}
+
+/* ─── Test: map values ─── */
+static int test_create_with_allocator(void) {
+    TEST("create_with_allocator");
+    zenit_map_t *m = zenit_map_create_with_allocator(sizeof(int), sizeof(int), ZENIT_ALLOCATOR_DEFAULT);
+    ASSERT(m != NULL, "create");
+    zenit_map_destroy(m);
+    PASS();
+    return 0;
+}
+
+static int test_map_values(void) {
+    TEST("map_values");
+    zenit_map_t *m = zenit_map_create(sizeof(int), sizeof(int));
+    ASSERT(m != NULL, "create");
+    int k1 = 1;
+    int v1 = 100;
+    int k2 = 2;
+    int v2 = 200;
+    zenit_map_insert(m, &k1, &v1);
+    zenit_map_insert(m, &k2, &v2);
+    int *values = NULL;
+    size_t count = 0;
+    zenit_result_t r = zenit_map_values(m, (void**)&values, &count);
+    ASSERT(r.error == ZENIT_OK, "values ok");
+    ASSERT(count == 2, "2 values");
+    int found1 = 0;
+    int found2 = 0;
+    for (size_t i = 0; i < count; i++) {
+        if (values[i] == 100) found1 = 1;
+        if (values[i] == 200) found2 = 1;
+    }
+    ASSERT(found1 && found2, "correct values");
+    free(values);
+    /* NULL params */
+    ASSERT(zenit_map_values(NULL, (void**)&values, &count).error == ZENIT_ERROR_NULL, "NULL map");
+    ASSERT(zenit_map_values(m, NULL, &count).error == ZENIT_ERROR_NULL, "NULL out_values");
+    ASSERT(zenit_map_values(m, (void**)&values, NULL).error == ZENIT_ERROR_NULL, "NULL out_count");
+    zenit_map_destroy(m);
+    PASS();
+    return 0;
+}
+
+static int test_values_empty(void) {
+    TEST("map_values empty");
+    zenit_map_t *m = zenit_map_create(sizeof(int), sizeof(int));
+    ASSERT(m != NULL, "create");
+    int *values = NULL;
+    size_t count = 99;
+    zenit_result_t r = zenit_map_values(m, (void**)&values, &count);
+    ASSERT(r.error == ZENIT_OK, "empty values ok");
+    ASSERT(count == 0, "0 values");
+    ASSERT(values == NULL, "NULL values");
+    zenit_map_destroy(m);
+    PASS();
+    return 0;
+}
+
 int main(void) {
     TEST_ENTRY tests[] = {
         { test_create_destroy,      "create_destroy" },
@@ -615,6 +743,11 @@ int main(void) {
         { test_struct_keys,         "struct_keys" },
         { test_remove_all_reinsert, "remove_all_reinsert" },
         { test_count_ops,           "count_ops" },
+        { test_map_iter,            "map_iter" },
+        { test_map_keys,            "map_keys" },
+        { test_map_values,          "map_values" },
+        { test_values_empty,        "map_values empty" },
+        { test_create_with_allocator, "create_with_allocator" },
         { 0, 0 }
     };
     return test_run_all("hash map", tests);

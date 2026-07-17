@@ -450,6 +450,81 @@ static int test_count_ops(void) {
     return 0;
 }
 
+/* ─── Test: set iter ─── */
+static int test_set_iter(void) {
+    TEST("set_iter");
+    zenit_set_t *s = zenit_set_create(sizeof(int));
+    ASSERT(s != NULL, "create");
+    int k1 = 1;
+    int k2 = 2;
+    zenit_set_insert(s, &k1);
+    zenit_set_insert(s, &k2);
+    zenit_iter_t it = zenit_set_iter(s);
+    int found = 0;
+    void *key;
+    while ((key = zenit_set_iter_next(&it)) != NULL) {
+        int kv = *(int*)key;
+        ASSERT(kv == 1 || kv == 2, "valid key");
+        found++;
+    }
+    ASSERT(found == 2, "got both keys");
+    /* NULL iter */
+    it = zenit_set_iter(NULL);
+    ASSERT(zenit_set_iter_next(&it) == NULL, "NULL set iter");
+    zenit_set_destroy(s);
+    PASS();
+    return 0;
+}
+
+/* ─── Test: set to_array ─── */
+static int test_set_to_array(void) {
+    TEST("set_to_array");
+    zenit_set_t *s = zenit_set_create(sizeof(int));
+    ASSERT(s != NULL, "create");
+    int k1 = 1;
+    int k2 = 2;
+    zenit_set_insert(s, &k1);
+    zenit_set_insert(s, &k2);
+    int *keys = NULL;
+    size_t count = 0;
+    zenit_result_t r = zenit_set_to_array(s, (void**)&keys, &count);
+    ASSERT(r.error == ZENIT_OK, "to_array ok");
+    ASSERT(count == 2, "2 keys");
+    int found1 = 0;
+    int found2 = 0;
+    for (size_t i = 0; i < count; i++) {
+        if (keys[i] == 1) found1 = 1;
+        if (keys[i] == 2) found2 = 1;
+    }
+    ASSERT(found1 && found2, "correct keys");
+    free(keys);
+    /* NULL params */
+    ASSERT(zenit_set_to_array(NULL, (void**)&keys, &count).error == ZENIT_ERROR_NULL, "NULL set");
+    ASSERT(zenit_set_to_array(s, NULL, &count).error == ZENIT_ERROR_NULL, "NULL out_keys");
+    ASSERT(zenit_set_to_array(s, (void**)&keys, NULL).error == ZENIT_ERROR_NULL, "NULL out_count");
+    /* Empty set */
+    zenit_set_t *empty = zenit_set_create(sizeof(int));
+    keys = NULL; count = 99;
+    r = zenit_set_to_array(empty, (void**)&keys, &count);
+    ASSERT(r.error == ZENIT_OK, "empty to_array ok");
+    ASSERT(count == 0, "0 keys");
+    ASSERT(keys == NULL, "NULL keys");
+    zenit_set_destroy(empty);
+    zenit_set_destroy(s);
+    PASS();
+    return 0;
+}
+
+/* ─── Test: create_with_allocator ─── */
+static int test_create_with_allocator(void) {
+    TEST("create_with_allocator");
+    zenit_set_t *s = zenit_set_create_with_allocator(sizeof(int), ZENIT_ALLOCATOR_DEFAULT);
+    ASSERT(s != NULL, "create");
+    zenit_set_destroy(s);
+    PASS();
+    return 0;
+}
+
 /* ─── Main ─── */
 int main(void) {
     TEST_ENTRY tests[] = {
@@ -481,6 +556,9 @@ int main(void) {
         { test_struct_keys,         "struct_keys" },
         { test_remove_all_reinsert, "remove_all_reinsert" },
         { test_count_ops,           "count_ops" },
+        { test_set_iter,            "set_iter" },
+        { test_set_to_array,        "set_to_array" },
+        { test_create_with_allocator, "create_with_allocator" },
         { 0, 0 }
     };
     return test_run_all("hash set", tests);

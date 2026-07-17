@@ -18,6 +18,7 @@
 #ifndef LIBZENIT_STATE_H
 #define LIBZENIT_STATE_H
 
+#include <libzenit/allocator.h>
 #include <libzenit/result.h>
 #include <stddef.h>
 
@@ -63,6 +64,25 @@ zenit_state_t *zenit_state_allocate(
     const zenit_state_transition_t *table,
     size_t count,
     int initial_state
+);
+
+/**
+ * @brief Allocate and initialise a state machine with a custom allocator.
+ *
+ * The caller must keep @p table alive for the lifetime of the returned state
+ * machine. The table is not copied internally.
+ *
+ * @param table         Pointer to an array of transition rules.
+ * @param count         Number of elements in @p table.
+ * @param initial_state State the machine starts in.
+ * @param allocator     Custom allocator to use for all internal memory.
+ * @return Opaque handle, or NULL on allocation failure.
+ */
+zenit_state_t *zenit_state_allocate_with_allocator(
+    const zenit_state_transition_t *table,
+    size_t count,
+    int initial_state,
+    zenit_allocator_t allocator
 );
 
 /**

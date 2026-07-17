@@ -54,31 +54,25 @@ BENCH_LINE_RE = re.compile(
     r'(?P<ops>[\d.]+)\s+ops/s'
 )
 
-# Map benchmark name prefix → display category.
-# Add a new entry here when a module is added so it gets its own chart.
-PREFIX_MAP = {
-    "libzenit_version": "Version",
-    "state_": "State Machine",
-    "arena_create_destroy": "Arena (overhead)",
-    "arena_acquire_release": "Arena (overhead)",
-    "arena_alloc": "Arena (alloc)",
-    "malloc_free": "malloc (baseline)",
-    "ring_": "Ring Buffer",
-    "vector_": "Vector",
-    "map_": "Hash Map",
-    "set_": "Hash Set",
-    "list_": "Linked List",
-    "heap_": "Binary Heap",
-    "deque_": "Deque",
+# Override mapping for benchmark names whose auto-detected category
+# (the first segment before '_') needs a friendlier display name.
+# Most benchmarks are auto-categorised — add an entry here only when
+# the default looks wrong.
+CATEGORY_OVERRIDE = {
+    "libzenit": "Version",
+    "malloc": "malloc (baseline)",
 }
 
 
 def categorize(bench_name: str) -> str:
-    """Determine category from benchmark name prefix."""
-    for prefix, category in PREFIX_MAP.items():
-        if bench_name.startswith(prefix):
-            return category
-    return "Other"
+    """Auto-detect category from the first segment of the benchmark name.
+
+    A benchmark named ``ring_seq_128B`` becomes category ``Ring``,
+    ``map_insert`` → ``Map``, etc.  Overrides in CATEGORY_OVERRIDE
+    take precedence.
+    """
+    segment = bench_name.split("_")[0] if "_" in bench_name else bench_name
+    return CATEGORY_OVERRIDE.get(segment, segment.capitalize())
 
 
 def build_categories(data: dict) -> dict[str, list[str]]:

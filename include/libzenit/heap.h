@@ -18,6 +18,7 @@
 #ifndef LIBZENIT_HEAP_H
 #define LIBZENIT_HEAP_H
 
+#include <libzenit/allocator.h>
 #include <libzenit/result.h>
 #include <stddef.h>
 
@@ -67,6 +68,29 @@ zenit_heap_t *zenit_heap_create(size_t elem_size, zenit_heap_compare_fn_t compar
  * @return Opaque handle, or NULL on invalid parameters or allocation failure.
  */
 zenit_heap_t *zenit_heap_create_with_capacity(size_t elem_size, zenit_heap_compare_fn_t compare, size_t capacity);
+
+/**
+ * @brief Create an empty heap with a custom allocator.
+ *
+ * Default initial capacity (8).
+ *
+ * @param elem_size Size in bytes of each element.
+ * @param compare   Comparator function (must not be NULL).
+ * @param allocator Custom allocator to use for all memory operations.
+ * @return Opaque handle, or NULL on invalid parameters or allocation failure.
+ */
+zenit_heap_t *zenit_heap_create_with_allocator(size_t elem_size, zenit_heap_compare_fn_t compare, zenit_allocator_t allocator);
+
+/**
+ * @brief Create an empty heap with a specific initial capacity and a custom allocator.
+ *
+ * @param elem_size Size in bytes of each element.
+ * @param compare   Comparator function (must not be NULL).
+ * @param capacity  Initial number of element slots to allocate (> 0).
+ * @param allocator Custom allocator to use for all memory operations.
+ * @return Opaque handle, or NULL on invalid parameters or allocation failure.
+ */
+zenit_heap_t *zenit_heap_create_with_capacity_and_allocator(size_t elem_size, zenit_heap_compare_fn_t compare, size_t capacity, zenit_allocator_t allocator);
 
 /**
  * @brief Destroy a heap and free all owned memory.
@@ -160,5 +184,21 @@ void zenit_heap_clear(zenit_heap_t *heap);
  *         - ZENIT_ERROR_ALLOC if reallocation fails.
  */
 zenit_result_t zenit_heap_reserve(zenit_heap_t *heap, size_t capacity);
+
+/**
+ * @brief Build a heap from an existing array using Floyd's algorithm (O(n)).
+ *
+ * Copies @p count elements from @p array into the heap's internal buffer
+ * (growing if needed) and then heapifies in-place via bottom-up sift_down.
+ * Any existing contents are discarded.
+ *
+ * @param heap  Heap handle.
+ * @param array Pointer to the source array (must not be NULL).
+ * @param count Number of elements to copy.
+ * @return ZENIT_RESULT_OK on success, or an error:
+ *         - ZENIT_ERROR_NULL if @p heap or @p array is NULL
+ *         - ZENIT_ERROR_ALLOC if reallocation fails.
+ */
+zenit_result_t zenit_heap_build(zenit_heap_t *heap, const void *array, size_t count);
 
 #endif

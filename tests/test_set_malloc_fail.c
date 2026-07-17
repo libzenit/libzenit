@@ -103,6 +103,23 @@ static void test_insert_fail_rehash_states(void) {
     PASS();
 }
 
+/* ─── Test: set_to_array fails on allocation ─── */
+static void test_to_array_fail_alloc(void) {
+    TEST("set_to_array alloc fail");
+    zenit_set_t *set = zenit_set_create(sizeof(int));
+    ASSERT(set != NULL, "create");
+    int k = 42;
+    ASSERT(zenit_set_insert(set, &k).error == ZENIT_OK, "insert");
+    int *keys = NULL;
+    size_t count = 0;
+    malloc_fail_countdown = 0;
+    zenit_result_t r = zenit_set_to_array(set, (void**)&keys, &count);
+    ASSERT(r.error == ZENIT_ERROR_ALLOC, "expected ALLOC");
+    malloc_fail_countdown = -1;
+    zenit_set_destroy(set);
+    PASS();
+}
+
 /* ─── Main ─── */
 int main(void) {
     printf("hash set malloc-fail tests\n");
@@ -115,6 +132,7 @@ int main(void) {
     test_create_fail_states();
     test_insert_fail_rehash_slots();
     test_insert_fail_rehash_states();
+    test_to_array_fail_alloc();
 
     printf("\n%d passed, %d failed, %d total\n",
            passed, failed, passed + failed);

@@ -18,6 +18,7 @@
 #ifndef LIBZENIT_DEQUE_H
 #define LIBZENIT_DEQUE_H
 
+#include <libzenit/allocator.h>
 #include <libzenit/result.h>
 #include <stddef.h>
 
@@ -49,6 +50,27 @@ zenit_deque_t *zenit_deque_create(size_t elem_size);
  * @return Opaque handle, or NULL on invalid parameters or allocation failure.
  */
 zenit_deque_t *zenit_deque_create_with_capacity(size_t elem_size, size_t capacity);
+
+/**
+ * @brief Create an empty deque with a custom allocator.
+ *
+ * Default initial capacity (8).
+ *
+ * @param elem_size Size in bytes of each element.
+ * @param allocator Custom allocator to use for all memory operations.
+ * @return Opaque handle, or NULL on invalid parameter or allocation failure.
+ */
+zenit_deque_t *zenit_deque_create_with_allocator(size_t elem_size, zenit_allocator_t allocator);
+
+/**
+ * @brief Create an empty deque with a specific initial capacity and a custom allocator.
+ *
+ * @param elem_size Size in bytes of each element.
+ * @param capacity  Initial number of element slots to allocate.
+ * @param allocator Custom allocator to use for all memory operations.
+ * @return Opaque handle, or NULL on invalid parameters or allocation failure.
+ */
+zenit_deque_t *zenit_deque_create_with_capacity_and_allocator(size_t elem_size, size_t capacity, zenit_allocator_t allocator);
 
 /**
  * @brief Destroy a deque and free all owned memory.
@@ -196,5 +218,23 @@ zenit_result_t zenit_deque_shrink_to_fit(zenit_deque_t *deque);
  * @param deque Deque handle, or NULL.
  */
 void zenit_deque_clear(zenit_deque_t *deque);
+
+/**
+ * @brief Create an iterator for the deque.
+ *
+ * The iterator must be advanced with zenit_deque_iter_next().
+ *
+ * @param deque Deque handle.
+ * @return An iterator (check is_valid).
+ */
+zenit_iter_t zenit_deque_iter(zenit_deque_t *deque);
+
+/**
+ * @brief Advance a deque iterator to the next element.
+ *
+ * @param iter Iterator created by zenit_deque_iter().
+ * @return Pointer to the element data, or NULL if iteration is complete.
+ */
+void *zenit_deque_iter_next(zenit_iter_t *iter);
 
 #endif

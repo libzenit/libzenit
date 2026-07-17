@@ -18,6 +18,7 @@
 #ifndef LIBZENIT_SET_H
 #define LIBZENIT_SET_H
 
+#include <libzenit/allocator.h>
 #include <libzenit/result.h>
 #include <stddef.h>
 
@@ -51,6 +52,32 @@ zenit_set_t *zenit_set_create(size_t key_size);
  * @return Opaque handle, or NULL on invalid parameters or allocation failure.
  */
 zenit_set_t *zenit_set_create_with_capacity(size_t key_size, size_t capacity);
+
+/**
+ * @brief Create a hash set with a custom memory allocator.
+ *
+ * Same as zenit_set_create() but uses @p allocator for all memory operations.
+ *
+ * @param key_size  Size in bytes of each key element.
+ * @param allocator Custom allocator (use ZENIT_ALLOCATOR_DEFAULT for libc).
+ * @return Opaque handle, or NULL on invalid parameter or allocation failure.
+ */
+zenit_set_t *zenit_set_create_with_allocator(size_t key_size, zenit_allocator_t allocator);
+
+/**
+ * @brief Create a hash set with initial capacity and a custom allocator.
+ *
+ * Same as zenit_set_create_with_capacity() but uses @p allocator for all
+ * memory operations.
+ *
+ * @param key_size  Size in bytes of each key element.
+ * @param capacity  Minimum initial slot count (> 0).
+ * @param allocator Custom allocator (use ZENIT_ALLOCATOR_DEFAULT for libc).
+ * @return Opaque handle, or NULL on invalid parameters or allocation failure.
+ */
+zenit_set_t *zenit_set_create_with_capacity_and_allocator(
+    size_t key_size, size_t capacity, zenit_allocator_t allocator
+);
 
 /**
  * @brief Destroy a hash set and free all owned memory.
@@ -146,5 +173,41 @@ typedef void (*zenit_set_visit_fn_t)(const void *key, void *ctx);
 void zenit_set_foreach(
     const zenit_set_t *set, zenit_set_visit_fn_t visit, void *ctx
 );
+
+/**
+ * @brief Create an iterator for the set.
+ *
+ * The iterator must be advanced with zenit_set_iter_next().
+ *
+ * @param set Set handle.
+ * @return An iterator (check is_valid).
+ */
+zenit_iter_t zenit_set_iter(zenit_set_t *set);
+
+/**
+ * @brief Advance a set iterator to the next key.
+ *
+ * Returns a pointer to the key data (key_size bytes).  Skips empty and
+ * deleted slots.
+ *
+ * @param iter Iterator created by zenit_set_iter().
+ * @return Pointer to the key data, or NULL if iteration is complete.
+ */
+void *zenit_set_iter_next(zenit_iter_t *iter);
+
+/**
+ * @brief Collect all keys into a newly allocated array.
+ *
+ * The caller takes ownership of the returned buffer and must free it via
+ * the set's allocator (allocator.free_fn(*out_keys, allocator.ctx)).
+ *
+ * @param set      Set handle.
+ * @param out_keys On success, receives a pointer to the allocated key array.
+ * @param out_count On success, receives the number of keys.
+ * @return ZENIT_RESULT_OK on success, or an error:
+ *         - ZENIT_ERROR_NULL if any pointer argument is NULL
+ *         - ZENIT_ERROR_ALLOC if allocation fails.
+ */
+zenit_result_t zenit_set_to_array(const zenit_set_t *set, void **out_keys, size_t *out_count);
 
 #endif

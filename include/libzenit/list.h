@@ -18,6 +18,7 @@
 #ifndef LIBZENIT_LIST_H
 #define LIBZENIT_LIST_H
 
+#include <libzenit/allocator.h>
 #include <libzenit/result.h>
 #include <stddef.h>
 
@@ -48,6 +49,17 @@ typedef void (*zenit_list_visit_fn_t)(const void *elem, void *ctx);
  * @return Opaque handle, or NULL on invalid parameter or allocation failure.
  */
 zenit_list_t *zenit_list_create(size_t elem_size);
+
+/**
+ * @brief Create an empty linked list with a custom memory allocator.
+ *
+ * Same as zenit_list_create() but uses @p allocator for all memory operations.
+ *
+ * @param elem_size Size in bytes of each element.
+ * @param allocator Custom allocator (use ZENIT_ALLOCATOR_DEFAULT for libc).
+ * @return Opaque handle, or NULL on invalid parameter or allocation failure.
+ */
+zenit_list_t *zenit_list_create_with_allocator(size_t elem_size, zenit_allocator_t allocator);
 
 /**
  * @brief Destroy a linked list and free all nodes.
@@ -203,5 +215,32 @@ void *zenit_list_front(const zenit_list_t *list);
  * @return Pointer to the last element, or NULL if empty or @p list is NULL.
  */
 void *zenit_list_back(const zenit_list_t *list);
+
+/**
+ * @brief Create an iterator for the list.
+ *
+ * The iterator must be advanced with zenit_list_iter_next().
+ *
+ * @param list List handle.
+ * @return An iterator (check is_valid).
+ */
+zenit_iter_t zenit_list_iter(zenit_list_t *list);
+
+/**
+ * @brief Advance a list iterator to the next element.
+ *
+ * @param iter Iterator created by zenit_list_iter().
+ * @return Pointer to the element data, or NULL if iteration is complete.
+ */
+void *zenit_list_iter_next(zenit_iter_t *iter);
+
+/**
+ * @brief Iterate over all elements in reverse order (tail to head).
+ *
+ * @param list  List handle.
+ * @param visit Visitor callback (must not be NULL).
+ * @param ctx   Opaque context forwarded to @p visit on every call.
+ */
+void zenit_list_reverse_foreach(const zenit_list_t *list, zenit_list_visit_fn_t visit, void *ctx);
 
 #endif

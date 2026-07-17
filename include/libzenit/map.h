@@ -18,6 +18,7 @@
 #ifndef LIBZENIT_MAP_H
 #define LIBZENIT_MAP_H
 
+#include <libzenit/allocator.h>
 #include <libzenit/result.h>
 #include <stddef.h>
 
@@ -54,6 +55,36 @@ zenit_map_t *zenit_map_create(size_t key_size, size_t value_size);
  */
 zenit_map_t *zenit_map_create_with_capacity(
     size_t key_size, size_t value_size, size_t capacity
+);
+
+/**
+ * @brief Create a hash map with a custom memory allocator.
+ *
+ * Same as zenit_map_create() but uses @p allocator for all memory operations.
+ *
+ * @param key_size   Size in bytes of each key element.
+ * @param value_size Size in bytes of each value element.
+ * @param allocator  Custom allocator (use ZENIT_ALLOCATOR_DEFAULT for libc).
+ * @return Opaque handle, or NULL on invalid parameters or allocation failure.
+ */
+zenit_map_t *zenit_map_create_with_allocator(
+    size_t key_size, size_t value_size, zenit_allocator_t allocator
+);
+
+/**
+ * @brief Create a hash map with initial capacity and a custom allocator.
+ *
+ * Same as zenit_map_create_with_capacity() but uses @p allocator for all
+ * memory operations.
+ *
+ * @param key_size   Size in bytes of each key element.
+ * @param value_size Size in bytes of each value element.
+ * @param capacity   Minimum initial slot count (> 0).
+ * @param allocator  Custom allocator (use ZENIT_ALLOCATOR_DEFAULT for libc).
+ * @return Opaque handle, or NULL on invalid parameters or allocation failure.
+ */
+zenit_map_t *zenit_map_create_with_capacity_and_allocator(
+    size_t key_size, size_t value_size, size_t capacity, zenit_allocator_t allocator
 );
 
 /**
@@ -168,5 +199,56 @@ typedef void (*zenit_map_visit_fn_t)(const void *key, const void *value, void *c
 void zenit_map_foreach(
     const zenit_map_t *map, zenit_map_visit_fn_t visit, void *ctx
 );
+
+/**
+ * @brief Create an iterator for the map.
+ *
+ * The iterator must be advanced with zenit_map_iter_next().
+ *
+ * @param map Map handle.
+ * @return An iterator (check is_valid).
+ */
+zenit_iter_t zenit_map_iter(zenit_map_t *map);
+
+/**
+ * @brief Advance a map iterator to the next key.
+ *
+ * Returns a pointer to the key data (key_size bytes).  The corresponding
+ * value follows immediately (value_size bytes).  Skips empty and deleted slots.
+ *
+ * @param iter Iterator created by zenit_map_iter().
+ * @return Pointer to the key data, or NULL if iteration is complete.
+ */
+void *zenit_map_iter_next(zenit_iter_t *iter);
+
+/**
+ * @brief Collect all keys into a newly allocated array.
+ *
+ * The caller takes ownership of the returned buffer and must free it via
+ * the map's allocator (allocator.free_fn(*out_keys, allocator.ctx)).
+ *
+ * @param map      Map handle.
+ * @param out_keys On success, receives a pointer to the allocated key array.
+ * @param out_count On success, receives the number of keys.
+ * @return ZENIT_RESULT_OK on success, or an error:
+ *         - ZENIT_ERROR_NULL if any pointer argument is NULL
+ *         - ZENIT_ERROR_ALLOC if allocation fails.
+ */
+zenit_result_t zenit_map_keys(const zenit_map_t *map, void **out_keys, size_t *out_count);
+
+/**
+ * @brief Collect all values into a newly allocated array.
+ *
+ * The caller takes ownership of the returned buffer and must free it via
+ * the map's allocator (allocator.free_fn(*out_values, allocator.ctx)).
+ *
+ * @param map        Map handle.
+ * @param out_values On success, receives a pointer to the allocated value array.
+ * @param out_count  On success, receives the number of values.
+ * @return ZENIT_RESULT_OK on success, or an error:
+ *         - ZENIT_ERROR_NULL if any pointer argument is NULL
+ *         - ZENIT_ERROR_ALLOC if allocation fails.
+ */
+zenit_result_t zenit_map_values(const zenit_map_t *map, void **out_values, size_t *out_count);
 
 #endif
