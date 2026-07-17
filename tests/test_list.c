@@ -16,19 +16,9 @@
 //
 
 #include <libzenit/list.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
-/* ─── Helpers ─── */
-
-static int tests_passed = 0;
-static int tests_failed = 0;
-
-#define TEST(name) do { printf("  %s ... ", name); } while (0)
-#define PASS() do { printf("PASS\n"); tests_passed++; } while (0)
-#define FAIL(msg) do { fprintf(stderr, "FAIL: %s\n", msg); tests_failed++; } while (0)
-#define ASSERT(cond, msg) do { if (!(cond)) { FAIL(msg); return 1; } } while (0)
+#include "test_runner.h"
 
 /* ─── Visitor context for foreach test ─── */
 typedef struct {
@@ -480,7 +470,7 @@ static int test_clear_empty(void) {
 }
 
 int main(void) {
-    struct { int (*fn)(void); const char *name; } tests[] = {
+    TEST_ENTRY tests[] = {
         { test_create_destroy,          "create_destroy" },
         { test_create_zero_elem,        "create_zero_elem" },
         { test_destroy_null,            "destroy_null" },
@@ -509,26 +499,5 @@ int main(void) {
         { 0, 0 }
     };
 
-    printf("=== test_list ===\n");
-    int failed = 0;
-    for (int i = 0; tests[i].fn != NULL; i++) {
-        failed += tests[i].fn();
-    }
-
-    printf("\n%d passed, %d failed out of %d\n",
-           tests_passed, tests_failed, tests_passed + tests_failed);
-
-    if (tests_failed != 0)
-        return 1;
-
-    /* Verify that every test was actually registered */
-    size_t total = tests_passed + tests_failed;
-    size_t expected = 0;
-    while (tests[expected].fn != NULL) expected++;
-    if (total != expected) {
-        fprintf(stderr, "Mismatch: %zu tests defined, %zu executed\n", expected, total);
-        return 1;
-    }
-
-    return 0;
+    return test_run_all("test_list", tests);
 }
