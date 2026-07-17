@@ -391,7 +391,8 @@ static int test_front_back(void) {
     ASSERT(zenit_list_front(NULL) == NULL, "front should be NULL on NULL");
     ASSERT(zenit_list_back(NULL) == NULL, "back should be NULL on NULL");
 
-    int a = 10, b = 20;
+    int a = 10;
+    int b = 20;
     zenit_list_push_back(list, &a);
     zenit_list_push_back(list, &b);
     ASSERT(*(int *)zenit_list_front(list) == 10, "front should be 10");
@@ -413,7 +414,7 @@ static int test_many_elements(void) {
     ASSERT(zenit_list_count(list) == (size_t)n, "count should be n");
 
     for (int i = 0; i < n; i++) {
-        int *v = (int *)zenit_list_get(list, (size_t)i);
+        const int *v = (const int *)zenit_list_get(list, (size_t)i);
         ASSERT(*v == i, "unexpected value at index");
     }
 
@@ -447,10 +448,10 @@ static int test_struct(void) {
     zenit_list_push_back(list, &s1);
     zenit_list_push_front(list, &s2);
 
-    test_struct_t *g2 = (test_struct_t *)zenit_list_get(list, 0);
+    const test_struct_t *g2 = (const test_struct_t *)zenit_list_get(list, 0);
     ASSERT(g2->x == 2 && g2->y == 2.5 && strcmp(g2->label, "second") == 0, "expected second at 0");
 
-    test_struct_t *g1 = (test_struct_t *)zenit_list_get(list, 1);
+    const test_struct_t *g1 = (const test_struct_t *)zenit_list_get(list, 1);
     ASSERT(g1->x == 1 && g1->y == 1.5 && strcmp(g1->label, "first") == 0, "expected first at 1");
 
     zenit_list_destroy(list);

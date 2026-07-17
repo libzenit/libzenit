@@ -167,7 +167,8 @@ static int test_pop_empty(void) {
 static int test_null_params(void) {
     TEST("NULL params return error");
     zenit_deque_t *d = zenit_deque_create(sizeof(int));
-    int v = 0, out;
+    int v = 0;
+    int out;
 
     ASSERT(zenit_deque_push_front(NULL, &v).error == ZENIT_ERROR_NULL, "push_front NULL list");
     ASSERT(zenit_deque_push_front(d, NULL).error == ZENIT_ERROR_NULL, "push_front NULL elem");
@@ -249,7 +250,8 @@ static int test_front_back(void) {
     ASSERT(zenit_deque_front(NULL) == NULL, "front NULL");
     ASSERT(zenit_deque_back(NULL) == NULL, "back NULL");
 
-    int a = 10, b = 20;
+    int a = 10;
+    int b = 20;
     zenit_deque_push_back(d, &a);
     zenit_deque_push_back(d, &b);
     ASSERT(*(int *)zenit_deque_front(d) == 10, "front is 10");
@@ -404,10 +406,10 @@ static int test_struct(void) {
     zenit_deque_push_back(d, &p1);
     zenit_deque_push_front(d, &p2);
 
-    point_t *fp = (point_t *)zenit_deque_front(d);
+    const point_t *fp = (const point_t *)zenit_deque_front(d);
     ASSERT(fp->id == 2 && fp->val == 2.5, "front check");
 
-    point_t *bp = (point_t *)zenit_deque_back(d);
+    const point_t *bp = (const point_t *)zenit_deque_back(d);
     ASSERT(bp->id == 1 && bp->val == 1.5, "back check");
 
     zenit_deque_destroy(d);

@@ -172,7 +172,7 @@ zenit_result_t zenit_deque_pop_front(zenit_deque_t *deque, void *out_elem) {
         return ZENIT_RESULT_ERROR(ZENIT_ERROR_EMPTY);
     }
 
-    unsigned char *src = deque->buffer + deque->head * deque->elem_size;
+    const unsigned char *src = deque->buffer + deque->head * deque->elem_size;
     memcpy(out_elem, src, deque->elem_size);
 
     deque->head = (deque->head + 1) % deque->capacity;
@@ -196,7 +196,7 @@ zenit_result_t zenit_deque_pop_back(zenit_deque_t *deque, void *out_elem) {
         deque->tail--;
     }
 
-    unsigned char *src = deque->buffer + deque->tail * deque->elem_size;
+    const unsigned char *src = deque->buffer + deque->tail * deque->elem_size;
     memcpy(out_elem, src, deque->elem_size);
     deque->count--;
 

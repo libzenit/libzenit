@@ -40,8 +40,8 @@ static int cmp_int_max(const void *a, const void *b) {
 }
 
 /* ─── Min-heap comparator ─── */
-static int cmp_int_min(const void *a, const void *b) {
-    return cmp_int_max(b, a);
+static int cmp_int_min(const void *lhs, const void *rhs) {
+    return cmp_int_max(rhs, lhs);
 }
 
 /* ─── Test: create and destroy ─── */
@@ -160,7 +160,8 @@ static int test_pop_empty(void) {
 static int test_null_params(void) {
     TEST("NULL params return error");
     zenit_heap_t *heap = zenit_heap_create(sizeof(int), cmp_int_max);
-    int v = 0, out;
+    int v = 0;
+    int out;
 
     ASSERT(zenit_heap_push(NULL, &v).error == ZENIT_ERROR_NULL, "push NULL list");
     ASSERT(zenit_heap_push(heap, NULL).error == ZENIT_ERROR_NULL, "push NULL elem");

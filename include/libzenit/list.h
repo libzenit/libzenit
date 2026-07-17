@@ -152,7 +152,7 @@ void *zenit_list_get(const zenit_list_t *list, size_t index);
  *         - ZENIT_ERROR_NULL if @p list or @p elem is NULL
  *         - ZENIT_ERROR_PARAM if @p index >= count.
  */
-zenit_result_t zenit_list_set(zenit_list_t *list, size_t index, const void *elem);
+zenit_result_t zenit_list_set(const zenit_list_t *list, size_t index, const void *elem);
 
 /**
  * @brief Return the number of elements in the list.
