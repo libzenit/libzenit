@@ -90,15 +90,15 @@ static void bench_build(void *ctx) {
 
 int main(void) {
     /* Parse */
-    zenit_bench_result_t r1 = zenit_bench_run("json parse", bench_parse, NULL, 50000);
+    zenit_bench_result_t r1 = zenit_bench_run("json_parse", bench_parse, NULL, 50000);
     zenit_bench_print(&r1);
 
     /* Parse + serialize */
-    zenit_bench_result_t r2 = zenit_bench_run("json serialize", bench_serialize, NULL, 50000);
+    zenit_bench_result_t r2 = zenit_bench_run("json_serialize", bench_serialize, NULL, 50000);
     zenit_bench_print(&r2);
 
     /* Build programmatically */
-    zenit_bench_result_t r3 = zenit_bench_run("json build", bench_build, NULL, 50000);
+    zenit_bench_result_t r3 = zenit_bench_run("json_build", bench_build, NULL, 50000);
     zenit_bench_print(&r3);
 
     return 0;
