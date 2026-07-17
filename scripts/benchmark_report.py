@@ -67,6 +67,9 @@ PREFIX_MAP = {
     "vector_": "Vector",
     "map_": "Hash Map",
     "set_": "Hash Set",
+    "list_": "Linked List",
+    "heap_": "Binary Heap",
+    "deque_": "Deque",
 }
 
 
