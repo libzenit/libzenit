@@ -372,6 +372,31 @@ Dynamically-sized bit array with automatic growth. Uses a contiguous byte array 
 
 ---
 
+### 14. JSON — `include/libzenit/json.h`
+
+Recursive-descent JSON parser and serializer with DOM-style value tree, custom allocator support, and full UTF-8 handling.
+
+| Function | Description |
+|---|---|
+| `zenit_json_parse(text)` / `_with_length` / `_with_allocator` | Parse JSON string into a document; returns NULL on parse error or OOM |
+| `zenit_json_create()` / `_with_allocator` | Create an empty document |
+| `zenit_json_destroy(json)` | Free all values and the document; NULL-safe |
+| `zenit_json_root(json)` / `zenit_json_set_root(json, val)` | Get/set the root value |
+| `zenit_json_value_type(val)` | Query type tag (NULL/BOOL/NUMBER/STRING/ARRAY/OBJECT) |
+| `zenit_json_value_is_null(val)` / `_get_bool` / `_get_number` / `_get_string` | Read typed payloads (safe on mismatch — return 0/NULL) |
+| `zenit_json_value_null(json)` / `_bool` / `_number` / `_string` / `_array` / `_object` | Construct values within a document |
+| `zenit_json_array_count` / `_get` / `_append` / `_remove` / `_insert` | Array manipulation |
+| `zenit_json_object_count` / `_key` / `_value_at` / `_get` / `_set` / `_remove` | Object manipulation |
+| `zenit_json_serialize(json)` / `zenit_json_value_serialize(val)` | Serialise to JSON string (caller frees) |
+
+**Number formatting:** Uses shortest-round-trip representation — formats with `%.17g` then progressively shortens while ensuring `strtod` reproduces the same double.
+
+- **Source:** [`src/json.c`](src/json.c)
+- **Tests:** [`tests/test_json.c`](tests/test_json.c) (39 sub-tests: all types, nesting, escapes, round-trip, errors, NULL safety, construction, array/object ops, mismatched getters, allocator variants), [`tests/test_json_malloc_fail.c`](tests/test_json_malloc_fail.c) (allocation failure via `--wrap=malloc/calloc/realloc`)
+- **Benchmark:** [`benchmarks/benchmark_json.c`](benchmarks/benchmark_json.c) — parse (50K), serialize (50K), build (50K)
+
+---
+
 ## Build Options
 
 | Option | Default | Description |
@@ -402,6 +427,7 @@ libzen/
 │       ├── arena.h             # Arena allocator API
 │       ├── benchmark.h         # Benchmark framework API
 │       ├── bitset.h            # Bit set API
+│       ├── json.h              # JSON parser / serializer API
 │       ├── ring.h              # Ring buffer API
 │       ├── string.h            # String builder API
 │       ├── vector.h            # Dynamic array API
@@ -414,16 +440,16 @@ libzen/
 │   ├── CMakeLists.txt          # Library target: static libzenit
 │   ├── result.c / version.c / state.c / arena.c / benchmark.c
 │   ├── ring.c / _hash_common.h / vector.c / map.c / set.c
-│   ├── list.c / heap.c / deque.c / string.c / bitset.c
+│   ├── list.c / heap.c / deque.c / string.c / bitset.c / json.c
 ├── tests/
-│   ├── CMakeLists.txt          # 24 test executables (DRY helpers)
+│   ├── CMakeLists.txt          # 27 test executables (DRY helpers)
 │   ├── test_malloc_fail.h      # Shared malloc/calloc wrappers
 │   ├── test_runner.h           # Shared test runner
 │   ├── test_result.c ... test_bitset.c  # One per module
 │   ├── test_*_malloc_fail.c    # Allocation-failure tests (--wrap)
 ├── benchmarks/
-│   ├── CMakeLists.txt          # 12 benchmark executables
-│   ├── benchmark_version.c ... benchmark_bitset.c
+│   ├── CMakeLists.txt          # 13 benchmark executables
+│   ├── benchmark_version.c ... benchmark_bitset.c ... benchmark_json.c
 ├── scripts/
 │   ├── benchmark_report.py     # CI benchmark log → BENCHMARK.md + charts
 │   └── checksum.py             # Release SHA-256 generator
@@ -470,4 +496,4 @@ libzen/
 
 ## Status
 
-Current version `0.1.0` — **alpha**. All 13 modules are implemented, fully tested, benchmarked, and passing CI across all platforms and sanitizers. All containers support custom allocators. The API is stable but may evolve before `1.0.0`.
+Current version `0.1.0` — **alpha**. All 14 modules are implemented, fully tested, benchmarked, and passing CI across all platforms and sanitizers. All containers support custom allocators. The API is stable but may evolve before `1.0.0`.

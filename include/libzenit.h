@@ -32,5 +32,6 @@
 #include <libzenit/heap.h>
 #include <libzenit/deque.h>
 #include <libzenit/bitset.h>
+#include <libzenit/json.h>
 
 #endif

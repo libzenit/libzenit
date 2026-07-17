@@ -59,6 +59,8 @@ zenit_add_test(test_list        test_list.c)
 zenit_add_test(test_heap        test_heap.c)
 zenit_add_test(test_deque       test_deque.c)
 zenit_add_test(test_bitset      test_bitset.c)
+zenit_add_test(test_json        test_json.c)
+zenit_add_test(test_json_cov    test_json_cov.c)
 
 # ─── Malloc-fail tests (--wrap) ───
 zenit_add_malloc_fail_test(test_ring_malloc_fail   test_ring_malloc_fail.c)
@@ -91,3 +93,4 @@ zenit_add_malloc_fail_realloc_test(test_vector_malloc_fail  test_vector_malloc_f
 zenit_add_malloc_fail_realloc_test(test_heap_malloc_fail    test_heap_malloc_fail.c)
 zenit_add_malloc_fail_realloc_test(test_deque_malloc_fail   test_deque_malloc_fail.c)
 zenit_add_malloc_fail_realloc_test(test_string_malloc_fail  test_string_malloc_fail.c)
+zenit_add_malloc_fail_realloc_test(test_json_malloc_fail    test_json_malloc_fail.c)
