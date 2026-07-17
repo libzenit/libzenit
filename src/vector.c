@@ -317,9 +317,9 @@ int zenit_vector_empty(const zenit_vector_t *vector) {
     return vector->count == 0 ? 1 : 0;
 }
 
-zenit_iter_t zenit_vector_iter(const zenit_vector_t *vector) {
+zenit_iter_t zenit_vector_iter(zenit_vector_t *vector) {
     zenit_iter_t iter;
-    iter.container = (void*)vector;
+    iter.container = vector;
     iter.index = 0;
     iter.count = vector ? vector->count : 0;
     iter.is_valid = (vector != NULL) ? 1 : 0;

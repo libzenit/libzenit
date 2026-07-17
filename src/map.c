@@ -387,9 +387,9 @@ void zenit_map_foreach(
     }
 }
 
-zenit_iter_t zenit_map_iter(const zenit_map_t *map) {
+zenit_iter_t zenit_map_iter(zenit_map_t *map) {
     zenit_iter_t iter;
-    iter.container = (void*)map;
+    iter.container = map;
     iter.index = 0;
     iter.count = map ? map->count : 0;
     iter.is_valid = (map != NULL) ? 1 : 0;

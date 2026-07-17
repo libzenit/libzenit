@@ -182,7 +182,7 @@ void zenit_set_foreach(
  * @param set Set handle.
  * @return An iterator (check is_valid).
  */
-zenit_iter_t zenit_set_iter(const zenit_set_t *set);
+zenit_iter_t zenit_set_iter(zenit_set_t *set);
 
 /**
  * @brief Advance a set iterator to the next key.

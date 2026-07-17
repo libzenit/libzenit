@@ -224,7 +224,7 @@ void *zenit_list_back(const zenit_list_t *list);
  * @param list List handle.
  * @return An iterator (check is_valid).
  */
-zenit_iter_t zenit_list_iter(const zenit_list_t *list);
+zenit_iter_t zenit_list_iter(zenit_list_t *list);
 
 /**
  * @brief Advance a list iterator to the next element.

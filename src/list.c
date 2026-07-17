@@ -359,9 +359,9 @@ void *zenit_list_back(const zenit_list_t *list) {
     return list->tail->data;
 }
 
-zenit_iter_t zenit_list_iter(const zenit_list_t *list) {
+zenit_iter_t zenit_list_iter(zenit_list_t *list) {
     zenit_iter_t iter;
-    iter.container = (void*)list;
+    iter.container = list;
     iter.index = 0;
     iter.count = list ? list->count : 0;
     iter.is_valid = (list != NULL) ? 1 : 0;

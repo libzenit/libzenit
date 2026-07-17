@@ -227,7 +227,7 @@ void zenit_deque_clear(zenit_deque_t *deque);
  * @param deque Deque handle.
  * @return An iterator (check is_valid).
  */
-zenit_iter_t zenit_deque_iter(const zenit_deque_t *deque);
+zenit_iter_t zenit_deque_iter(zenit_deque_t *deque);
 
 /**
  * @brief Advance a deque iterator to the next element.

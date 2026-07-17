@@ -236,7 +236,7 @@ int zenit_vector_empty(const zenit_vector_t *vector);
  * @param vector Vector handle.
  * @return An iterator (check is_valid).
  */
-zenit_iter_t zenit_vector_iter(const zenit_vector_t *vector);
+zenit_iter_t zenit_vector_iter(zenit_vector_t *vector);
 
 /**
  * @brief Advance a vector iterator to the next element.

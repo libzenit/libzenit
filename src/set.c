@@ -308,9 +308,9 @@ void zenit_set_foreach(
     }
 }
 
-zenit_iter_t zenit_set_iter(const zenit_set_t *set) {
+zenit_iter_t zenit_set_iter(zenit_set_t *set) {
     zenit_iter_t iter;
-    iter.container = (void*)set;
+    iter.container = set;
     iter.index = 0;
     iter.count = set ? set->count : 0;
     iter.is_valid = (set != NULL) ? 1 : 0;

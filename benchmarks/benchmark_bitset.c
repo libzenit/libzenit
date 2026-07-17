@@ -17,6 +17,7 @@
 
 #include <libzenit/benchmark.h>
 #include <libzenit/bitset.h>
+#include <stdint.h>
 #include <stdlib.h>
 
 /* ---------------------------------------------------------------------------
@@ -54,6 +55,11 @@ static void bench_set_fn(void *ctx) {
     c->pos = (c->pos + 1) % 100000;
 }
 
+/* Escape hatch to prevent dead-code elimination — the compiler cannot see
+ * across translation units, so writing to this pointer forces the result
+ * to be materialised without volatile or atomic types. */
+static void *bench_sink = NULL;
+
 /* ---------------------------------------------------------------------------
  * Test 100K bits (hit — all bits are set first).
  * -------------------------------------------------------------------------*/
@@ -88,9 +94,9 @@ static void bitset_test_teardown(bitset_test_ctx_t *ctx) {
 
 static void bench_test_fn(void *ctx) {
     bitset_test_ctx_t *c = (bitset_test_ctx_t *)ctx;
-    /* Volatile cast prevents compiler from optimising the test away */
-    volatile int v = zenit_bitset_test(c->bs, c->pos);
-    (void)v;
+    int v = zenit_bitset_test(c->bs, c->pos);
+    /* Escape the result so the compiler cannot optimise the call away */
+    bench_sink = (void*)(uintptr_t)v;
     c->pos = (c->pos + 1) % 100000;
 }
 
@@ -127,8 +133,9 @@ static void bitset_count_teardown(bitset_count_ctx_t *ctx) {
 }
 
 static void bench_count_fn(void *ctx) {
-    volatile size_t c = zenit_bitset_count(((bitset_count_ctx_t *)ctx)->bs);
-    (void)c;
+    size_t c = zenit_bitset_count(((bitset_count_ctx_t *)ctx)->bs);
+    /* Escape the result so the compiler cannot optimise the call away */
+    bench_sink = (void*)c;
 }
 
 /* ---------------------------------------------------------------------------

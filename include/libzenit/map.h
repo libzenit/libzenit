@@ -208,7 +208,7 @@ void zenit_map_foreach(
  * @param map Map handle.
  * @return An iterator (check is_valid).
  */
-zenit_iter_t zenit_map_iter(const zenit_map_t *map);
+zenit_iter_t zenit_map_iter(zenit_map_t *map);
 
 /**
  * @brief Advance a map iterator to the next key.

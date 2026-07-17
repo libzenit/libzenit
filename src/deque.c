@@ -294,9 +294,9 @@ void zenit_deque_clear(zenit_deque_t *deque) {
     deque->count = 0;
 }
 
-zenit_iter_t zenit_deque_iter(const zenit_deque_t *deque) {
+zenit_iter_t zenit_deque_iter(zenit_deque_t *deque) {
     zenit_iter_t iter;
-    iter.container = (void*)deque;
+    iter.container = deque;
     iter.index = 0;
     iter.count = deque ? deque->count : 0;
     iter.is_valid = (deque != NULL) ? 1 : 0;
