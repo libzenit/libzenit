@@ -227,3 +227,90 @@ if(CMAKE_C_COMPILER_ID STREQUAL "GNU" OR (CMAKE_C_COMPILER_ID STREQUAL "Clang" A
 endif()
 
 add_test(NAME test_libzenit COMMAND test_libzenit)
+
+add_executable(test_list
+  test_list.c
+)
+
+target_link_libraries(test_list PRIVATE zenit)
+
+if(LIBZENIT_BUILD_COVERAGE)
+  target_compile_options(test_list PRIVATE --coverage -g -O0)
+  target_link_options(test_list PRIVATE --coverage)
+endif()
+
+add_test(NAME test_list COMMAND test_list)
+
+if(CMAKE_C_COMPILER_ID STREQUAL "GNU" OR (CMAKE_C_COMPILER_ID STREQUAL "Clang" AND NOT APPLE))
+  add_executable(test_list_malloc_fail
+    test_list_malloc_fail.c
+  )
+
+  target_link_libraries(test_list_malloc_fail PRIVATE zenit)
+  target_link_options(test_list_malloc_fail PRIVATE -Wl,--wrap=malloc -Wl,--wrap=calloc)
+
+  if(LIBZENIT_BUILD_COVERAGE)
+    target_compile_options(test_list_malloc_fail PRIVATE --coverage -g -O0)
+    target_link_options(test_list_malloc_fail PRIVATE --coverage)
+  endif()
+
+  add_test(NAME test_list_malloc_fail COMMAND test_list_malloc_fail)
+endif()
+
+add_executable(test_heap
+  test_heap.c
+)
+
+target_link_libraries(test_heap PRIVATE zenit)
+
+if(LIBZENIT_BUILD_COVERAGE)
+  target_compile_options(test_heap PRIVATE --coverage -g -O0)
+  target_link_options(test_heap PRIVATE --coverage)
+endif()
+
+add_test(NAME test_heap COMMAND test_heap)
+
+if(CMAKE_C_COMPILER_ID STREQUAL "GNU" OR (CMAKE_C_COMPILER_ID STREQUAL "Clang" AND NOT APPLE))
+  add_executable(test_heap_malloc_fail
+    test_heap_malloc_fail.c
+  )
+
+  target_link_libraries(test_heap_malloc_fail PRIVATE zenit)
+  target_link_options(test_heap_malloc_fail PRIVATE -Wl,--wrap=malloc -Wl,--wrap=calloc -Wl,--wrap=realloc)
+
+  if(LIBZENIT_BUILD_COVERAGE)
+    target_compile_options(test_heap_malloc_fail PRIVATE --coverage -g -O0)
+    target_link_options(test_heap_malloc_fail PRIVATE --coverage)
+  endif()
+
+  add_test(NAME test_heap_malloc_fail COMMAND test_heap_malloc_fail)
+endif()
+
+add_executable(test_deque
+  test_deque.c
+)
+
+target_link_libraries(test_deque PRIVATE zenit)
+
+if(LIBZENIT_BUILD_COVERAGE)
+  target_compile_options(test_deque PRIVATE --coverage -g -O0)
+  target_link_options(test_deque PRIVATE --coverage)
+endif()
+
+add_test(NAME test_deque COMMAND test_deque)
+
+if(CMAKE_C_COMPILER_ID STREQUAL "GNU" OR (CMAKE_C_COMPILER_ID STREQUAL "Clang" AND NOT APPLE))
+  add_executable(test_deque_malloc_fail
+    test_deque_malloc_fail.c
+  )
+
+  target_link_libraries(test_deque_malloc_fail PRIVATE zenit)
+  target_link_options(test_deque_malloc_fail PRIVATE -Wl,--wrap=malloc -Wl,--wrap=calloc -Wl,--wrap=realloc)
+
+  if(LIBZENIT_BUILD_COVERAGE)
+    target_compile_options(test_deque_malloc_fail PRIVATE --coverage -g -O0)
+    target_link_options(test_deque_malloc_fail PRIVATE --coverage)
+  endif()
+
+  add_test(NAME test_deque_malloc_fail COMMAND test_deque_malloc_fail)
+endif()

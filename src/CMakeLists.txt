@@ -25,6 +25,9 @@ add_library(zenit STATIC
   vector.c
   map.c
   set.c
+  list.c
+  heap.c
+  deque.c
 )
 
 target_include_directories(zenit

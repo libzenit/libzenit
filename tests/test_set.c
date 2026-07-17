@@ -16,19 +16,9 @@
 //
 
 #include <libzenit/set.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
-/* ─── Helpers ─── */
-
-static int tests_passed = 0;
-static int tests_failed = 0;
-
-#define TEST(name) do { printf("  %s ... ", name); } while (0)
-#define PASS() do { printf("PASS\n"); tests_passed++; } while (0)
-#define FAIL(msg) do { fprintf(stderr, "FAIL: %s\n", msg); tests_failed++; } while (0)
-#define ASSERT(cond, msg) do { if (!(cond)) { FAIL(msg); return 1; } } while (0)
+#include "test_runner.h"
 
 /* ─── Visitor context for foreach test ─── */
 typedef struct {
@@ -462,42 +452,36 @@ static int test_count_ops(void) {
 
 /* ─── Main ─── */
 int main(void) {
-    printf("hash set tests\n");
-    printf("--------------\n");
-
-    int total = 0;
-
-    total += test_create_destroy();
-    total += test_create_with_capacity();
-    total += test_create_zero_key();
-    total += test_create_zero_capacity();
-    total += test_null_destroy();
-    total += test_insert_contains();
-    total += test_insert_duplicate();
-    total += test_contains_not_found();
-    total += test_remove();
-    total += test_remove_not_found();
-    total += test_tombstone();
-    total += test_contains_null();
-    total += test_clear();
-    total += test_clear_null();
-    total += test_count_null();
-    total += test_capacity_null();
-    total += test_insert_null_set();
-    total += test_insert_null_key();
-    total += test_insert_multiple();
-    total += test_remove_null_set();
-    total += test_remove_null_key();
-    total += test_foreach();
-    total += test_foreach_null_set();
-    total += test_foreach_null_visit();
-    total += test_many_inserts();
-    total += test_struct_keys();
-    total += test_remove_all_reinsert();
-    total += test_count_ops();
-
-    printf("\n%d passed, %d failed, %d total\n",
-           tests_passed, tests_failed, total);
-
-    return tests_failed > 0 ? 1 : 0;
+    TEST_ENTRY tests[] = {
+        { test_create_destroy,      "create_destroy" },
+        { test_create_with_capacity, "create_with_capacity" },
+        { test_create_zero_key,     "create_zero_key" },
+        { test_create_zero_capacity, "create_zero_capacity" },
+        { test_null_destroy,        "null_destroy" },
+        { test_insert_contains,     "insert_contains" },
+        { test_insert_duplicate,    "insert_duplicate" },
+        { test_contains_not_found,  "contains_not_found" },
+        { test_remove,              "remove" },
+        { test_remove_not_found,    "remove_not_found" },
+        { test_tombstone,           "tombstone" },
+        { test_contains_null,       "contains_null" },
+        { test_clear,               "clear" },
+        { test_clear_null,          "clear_null" },
+        { test_count_null,          "count_null" },
+        { test_capacity_null,       "capacity_null" },
+        { test_insert_null_set,     "insert_null_set" },
+        { test_insert_null_key,     "insert_null_key" },
+        { test_insert_multiple,     "insert_multiple" },
+        { test_remove_null_set,     "remove_null_set" },
+        { test_remove_null_key,     "remove_null_key" },
+        { test_foreach,             "foreach" },
+        { test_foreach_null_set,    "foreach_null_set" },
+        { test_foreach_null_visit,  "foreach_null_visit" },
+        { test_many_inserts,        "many_inserts" },
+        { test_struct_keys,         "struct_keys" },
+        { test_remove_all_reinsert, "remove_all_reinsert" },
+        { test_count_ops,           "count_ops" },
+        { 0, 0 }
+    };
+    return test_run_all("hash set", tests);
 }

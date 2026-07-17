@@ -2,7 +2,7 @@
   <img src="media/logo.svg" alt="LibZenit" width="180">
 </p>
 
-Portable C library providing building blocks for systems programming: a **typed result type with error codes**, a **ring buffer**, a **finite-state machine engine**, a **fixed-block arena allocator**, a **benchmark framework**, a **dynamic array (vector)**, a **hash map**, a **hash set**, and a **version API**.
+Portable C library providing building blocks for systems programming: a **typed result type with error codes**, a **ring buffer**, a **finite-state machine engine**, a **fixed-block arena allocator**, a **benchmark framework**, a **dynamic array (vector)**, a **hash map**, a **hash set**, a **doubly linked list**, a **binary heap (priority queue)**, a **double-ended queue (deque)**, and a **version API**.
 
 <p align="center">
 <a href="https://github.com/libzenit/libzenit/actions/workflows/ci.yml"><img src="https://github.com/libzenit/libzenit/actions/workflows/ci.yml/badge.svg?branch=master" alt="CI Status"></a>
@@ -243,6 +243,86 @@ Generic type-erased hash set with open-addressing and linear probing. Uses FNV-1
 
 ---
 
+### 9. Doubly Linked List — `include/libzenit/list.h`
+
+Generic type-erased doubly linked list with O(1) push/pop at both ends and O(n) indexed access.
+
+| Function | Description |
+|---|---|
+| `zenit_list_create(elem_size)` | Create empty list; returns `NULL` on zero elem_size or OOM |
+| `zenit_list_destroy(list)` | Free all nodes and handle; NULL-safe |
+| `zenit_list_push_front(list, elem)` | Prepend element (O(1)); returns `ZENIT_ERROR_NULL` / `ZENIT_ERROR_ALLOC` |
+| `zenit_list_push_back(list, elem)` | Append element (O(1)); same errors |
+| `zenit_list_pop_front(list, out)` | Remove and retrieve first (O(1)); returns `ZENIT_ERROR_EMPTY` if empty |
+| `zenit_list_pop_back(list, out)` | Remove and retrieve last (O(1)); same |
+| `zenit_list_insert(list, index, elem)` | Insert at position; returns `ZENIT_ERROR_PARAM` if index > count |
+| `zenit_list_remove(list, index, out)` | Remove at position; returns `ZENIT_ERROR_PARAM` if OOB |
+| `zenit_list_get(list, index)` | Pointer to element (O(n)); NULL if OOB |
+| `zenit_list_set(list, index, elem)` | Overwrite at index; returns `ZENIT_ERROR_PARAM` if OOB |
+| `zenit_list_count(list)` | Number of elements (0 if NULL) |
+| `zenit_list_empty(list)` | 1 if empty or NULL |
+| `zenit_list_clear(list)` | Remove all elements; NULL-safe |
+| `zenit_list_foreach(list, visit, ctx)` | Iterate all elements in order |
+| `zenit_list_front(list)` / `zenit_list_back(list)` | Pointer to first/last element (NULL if empty) |
+
+- **Source:** [`src/list.c`](src/list.c)
+- **Tests:** [`tests/test_list.c`](tests/test_list.c) (24 sub-tests: create/destroy, push/pop front/back, insert/remove, get/set, clear, foreach, front/back, many elements, struct, all NULL edge cases), [`tests/test_list_malloc_fail.c`](tests/test_list_malloc_fail.c) (4 sub-tests covering malloc/calloc failure via `--wrap`)
+- **Benchmark:** [`benchmarks/benchmark_list.c`](benchmarks/benchmark_list.c) — push_back (100K), push_front (100K), push_pop (100K), foreach (100K)
+
+---
+
+### 10. Binary Heap / Priority Queue — `include/libzenit/heap.h`
+
+Generic binary heap with user-provided comparator (max-heap or min-heap). Uses 1.5x exponential growth.
+
+| Function | Description |
+|---|---|
+| `zenit_heap_create(elem_size, compare)` | Create empty heap (default cap 8); returns `NULL` on zero elem_size, NULL compare, or OOM |
+| `zenit_heap_create_with_capacity(elem_size, compare, capacity)` | Create with initial capacity; returns `NULL` on invalid params or OOM |
+| `zenit_heap_destroy(heap)` | Free all memory; NULL-safe |
+| `zenit_heap_push(heap, elem)` | Insert element (O(log n)); returns `ZENIT_ERROR_ALLOC` on grow failure |
+| `zenit_heap_pop(heap, out)` | Remove root (O(log n)); returns `ZENIT_ERROR_EMPTY` if empty |
+| `zenit_heap_peek(heap)` | Pointer to root without removal (NULL if empty) |
+| `zenit_heap_count(heap)` | Number of elements (0 if NULL) |
+| `zenit_heap_capacity(heap)` | Current slot capacity (0 if NULL) |
+| `zenit_heap_empty(heap)` | 1 if empty or NULL |
+| `zenit_heap_clear(heap)` | Remove all without freeing buffer; NULL-safe |
+| `zenit_heap_reserve(heap, capacity)` | Pre-allocate capacity; no-op if sufficient |
+
+- **Source:** [`src/heap.c`](src/heap.c)
+- **Tests:** [`tests/test_heap.c`](tests/test_heap.c) (13 sub-tests: create/destroy, push/pop max/min, peek, pop empty, NULL params, reserve, clear, many elements, struct, all query NULL), [`tests/test_heap_malloc_fail.c`](tests/test_heap_malloc_fail.c) (3 sub-tests covering malloc/calloc/realloc failure via `--wrap`)
+- **Benchmark:** [`benchmarks/benchmark_heap.c`](benchmarks/benchmark_heap.c) — push (100K), push_pop (100K), peek (100K)
+
+---
+
+### 11. Double-Ended Queue (Deque) — `include/libzenit/deque.h`
+
+Generic type-erased deque with a contiguous circular buffer. Amortized O(1) push/pop at both ends. Grows by 1.5x.
+
+| Function | Description |
+|---|---|
+| `zenit_deque_create(elem_size)` | Create empty deque (default cap 8); returns `NULL` on zero elem_size or OOM |
+| `zenit_deque_create_with_capacity(elem_size, capacity)` | Create with initial capacity; returns `NULL` on invalid params or OOM |
+| `zenit_deque_destroy(deque)` | Free all memory; NULL-safe |
+| `zenit_deque_push_front(deque, elem)` | Prepend element; returns `ZENIT_ERROR_ALLOC` on grow failure |
+| `zenit_deque_push_back(deque, elem)` | Append element; same |
+| `zenit_deque_pop_front(deque, out)` | Remove first; returns `ZENIT_ERROR_EMPTY` if empty |
+| `zenit_deque_pop_back(deque, out)` | Remove last; same |
+| `zenit_deque_get(deque, index)` | Pointer to element at index (O(1)); NULL if OOB |
+| `zenit_deque_front(deque)` / `zenit_deque_back(deque)` | Pointer to first/last element (NULL if empty) |
+| `zenit_deque_count(deque)` | Number of elements (0 if NULL) |
+| `zenit_deque_capacity(deque)` | Current capacity (0 if NULL) |
+| `zenit_deque_empty(deque)` | 1 if empty or NULL |
+| `zenit_deque_reserve(deque, capacity)` | Pre-allocate; no-op if sufficient |
+| `zenit_deque_shrink_to_fit(deque)` | Reallocate to exact element count |
+| `zenit_deque_clear(deque)` | Remove all without freeing; NULL-safe |
+
+- **Source:** [`src/deque.c`](src/deque.c)
+- **Tests:** [`tests/test_deque.c`](tests/test_deque.c) (19 sub-tests: create/destroy, push/pop all four combinations, empty, NULL params, get, get with wrap, front/back, reserve, shrink, clear, many elements, mixed push/pop, struct, all query NULL), [`tests/test_deque_malloc_fail.c`](tests/test_deque_malloc_fail.c) (4 sub-tests covering malloc/calloc/realloc failure via `--wrap`)
+- **Benchmark:** [`benchmarks/benchmark_deque.c`](benchmarks/benchmark_deque.c) — push_back (1M), push_front (1M), push_pop (1M)
+
+---
+
 ## Build Options
 
 | Option | Default | Description |
@@ -274,7 +354,10 @@ libzen/
 │       ├── ring.h              # Ring buffer API
 │       ├── vector.h            # Dynamic array API
 │       ├── map.h               # Hash map API
-│       └── set.h               # Hash set API
+│       ├── set.h               # Hash set API
+│       ├── list.h              # Doubly linked list API
+│       ├── heap.h              # Binary heap / priority queue API
+│       └── deque.h             # Double-ended queue API
 ├── src/
 │   ├── CMakeLists.txt          # Library target: static libzenit
 │   ├── result.c
@@ -285,9 +368,12 @@ libzen/
 │   ├── ring.c
 │   ├── vector.c
 │   ├── map.c
-│   └── set.c
+│   ├── set.c
+│   ├── list.c
+│   ├── heap.c
+│   └── deque.c
 ├── tests/
-│   ├── CMakeLists.txt          # 15 test executables
+│   ├── CMakeLists.txt          # 21 test executables
 │   ├── test_malloc_fail.h      # Shared malloc/calloc wrappers
 │   ├── test_result.c           # 11 error codes + macro helpers
 │   ├── test_version.c
@@ -303,16 +389,25 @@ libzen/
 │   ├── test_map.c              # 34 sub-tests
 │   ├── test_map_malloc_fail.c  # 4 sub-tests
 │   ├── test_set.c              # 28 sub-tests
-│   └── test_set_malloc_fail.c  # 5 sub-tests
+│   ├── test_set_malloc_fail.c  # 5 sub-tests
+│   ├── test_list.c             # 24 sub-tests
+│   ├── test_list_malloc_fail.c # 4 sub-tests
+│   ├── test_heap.c             # 13 sub-tests
+│   ├── test_heap_malloc_fail.c # 3 sub-tests
+│   ├── test_deque.c            # 19 sub-tests
+│   └── test_deque_malloc_fail.c # 4 sub-tests
 ├── benchmarks/
-│   ├── CMakeLists.txt          # 7 benchmark executables (label: "benchmark")
+│   ├── CMakeLists.txt          # 10 benchmark executables (label: "benchmark")
 │   ├── benchmark_version.c
 │   ├── benchmark_state.c       # 3 cases (8-state, 1024-state, miss)
 │   ├── benchmark_arena.c       # 7 cases (arena vs malloc)
 │   ├── benchmark_ring.c        # 3 cases (seq 128B, seq 1K, full-miss)
 │   ├── benchmark_vector.c      # 4 cases (seq push, push/pop, insert front, reserve+push)
 │   ├── benchmark_map.c         # 5 cases (insert, get hit/miss, rehash, foreach)
-│   └── benchmark_set.c         # 5 cases (insert, contains hit/miss, rehash, foreach)
+│   ├── benchmark_set.c         # 5 cases (insert, contains hit/miss, rehash, foreach)
+│   ├── benchmark_list.c        # 4 cases (push_back, push_front, push_pop, foreach)
+│   ├── benchmark_heap.c        # 3 cases (push, push_pop, peek)
+│   └── benchmark_deque.c       # 3 cases (push_back, push_front, push_pop)
 ├── scripts/
 │   ├── benchmark_report.py     # CI benchmark log → BENCHMARK.md + charts
 │   └── checksum.py             # Release SHA-256 generator
@@ -359,4 +454,4 @@ libzen/
 
 ## Status
 
-Current version `0.1.0` — **alpha**. All seven modules are implemented, fully tested, benchmarked, and passing CI across all platforms and sanitizers. The API is stable but may evolve before `1.0.0`.
+Current version `0.1.0` — **alpha**. All eleven modules are implemented, fully tested, benchmarked, and passing CI across all platforms and sanitizers. The API is stable but may evolve before `1.0.0`.

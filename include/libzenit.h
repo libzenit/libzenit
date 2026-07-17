@@ -27,5 +27,8 @@
 #include <libzenit/vector.h>
 #include <libzenit/map.h>
 #include <libzenit/set.h>
+#include <libzenit/list.h>
+#include <libzenit/heap.h>
+#include <libzenit/deque.h>
 
 #endif
