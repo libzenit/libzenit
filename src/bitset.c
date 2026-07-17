@@ -41,7 +41,8 @@ struct zenit_bitset_t {
  * @brief Return the number of bytes needed to store @p bit_count bits.
  */
 static inline size_t bytes_needed(size_t bit_count) {
-    return (bit_count + 7) / 8;
+    size_t n = (bit_count + 7) / 8;
+    return n > 0 ? n : 1;
 }
 
 /**
@@ -89,16 +90,15 @@ zenit_bitset_t* zenit_bitset_create_with_allocator(size_t num_bits, zenit_alloca
     /* Store the allocator early so failure paths can free correctly */
     bs->allocator = allocator;
 
-    /* Compute byte count and allocate the bit storage */
-    size_t nb = bytes_needed(num_bits);
-    bs->bits = zenit_allocator_alloc_zero(allocator, 1, nb);
-    if (bs->bits == NULL && nb > 0) {
+    /* Compute byte count and allocate the bit storage.
+     * bytes_needed guarantees at least 1 byte so bits is never NULL. */
+    bs->num_bytes = bytes_needed(num_bits);
+    bs->num_bits = num_bits;
+    bs->bits = zenit_allocator_alloc_zero(allocator, 1, bs->num_bytes);
+    if (bs->bits == NULL) {
         allocator.free_fn(bs, allocator.ctx);
         return NULL;
     }
-
-    bs->num_bytes = nb;
-    bs->num_bits = num_bits;
 
     return bs;
 }
@@ -126,7 +126,7 @@ zenit_result_t zenit_bitset_set(zenit_bitset_t* bs, size_t pos) {
     /* Compute byte index and bit mask, then set */
     size_t byte = pos / 8;
     unsigned char bit = (unsigned char)(pos % 8);
-    bs->bits[byte] |= (unsigned char)(1u << bit); // NOSONAR — ensure_capacity guarantees non-null
+    bs->bits[byte] |= (unsigned char)(1u << bit);
 
     return ZENIT_RESULT_OK;
 }
@@ -145,7 +145,7 @@ zenit_result_t zenit_bitset_clear(zenit_bitset_t* bs, size_t pos) {
     /* Compute byte index and bit mask, then clear */
     size_t byte = pos / 8;
     unsigned char bit = (unsigned char)(pos % 8);
-    bs->bits[byte] &= (unsigned char)~(1u << bit); // NOSONAR — ensure_capacity guarantees non-null
+    bs->bits[byte] &= (unsigned char)~(1u << bit);
 
     return ZENIT_RESULT_OK;
 }
@@ -164,7 +164,7 @@ zenit_result_t zenit_bitset_toggle(zenit_bitset_t* bs, size_t pos) {
     /* Compute byte index and bit mask, then toggle */
     size_t byte = pos / 8;
     unsigned char bit = (unsigned char)(pos % 8);
-    bs->bits[byte] ^= (unsigned char)(1u << bit); // NOSONAR — ensure_capacity guarantees non-null
+    bs->bits[byte] ^= (unsigned char)(1u << bit);
 
     return ZENIT_RESULT_OK;
 }
@@ -188,10 +188,8 @@ zenit_result_t zenit_bitset_set_all(zenit_bitset_t* bs) {
         return ZENIT_RESULT_ERROR(ZENIT_ERROR_NULL);
     }
 
-    /* Set every byte to 0xFF — all bits become 1 */
-    if (bs->num_bytes > 0) {
-        memset(bs->bits, 0xFF, bs->num_bytes);
-    }
+    /* Set every byte to 0xFF — all bits become 1 (num_bytes is always >= 1) */
+    memset(bs->bits, 0xFF, bs->num_bytes);
 
     return ZENIT_RESULT_OK;
 }
@@ -201,10 +199,8 @@ zenit_result_t zenit_bitset_clear_all(zenit_bitset_t* bs) {
         return ZENIT_RESULT_ERROR(ZENIT_ERROR_NULL);
     }
 
-    /* Clear every byte to 0x00 — all bits become 0 */
-    if (bs->num_bytes > 0) {
-        memset(bs->bits, 0x00, bs->num_bytes);
-    }
+    /* Clear every byte to 0x00 — all bits become 0 (num_bytes is always >= 1) */
+    memset(bs->bits, 0x00, bs->num_bytes);
 
     return ZENIT_RESULT_OK;
 }
@@ -248,16 +244,6 @@ zenit_result_t zenit_bitset_resize(zenit_bitset_t* bs, size_t num_bits) {
     }
 
     size_t new_bytes = bytes_needed(num_bits);
-
-    /* If new_bytes is 0, free the buffer */
-    if (new_bytes == 0) {
-        zenit_allocator_t a = bs->allocator;
-        a.free_fn(bs->bits, a.ctx);
-        bs->bits = NULL;
-        bs->num_bytes = 0;
-        bs->num_bits = 0;
-        return ZENIT_RESULT_OK;
-    }
 
     /* Reallocate the byte array */
     zenit_allocator_t a = bs->allocator;
