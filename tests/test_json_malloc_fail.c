@@ -78,7 +78,7 @@ static void test_value_construct_fail(void) {
      * But countdown=0 was already used above... ah, countdown was reset to -1 after doc creation.
      * So: set countdown=0, then call value_alloc -> __wrap_malloc -> returns NULL. */
     malloc_fail_countdown = 0;
-    zenit_json_value_t *val = zenit_json_value_number(doc, 42.0);
+    const zenit_json_value_t *val = zenit_json_value_number(doc, 42.0);
     malloc_fail_countdown = -1;
     if (val != NULL) { fprintf(stderr, "FAIL: value should be NULL\n"); failures++; zenit_json_destroy(doc); return; }
 
@@ -98,7 +98,7 @@ static void test_string_value_fail(void) {
     /* First alloc: value struct (succeeds, countdown goes 1→0)
      * Second alloc: string copy (countdown=0, fails) */
     malloc_fail_countdown = 1;
-    zenit_json_value_t *val = zenit_json_value_string(doc, "hello");
+    const zenit_json_value_t *val = zenit_json_value_string(doc, "hello");
     malloc_fail_countdown = -1;
     if (val != NULL) { fprintf(stderr, "FAIL: value should be NULL\n"); failures++; zenit_json_destroy(doc); return; }
 
@@ -117,7 +117,7 @@ static void test_string_value_struct_fail(void) {
 
     /* Set countdown=0 so the very next malloc (value struct) fails */
     malloc_fail_countdown = 0;
-    zenit_json_value_t *val = zenit_json_value_string(doc, "hello");
+    const zenit_json_value_t *val = zenit_json_value_string(doc, "hello");
     malloc_fail_countdown = -1;
     if (val != NULL) { fprintf(stderr, "FAIL: value should be NULL\n"); failures++; zenit_json_destroy(doc); return; }
 

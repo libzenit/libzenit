@@ -161,7 +161,7 @@ static int test_parse_array_nested(void) {
     zenit_json_t *doc = zenit_json_parse("[[1,[]],[{}]]");
     if (doc == NULL) { FAIL("parse NULL"); return 1; }
     if (zenit_json_array_count(zenit_json_root(doc)) != 2) { FAIL("count"); zenit_json_destroy(doc); return 1; }
-    zenit_json_value_t *inner = zenit_json_array_get(zenit_json_root(doc), 0);
+    const zenit_json_value_t *inner = zenit_json_array_get(zenit_json_root(doc), 0);
     if (inner == NULL || zenit_json_value_type(inner) != ZENIT_JSON_ARRAY) { FAIL("inner not array"); zenit_json_destroy(doc); return 1; }
     if (zenit_json_array_count(inner) != 2) { FAIL("inner count"); zenit_json_destroy(doc); return 1; }
     zenit_json_destroy(doc);
@@ -209,7 +209,7 @@ static int test_parse_object_nested(void) {
     TEST("parse nested object");
     zenit_json_t *doc = zenit_json_parse("{\"obj\":{\"inner\":true}}");
     if (doc == NULL) { FAIL("parse NULL"); return 1; }
-    zenit_json_value_t *inner = zenit_json_object_get(zenit_json_root(doc), "obj");
+    const zenit_json_value_t *inner = zenit_json_object_get(zenit_json_root(doc), "obj");
     if (inner == NULL || zenit_json_value_type(inner) != ZENIT_JSON_OBJECT) { FAIL("inner not obj"); zenit_json_destroy(doc); return 1; }
     if (!zenit_json_value_get_bool(zenit_json_object_get(inner, "inner"))) { FAIL("inner bool"); zenit_json_destroy(doc); return 1; }
     zenit_json_destroy(doc);
@@ -233,15 +233,15 @@ static int test_parse_complex(void) {
         "}";
     zenit_json_t *doc = zenit_json_parse(input);
     if (doc == NULL) { FAIL("parse NULL"); return 1; }
-    zenit_json_value_t *root = zenit_json_root(doc);
+    const zenit_json_value_t *root = zenit_json_root(doc);
     if (zenit_json_value_type(root) != ZENIT_JSON_OBJECT) { FAIL("root not obj"); zenit_json_destroy(doc); return 1; }
     const char *name = zenit_json_value_get_string(zenit_json_object_get(root, "name"));
     if (name == NULL || strcmp(name, "LibZenit") != 0) { FAIL("name wrong"); zenit_json_destroy(doc); return 1; }
     if (fabs(zenit_json_value_get_number(zenit_json_object_get(root, "version")) - 1.0) > 1e-15) { FAIL("version wrong"); zenit_json_destroy(doc); return 1; }
-    zenit_json_value_t *features = zenit_json_object_get(root, "features");
+    const zenit_json_value_t *features = zenit_json_object_get(root, "features");
     if (features == NULL || zenit_json_value_type(features) != ZENIT_JSON_ARRAY) { FAIL("features not array"); zenit_json_destroy(doc); return 1; }
     if (zenit_json_array_count(features) != 3) { FAIL("features count"); zenit_json_destroy(doc); return 1; }
-    zenit_json_value_t *meta = zenit_json_object_get(root, "metadata");
+    const zenit_json_value_t *meta = zenit_json_object_get(root, "metadata");
     if (meta == NULL || zenit_json_value_type(meta) != ZENIT_JSON_OBJECT) { FAIL("meta not obj"); zenit_json_destroy(doc); return 1; }
     if (!zenit_json_value_get_bool(zenit_json_object_get(meta, "active"))) { FAIL("meta.active not true"); zenit_json_destroy(doc); return 1; }
     zenit_json_destroy(doc);
@@ -389,7 +389,7 @@ static int test_programmatic(void) {
     if (zenit_json_value_get_number(zenit_json_object_get(obj, "count")) != 99.0) { FAIL("get count"); zenit_json_destroy(doc); return 1; }
     if (!zenit_json_value_get_bool(zenit_json_object_get(obj, "active"))) { FAIL("get active"); zenit_json_destroy(doc); return 1; }
     if (!zenit_json_value_is_null(zenit_json_object_get(obj, "data"))) { FAIL("get data"); zenit_json_destroy(doc); return 1; }
-    zenit_json_value_t *got_arr = zenit_json_object_get(obj, "items");
+    const zenit_json_value_t *got_arr = zenit_json_object_get(obj, "items");
     if (got_arr == NULL || zenit_json_value_type(got_arr) != ZENIT_JSON_ARRAY) { FAIL("items type"); zenit_json_destroy(doc); return 1; }
     if (zenit_json_array_count(got_arr) != 2) { FAIL("items count"); zenit_json_destroy(doc); return 1; }
 
@@ -477,7 +477,7 @@ static int test_value_serialize(void) {
     TEST("value serialization");
     zenit_json_t *doc = zenit_json_parse("{\"a\":[1,2,3]}");
     if (doc == NULL) { FAIL("parse NULL"); return 1; }
-    zenit_json_value_t *val = zenit_json_object_get(zenit_json_root(doc), "a");
+    const zenit_json_value_t *val = zenit_json_object_get(zenit_json_root(doc), "a");
     if (val == NULL) { FAIL("get a NULL"); zenit_json_destroy(doc); return 1; }
     char *out = zenit_json_value_serialize(val);
     if (out == NULL) { FAIL("value_serialize NULL"); zenit_json_destroy(doc); return 1; }

@@ -280,7 +280,7 @@ static void test_string_null(void) {
     TEST("string value NULL str");
     zenit_json_t *doc = zenit_json_create();
     if (doc == NULL) { FAIL("create"); return; }
-    zenit_json_value_t *v = zenit_json_value_string(doc, NULL);
+    const zenit_json_value_t *v = zenit_json_value_string(doc, NULL);
     if (v == NULL) { FAIL("value NULL"); zenit_json_destroy(doc); return; }
     const char *s = zenit_json_value_get_string(v);
     if (s == NULL || strcmp(s, "") != 0) { FAIL("wrong"); zenit_json_destroy(doc); return; }
