@@ -65,6 +65,8 @@ PREFIX_MAP = {
     "malloc_free": "malloc (baseline)",
     "ring_": "Ring Buffer",
     "vector_": "Vector",
+    "map_": "Hash Map",
+    "set_": "Hash Set",
 }
 
 

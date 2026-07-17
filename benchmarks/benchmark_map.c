@@ -149,19 +149,19 @@ int main(void) {
 
     zenit_bench_result_t r;
 
-    r = zenit_bench_run("map insert (100K)", bench_insert, empty, 100000);
+    r = zenit_bench_run("map_insert_100K", bench_insert, empty, 100000);
     zenit_bench_print(&r);
 
-    r = zenit_bench_run("map get (hit 100K)", bench_get_hit, full, 100000);
+    r = zenit_bench_run("map_get_hit_100K", bench_get_hit, full, 100000);
     zenit_bench_print(&r);
 
-    r = zenit_bench_run("map get (miss 100K)", bench_get_miss, full, 100000);
+    r = zenit_bench_run("map_get_miss_100K", bench_get_miss, full, 100000);
     zenit_bench_print(&r);
 
-    r = zenit_bench_run("map insert rehash (100K)", bench_insert_rehash, growing, 100000);
+    r = zenit_bench_run("map_insert_rehash_100K", bench_insert_rehash, growing, 100000);
     zenit_bench_print(&r);
 
-    r = zenit_bench_run("map foreach (100K)", bench_foreach, full, 1000);
+    r = zenit_bench_run("map_foreach_100K", bench_foreach, full, 1000);
     zenit_bench_print(&r);
 
     destroy_ctx(full);

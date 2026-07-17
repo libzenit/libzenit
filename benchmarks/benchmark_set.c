@@ -135,19 +135,19 @@ int main(void) {
 
     zenit_bench_result_t r;
 
-    r = zenit_bench_run("set insert (100K)", bench_insert, empty, 100000);
+    r = zenit_bench_run("set_insert_100K", bench_insert, empty, 100000);
     zenit_bench_print(&r);
 
-    r = zenit_bench_run("set contains (hit 100K)", bench_contains_hit, full, 100000);
+    r = zenit_bench_run("set_contains_hit_100K", bench_contains_hit, full, 100000);
     zenit_bench_print(&r);
 
-    r = zenit_bench_run("set contains (miss 100K)", bench_contains_miss, full, 100000);
+    r = zenit_bench_run("set_contains_miss_100K", bench_contains_miss, full, 100000);
     zenit_bench_print(&r);
 
-    r = zenit_bench_run("set insert rehash (100K)", bench_insert_rehash, growing, 100000);
+    r = zenit_bench_run("set_insert_rehash_100K", bench_insert_rehash, growing, 100000);
     zenit_bench_print(&r);
 
-    r = zenit_bench_run("set foreach (100K)", bench_foreach, full, 1000);
+    r = zenit_bench_run("set_foreach_100K", bench_foreach, full, 1000);
     zenit_bench_print(&r);
 
     destroy_ctx(full);
