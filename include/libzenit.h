@@ -33,5 +33,10 @@
 #include <libzenit/deque.h>
 #include <libzenit/bitset.h>
 #include <libzenit/json.h>
+#include <libzenit/base64.h>
+#include <libzenit/hex.h>
+#include <libzenit/uri.h>
+#include <libzenit/str.h>
+#include <libzenit/sort.h>
 
 #endif

@@ -105,8 +105,38 @@ target_link_libraries(benchmark_json PRIVATE zenit)
 add_test(NAME benchmark_json COMMAND benchmark_json)
 set_tests_properties(benchmark_json PROPERTIES LABELS "benchmark")
 
+# Base64 throughput
+add_executable(benchmark_base64 benchmark_base64.c)
+target_link_libraries(benchmark_base64 PRIVATE zenit)
+add_test(NAME benchmark_base64 COMMAND benchmark_base64)
+set_tests_properties(benchmark_base64 PROPERTIES LABELS "benchmark")
+
+# Hex throughput
+add_executable(benchmark_hex benchmark_hex.c)
+target_link_libraries(benchmark_hex PRIVATE zenit)
+add_test(NAME benchmark_hex COMMAND benchmark_hex)
+set_tests_properties(benchmark_hex PROPERTIES LABELS "benchmark")
+
+# URI throughput
+add_executable(benchmark_uri benchmark_uri.c)
+target_link_libraries(benchmark_uri PRIVATE zenit)
+add_test(NAME benchmark_uri COMMAND benchmark_uri)
+set_tests_properties(benchmark_uri PROPERTIES LABELS "benchmark")
+
+# String utilities throughput
+add_executable(benchmark_str benchmark_str.c)
+target_link_libraries(benchmark_str PRIVATE zenit)
+add_test(NAME benchmark_str COMMAND benchmark_str)
+set_tests_properties(benchmark_str PROPERTIES LABELS "benchmark")
+
+# Sort throughput
+add_executable(benchmark_sort benchmark_sort.c)
+target_link_libraries(benchmark_sort PRIVATE zenit)
+add_test(NAME benchmark_sort COMMAND benchmark_sort)
+set_tests_properties(benchmark_sort PROPERTIES LABELS "benchmark")
+
 if(LIBZENIT_BUILD_COVERAGE)
-  foreach(tgt benchmark_version benchmark_state benchmark_arena benchmark_ring benchmark_vector benchmark_map benchmark_set benchmark_string benchmark_list benchmark_heap benchmark_deque benchmark_bitset benchmark_json)
+  foreach(tgt benchmark_version benchmark_state benchmark_arena benchmark_ring benchmark_vector benchmark_map benchmark_set benchmark_string benchmark_list benchmark_heap benchmark_deque benchmark_bitset benchmark_json benchmark_base64 benchmark_hex benchmark_uri benchmark_str benchmark_sort)
     target_compile_options(${tgt} PRIVATE --coverage -g -O0)
     target_link_options(${tgt} PRIVATE --coverage)
   endforeach()
@@ -130,6 +160,11 @@ add_custom_target(benchmark
   COMMAND "$<TARGET_FILE:benchmark_deque>"
   COMMAND "$<TARGET_FILE:benchmark_bitset>"
   COMMAND "$<TARGET_FILE:benchmark_json>"
+  COMMAND "$<TARGET_FILE:benchmark_base64>"
+  COMMAND "$<TARGET_FILE:benchmark_hex>"
+  COMMAND "$<TARGET_FILE:benchmark_uri>"
+  COMMAND "$<TARGET_FILE:benchmark_str>"
+  COMMAND "$<TARGET_FILE:benchmark_sort>"
   COMMAND ${CMAKE_COMMAND} -E echo ""
   COMMAND ${CMAKE_COMMAND} -E echo "===== Done ====="
   USES_TERMINAL

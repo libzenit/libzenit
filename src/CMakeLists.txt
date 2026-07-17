@@ -32,6 +32,11 @@ add_library(zenit STATIC
   string.c
   bitset.c
   json.c
+  base64.c
+  hex.c
+  uri.c
+  str.c
+  sort.c
 )
 
 target_include_directories(zenit
