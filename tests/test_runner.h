@@ -52,7 +52,7 @@ typedef struct {
     const char *name;
 } TEST_ENTRY;
 
-static inline int test_run_all(const char *suite, TEST_ENTRY *tests) {
+static inline int test_run_all(const char *suite, const TEST_ENTRY *tests) {
     printf("=== %s ===\n", suite);
     for (int i = 0; tests[i].fn != NULL; i++) {
         tests[i].fn();
