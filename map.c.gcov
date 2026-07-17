@@ -1,0 +1,422 @@
+        -:    0:Source:/home/ian/projects/libzen/src/map.c
+        -:    0:Graph:build/src/CMakeFiles/zenit.dir/map.c.gcno
+        -:    0:Data:build/src/CMakeFiles/zenit.dir/map.c.gcda
+        -:    0:Runs:2
+        -:    1://
+        -:    2://    LibZenit
+        -:    3://    Copyright (C) 2026  Ian Torres
+        -:    4://
+        -:    5://    This program is free software: you can redistribute it and/or modify
+        -:    6://    it under the terms of the GNU Affero General Public License version 3
+        -:    7://    as published by the Free Software Foundation.
+        -:    8://
+        -:    9://    This program is distributed in the hope that it will be useful,
+        -:   10://    but WITHOUT ANY WARRANTY; without even the implied warranty of
+        -:   11://    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+        -:   12://    GNU Affero General Public License for more details.
+        -:   13://
+        -:   14://    You should have received a copy of the GNU Affero General Public License
+        -:   15://    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+        -:   16://
+        -:   17:
+        -:   18:#include <libzenit/map.h>
+        -:   19:#include <stdlib.h>
+        -:   20:#include <string.h>
+        -:   21:
+        -:   22:/* ─── Slot states ───
+        -:   23: * Each slot in the hash table is one of three states:
+        -:   24: *   EMPTY   – never used (initial state)
+        -:   25: *   OCCUPIED – holds a live key-value pair
+        -:   26: *   DELETED  – tombstone; key was removed, probe chain continues
+        -:   27: */
+        -:   28:enum { MAP_SLOT_EMPTY = 0, MAP_SLOT_OCCUPIED = 1, MAP_SLOT_DELETED = 2 };
+        -:   29:
+        -:   30:/* Default initial capacity (must be a power of two) */
+        -:   31:#define MAP_DEFAULT_CAPACITY 16
+        -:   32:
+        -:   33:/* Load-factor threshold: when (occupied + deleted) > capacity * LIMIT,
+        -:   34: * the table is rehashed.  Stored as a numerator out of 100 to avoid floats. */
+        -:   35:#define MAP_LOAD_PERCENT 75
+        -:   36:#define MAP_GROWTH_FACTOR 2
+        -:   37:
+        -:   38:/**
+        -:   39: * @brief Internal hash map state.
+        -:   40: *
+        -:   41: * Keys and values are stored together in a flat byte array where each slot
+        -:   42: * holds key_size + value_size bytes (key first, then value).  A separate
+        -:   43: * state byte array tracks EMPTY / OCCUPIED / DELETED for each slot.
+        -:   44: */
+        -:   45:struct zenit_map_t {
+        -:   46:    unsigned char *slots;   /**< Flat array: [key][value] per slot */
+        -:   47:    unsigned char *states;  /**< State byte per slot (EMPTY/OCCUPIED/DELETED) */
+        -:   48:    size_t key_size;        /**< Size in bytes of each key */
+        -:   49:    size_t value_size;      /**< Size in bytes of each value */
+        -:   50:    size_t slot_size;       /**< key_size + value_size */
+        -:   51:    size_t capacity;        /**< Total number of slots (always a power of two) */
+        -:   52:    size_t count;           /**< Number of live (OCCUPIED) entries */
+        -:   53:    size_t deleted;         /**< Number of DELETED (tombstone) slots */
+        -:   54:};
+        -:   55:
+        -:   56:/* ─── Helper: round up to the next power of two ─── */
+       27:   57:static size_t round_pow2(size_t n) {
+        -:   58:    /* Decrement so that a perfect power of two rounds to itself */
+       27:   59:    n--;
+        -:   60:    /* Propagate the highest set bit through all lower bits */
+       27:   61:    n |= n >> 1;
+       27:   62:    n |= n >> 2;
+       27:   63:    n |= n >> 4;
+       27:   64:    n |= n >> 8;
+       27:   65:    n |= n >> 16;
+        -:   66:#if SIZE_MAX > 0xFFFFFFFFULL
+        -:   67:    n |= n >> 32;
+        -:   68:#endif
+       27:   69:    return n + 1;
+        -:   70:}
+        -:   71:
+        -:   72:/* ─── FNV-1a hash (64-bit) ───
+        -:   73: * Fowler–Noll–Vo hash function, variant 1a.  Operates on raw byte arrays.
+        -:   74: * The result is truncated to size_t on 32-bit platforms.
+        -:   75: */
+     3622:   76:static size_t hash_fnv1a(const void *data, size_t len) {
+        -:   77:    /* FNV-1a offset basis for 64 bits */
+     3622:   78:    size_t h = 14695981039346656037ULL;
+        -:   79:    /* FNV-1a prime for 64 bits */
+     3622:   80:    const unsigned char *bytes = (const unsigned char *)data;
+    18146:   81:    for (size_t i = 0; i < len; i++) {
+        -:   82:        /* XOR then multiply — the "1a" variant order */
+    14524:   83:        h ^= (size_t)bytes[i];
+    14524:   84:        h *= 1099511628211ULL;
+        -:   85:    }
+     3622:   86:    return h;
+        -:   87:}
+        -:   88:
+        -:   89:/* ─── Probe: walk the slot array looking for a key ───
+        -:   90: * Returns the slot state (OCCUPIED, DELETED, or EMPTY) and writes the slot
+        -:   91: * index into *out_index.
+        -:   92: *
+        -:   93: * - If an OCCUPIED slot with a matching key is found, returns OCCUPIED.
+        -:   94: * - If the key is not found, returns the first available slot for insertion
+        -:   95: *   (preferring an earlier DELETED tombstone over a later EMPTY slot so that
+        -:   96: *   tombstones are reclaimed and deleted_count decreases).
+        -:   97: * - Returns EMPTY only when no DELETED slot was encountered along the chain.
+        -:   98: */
+     2091:   99:static int probe_slot(
+        -:  100:    const zenit_map_t *map, const void *key, size_t *out_index
+        -:  101:) {
+     2091:  102:    size_t hash = hash_fnv1a(key, map->key_size);
+     2091:  103:    size_t mask = map->capacity - 1;
+     2091:  104:    size_t index = hash & mask;
+        -:  105:
+        -:  106:    /* Track the first DELETED slot seen, so we can reclaim tombstones */
+     2091:  107:    size_t first_deleted = map->capacity;
+     2091:  108:    int found_deleted = 0;
+        -:  109:
+        -:  110:    /* Walk until we find an EMPTY slot or a key match.  The 75 % load factor
+        -:  111:     * guarantees at least 25 % EMPTY slots, so we always terminate. */
+      409:  112:    while (1) {
+     2500:  113:        unsigned char state = map->states[index];
+        -:  114:
+     2500:  115:        if (state == MAP_SLOT_EMPTY) {
+        -:  116:            /* Prefer reclaiming a tombstone over an empty slot */
+     1056:  117:            if (found_deleted) {
+       13:  118:                *out_index = first_deleted;
+       13:  119:                return MAP_SLOT_DELETED;
+        -:  120:            }
+     1043:  121:            *out_index = index;
+     1043:  122:            return MAP_SLOT_EMPTY;
+        -:  123:        }
+        -:  124:
+     1444:  125:        if (state == MAP_SLOT_DELETED) {
+       21:  126:            if (!found_deleted) {
+       13:  127:                first_deleted = index;
+       13:  128:                found_deleted = 1;
+        -:  129:            }
+       21:  130:            index = (index + 1) & mask;
+       21:  131:            continue;
+        -:  132:        }
+        -:  133:
+        -:  134:        /* State == OCCUPIED */
+     1423:  135:        unsigned char *slot = map->slots + index * map->slot_size;
+     1423:  136:        if (memcmp(slot, key, map->key_size) == 0) {
+     1035:  137:            *out_index = index;
+     1035:  138:            return MAP_SLOT_OCCUPIED;
+        -:  139:        }
+        -:  140:
+      388:  141:        index = (index + 1) & mask;
+        -:  142:    }
+        -:  143:}
+        -:  144:
+        -:  145:/* ─── Rehash: grow the table and re-insert all live entries ─── */
+        9:  146:static zenit_result_t rehash(zenit_map_t *map, size_t new_capacity) {
+        -:  147:    /* new_capacity must be a power of two (caller ensures this) */
+        -:  148:
+        -:  149:    /* Allocate new slot array */
+        9:  150:    unsigned char *new_slots = calloc(new_capacity, map->slot_size);
+        9:  151:    if (new_slots == NULL) {
+        1:  152:        return ZENIT_RESULT_ERROR(ZENIT_ERROR_ALLOC);
+        -:  153:    }
+        -:  154:
+        -:  155:    /* Allocate new state array — calloc gives all EMPTY (0) */
+        8:  156:    unsigned char *new_states = calloc(new_capacity, 1);
+        8:  157:    if (new_states == NULL) {
+        1:  158:        free(new_slots);
+        1:  159:        return ZENIT_RESULT_ERROR(ZENIT_ERROR_ALLOC);
+        -:  160:    }
+        -:  161:
+        -:  162:    /* Snapshot old pointers before we swap */
+        7:  163:    unsigned char *old_slots = map->slots;
+        7:  164:    unsigned char *old_states = map->states;
+        7:  165:    size_t old_capacity = map->capacity;
+        7:  166:    size_t old_count = map->count;
+        -:  167:
+        -:  168:    /* Swap in the new arrays */
+        7:  169:    map->slots = new_slots;
+        7:  170:    map->states = new_states;
+        7:  171:    map->capacity = new_capacity;
+        7:  172:    map->count = 0;
+        7:  173:    map->deleted = 0;
+        -:  174:
+        -:  175:    /* Re-insert every live entry from the old table */
+        7:  176:    size_t mask = new_capacity - 1;
+     2039:  177:    for (size_t i = 0; i < old_capacity; i++) {
+     2032:  178:        if (old_states[i] == MAP_SLOT_OCCUPIED) {
+        -:  179:            /* Extract key and value from the old slot */
+     1531:  180:            unsigned char *old_slot = old_slots + i * map->slot_size;
+     1531:  181:            void *key = old_slot;
+     1531:  182:            void *value = old_slot + map->key_size;
+        -:  183:
+        -:  184:            /* Compute the new probe position */
+     1531:  185:            size_t hash = hash_fnv1a(key, map->key_size);
+     1531:  186:            size_t index = hash & mask;
+        -:  187:
+        -:  188:            /* Linear probe in the new table */
+     1603:  189:            while (map->states[index] == MAP_SLOT_OCCUPIED) {
+       72:  190:                index = (index + 1) & mask;
+        -:  191:            }
+        -:  192:
+        -:  193:            /* Copy key and value into the new slot */
+     1531:  194:            unsigned char *dest = map->slots + index * map->slot_size;
+     1531:  195:            memcpy(dest, key, map->key_size);
+     1531:  196:            memcpy(dest + map->key_size, value, map->value_size);
+     1531:  197:            map->states[index] = MAP_SLOT_OCCUPIED;
+     1531:  198:            map->count++;
+        -:  199:        }
+        -:  200:    }
+        -:  201:
+        -:  202:    /* Free the old arrays */
+        7:  203:    free(old_slots);
+        7:  204:    free(old_states);
+        -:  205:
+        -:  206:    /* Verify we re-inserted every entry (defensive) */
+        -:  207:    (void)old_count;
+        -:  208:
+        7:  209:    return ZENIT_RESULT_OK;
+        -:  210:}
+        -:  211:
+        -:  212:/* ─── Ensure load factor is below threshold; rehash if needed ─── */
+     1053:  213:static zenit_result_t ensure_load(zenit_map_t *map) {
+        -:  214:    /* Load factor = (occupied + deleted) / capacity.
+        -:  215:     * Rehash when occupied + deleted > capacity * 75 / 100. */
+     1053:  216:    size_t used = map->count + map->deleted;
+     1053:  217:    if (used * 100 > map->capacity * MAP_LOAD_PERCENT) {
+        -:  218:        /* Double the capacity (always power of two if starting from one) */
+        9:  219:        size_t new_cap = map->capacity * MAP_GROWTH_FACTOR;
+        9:  220:        return rehash(map, new_cap);
+        -:  221:    }
+     1044:  222:    return ZENIT_RESULT_OK;
+        -:  223:}
+        -:  224:
+        -:  225:/* ─── Public API ─── */
+        -:  226:
+       26:  227:zenit_map_t *zenit_map_create(size_t key_size, size_t value_size) {
+        -:  228:    /* Delegate to the full create function with default capacity */
+       26:  229:    return zenit_map_create_with_capacity(key_size, value_size, MAP_DEFAULT_CAPACITY);
+        -:  230:}
+        -:  231:
+       30:  232:zenit_map_t *zenit_map_create_with_capacity(
+        -:  233:    size_t key_size, size_t value_size, size_t capacity
+        -:  234:) {
+        -:  235:    /* Validate parameters */
+       30:  236:    if (key_size == 0 || value_size == 0 || capacity == 0) {
+        3:  237:        return NULL;
+        -:  238:    }
+        -:  239:
+        -:  240:    /* Round capacity to the next power of two */
+       27:  241:    size_t cap = round_pow2(capacity);
+        -:  242:
+        -:  243:    /* Allocate the handle */
+       27:  244:    zenit_map_t *map = malloc(sizeof(zenit_map_t));
+       27:  245:    if (map == NULL) {
+        1:  246:        return NULL;
+        -:  247:    }
+        -:  248:
+        -:  249:    /* Populate fields */
+       26:  250:    map->key_size = key_size;
+       26:  251:    map->value_size = value_size;
+       26:  252:    map->slot_size = key_size + value_size;
+       26:  253:    map->capacity = cap;
+       26:  254:    map->count = 0;
+       26:  255:    map->deleted = 0;
+        -:  256:
+        -:  257:    /* Allocate slot array — calloc so all bytes are zeroed */
+       26:  258:    map->slots = calloc(cap, map->slot_size);
+       26:  259:    if (map->slots == NULL) {
+        1:  260:        free(map);
+        1:  261:        return NULL;
+        -:  262:    }
+        -:  263:
+        -:  264:    /* Allocate state array — calloc gives all MAP_SLOT_EMPTY (0) */
+       25:  265:    map->states = calloc(cap, 1);
+       25:  266:    if (map->states == NULL) {
+        1:  267:        free(map->slots);
+        1:  268:        free(map);
+        1:  269:        return NULL;
+        -:  270:    }
+        -:  271:
+       24:  272:    return map;
+        -:  273:}
+        -:  274:
+       25:  275:void zenit_map_destroy(zenit_map_t *map) {
+       25:  276:    if (map == NULL) {
+        1:  277:        return;
+        -:  278:    }
+        -:  279:    /* Free the slot and state arrays, then the handle itself */
+       24:  280:    free(map->slots);
+       24:  281:    free(map->states);
+       24:  282:    free(map);
+        -:  283:}
+        -:  284:
+     1056:  285:zenit_result_t zenit_map_insert(
+        -:  286:    zenit_map_t *map, const void *key, const void *value
+        -:  287:) {
+        -:  288:    /* Validate preconditions */
+     1056:  289:    if (map == NULL || key == NULL || value == NULL) {
+        3:  290:        return ZENIT_RESULT_ERROR(ZENIT_ERROR_NULL);
+        -:  291:    }
+        -:  292:
+        -:  293:    /* Check load factor and rehash if needed */
+     1053:  294:    zenit_result_t lr = ensure_load(map);
+     1053:  295:    if (lr.error != ZENIT_OK) {
+        2:  296:        return lr;
+        -:  297:    }
+        -:  298:
+        -:  299:    /* Probe for the key — if found we will overwrite */
+     1051:  300:    size_t index = 0;
+     1051:  301:    int state = probe_slot(map, key, &index);
+        -:  302:
+     1051:  303:    if (state == MAP_SLOT_OCCUPIED) {
+        -:  304:        /* Key exists — overwrite the value portion only */
+        1:  305:        unsigned char *dest = map->slots + index * map->slot_size + map->key_size;
+        1:  306:        memcpy(dest, value, map->value_size);
+        1:  307:        return ZENIT_RESULT_OK;
+        -:  308:    }
+        -:  309:
+        -:  310:    /* Key not found — index points to the first EMPTY or DELETED slot.
+        -:  311:     * Place the new entry there. */
+     1050:  312:    unsigned char *dest = map->slots + index * map->slot_size;
+     1050:  313:    memcpy(dest, key, map->key_size);
+     1050:  314:    memcpy(dest + map->key_size, value, map->value_size);
+     1050:  315:    map->states[index] = MAP_SLOT_OCCUPIED;
+     1050:  316:    map->count++;
+        -:  317:
+        -:  318:    /* If we overwrote a DELETED slot, decrement the tombstone counter */
+     1050:  319:    if (state == MAP_SLOT_DELETED) {
+       11:  320:        map->deleted--;
+        -:  321:    }
+        -:  322:
+     1050:  323:    return ZENIT_RESULT_OK;
+        -:  324:}
+        -:  325:
+     1025:  326:zenit_result_t zenit_map_get(
+        -:  327:    const zenit_map_t *map, const void *key, void *out_value
+        -:  328:) {
+        -:  329:    /* Validate preconditions */
+     1025:  330:    if (map == NULL || key == NULL || out_value == NULL) {
+        3:  331:        return ZENIT_RESULT_ERROR(ZENIT_ERROR_NULL);
+        -:  332:    }
+        -:  333:
+        -:  334:    /* Probe for the key */
+     1022:  335:    size_t index = 0;
+     1022:  336:    int state = probe_slot(map, key, &index);
+        -:  337:
+     1022:  338:    if (state != MAP_SLOT_OCCUPIED) {
+        3:  339:        return ZENIT_RESULT_ERROR(ZENIT_ERROR_NOT_FOUND);
+        -:  340:    }
+        -:  341:
+        -:  342:    /* Copy the value from the slot */
+     1019:  343:    const unsigned char *src = map->slots + index * map->slot_size + map->key_size;
+     1019:  344:    memcpy(out_value, src, map->value_size);
+     1019:  345:    return ZENIT_RESULT_OK;
+        -:  346:}
+        -:  347:
+       17:  348:zenit_result_t zenit_map_remove(zenit_map_t *map, const void *key) {
+        -:  349:    /* Validate preconditions */
+       17:  350:    if (map == NULL || key == NULL) {
+        2:  351:        return ZENIT_RESULT_ERROR(ZENIT_ERROR_NULL);
+        -:  352:    }
+        -:  353:
+        -:  354:    /* Probe for the key */
+       15:  355:    size_t index = 0;
+       15:  356:    int state = probe_slot(map, key, &index);
+        -:  357:
+       15:  358:    if (state != MAP_SLOT_OCCUPIED) {
+        1:  359:        return ZENIT_RESULT_ERROR(ZENIT_ERROR_NOT_FOUND);
+        -:  360:    }
+        -:  361:
+        -:  362:    /* Leave a tombstone so that probe chains are not broken */
+       14:  363:    map->states[index] = MAP_SLOT_DELETED;
+       14:  364:    map->count--;
+       14:  365:    map->deleted++;
+        -:  366:
+       14:  367:    return ZENIT_RESULT_OK;
+        -:  368:}
+        -:  369:
+        5:  370:int zenit_map_contains(const zenit_map_t *map, const void *key) {
+        5:  371:    if (map == NULL || key == NULL) {
+        2:  372:        return 0;
+        -:  373:    }
+        -:  374:
+        -:  375:    /* Probe for the key — OCCUPIED means present */
+        3:  376:    size_t index = 0;
+        3:  377:    return probe_slot(map, key, &index) == MAP_SLOT_OCCUPIED ? 1 : 0;
+        -:  378:}
+        -:  379:
+       17:  380:size_t zenit_map_count(const zenit_map_t *map) {
+       17:  381:    if (map == NULL) {
+        1:  382:        return 0;
+        -:  383:    }
+       16:  384:    return map->count;
+        -:  385:}
+        -:  386:
+        3:  387:size_t zenit_map_capacity(const zenit_map_t *map) {
+        3:  388:    if (map == NULL) {
+        1:  389:        return 0;
+        -:  390:    }
+        2:  391:    return map->capacity;
+        -:  392:}
+        -:  393:
+        2:  394:void zenit_map_clear(zenit_map_t *map) {
+        2:  395:    if (map == NULL) {
+        1:  396:        return;
+        -:  397:    }
+        -:  398:    /* Reset every slot state to EMPTY.  The data buffers are left intact. */
+        1:  399:    memset(map->states, MAP_SLOT_EMPTY, map->capacity);
+        1:  400:    map->count = 0;
+        1:  401:    map->deleted = 0;
+        -:  402:}
+        -:  403:
+        3:  404:void zenit_map_foreach(
+        -:  405:    const zenit_map_t *map, zenit_map_visit_fn_t visit, void *ctx
+        -:  406:) {
+        3:  407:    if (map == NULL || visit == NULL) {
+        2:  408:        return;
+        -:  409:    }
+        -:  410:
+        -:  411:    /* Walk every slot and invoke the callback for OCCUPIED entries */
+       17:  412:    for (size_t i = 0; i < map->capacity; i++) {
+       16:  413:        if (map->states[i] == MAP_SLOT_OCCUPIED) {
+        5:  414:            unsigned char *slot = map->slots + i * map->slot_size;
+        5:  415:            visit(slot, slot + map->key_size, ctx);
+        -:  416:        }
+        -:  417:    }
+        -:  418:}

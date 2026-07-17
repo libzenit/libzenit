@@ -196,6 +196,30 @@ Generic type-erased dynamic array with 1.5x exponential growth. Elements are sto
 
 ---
 
+### 7. Hash Map — `include/libzenit/map.h`
+
+Generic type-erased hash map with open-addressing and linear probing. Uses FNV-1a hashing with power-of-2 capacity. Automatically rehashes at 75% load factor.
+
+| Function | Description |
+|---|---|
+| `zenit_map_create(key_size, value_size)` | Create empty map (default capacity 16); returns `NULL` on zero sizes or OOM |
+| `zenit_map_create_with_capacity(key_size, value_size, capacity)` | Create with specific initial capacity (rounded to power of two); returns `NULL` on invalid params or OOM |
+| `zenit_map_destroy(map)` | Free all memory; NULL-safe |
+| `zenit_map_insert(map, key, value)` | Insert or overwrite; returns `ZENIT_ERROR_NULL` / `ZENIT_ERROR_ALLOC` |
+| `zenit_map_get(map, key, out_value)` | Retrieve value; returns `ZENIT_ERROR_NOT_FOUND` if missing |
+| `zenit_map_remove(map, key)` | Remove key (tombstone); returns `ZENIT_ERROR_NOT_FOUND` if missing |
+| `zenit_map_contains(map, key)` | 1 if present, 0 otherwise |
+| `zenit_map_count(map)` | Number of entries (0 if NULL) |
+| `zenit_map_capacity(map)` | Slot capacity, always power of two (0 if NULL) |
+| `zenit_map_clear(map)` | Remove all entries without shrinking; NULL-safe |
+| `zenit_map_foreach(map, visit, ctx)` | Iterate all entries in unspecified order |
+
+- **Source:** [`src/map.c`](src/map.c)
+- **Tests:** [`tests/test_map.c`](tests/test_map.c) (34 sub-tests: create/destroy, insert/get, overwrite, remove, tombstone, contains, clear, foreach, rehash, struct keys, string keys, all NULL edge cases), [`tests/test_map_malloc_fail.c`](tests/test_map_malloc_fail.c) (4 sub-tests covering malloc/calloc failure via `--wrap`)
+- **Benchmark:** [`benchmarks/benchmark_map.c`](benchmarks/benchmark_map.c) — insert (100K), get hit/miss (100K), insert rehash (100K), foreach (100K×1K)
+
+---
+
 ## Build Options
 
 | Option | Default | Description |
@@ -225,7 +249,8 @@ libzen/
 │       ├── arena.h             # Arena allocator API
 │       ├── benchmark.h         # Benchmark framework API
 │       ├── ring.h              # Ring buffer API
-│       └── vector.h            # Dynamic array API
+│       ├── vector.h            # Dynamic array API
+│       └── map.h               # Hash map API
 ├── src/
 │   ├── CMakeLists.txt          # Library target: static libzenit
 │   ├── result.c
@@ -234,9 +259,10 @@ libzen/
 │   ├── arena.c
 │   ├── benchmark.c
 │   ├── ring.c
-│   └── vector.c
+│   ├── vector.c
+│   └── map.c
 ├── tests/
-│   ├── CMakeLists.txt          # 11 test executables
+│   ├── CMakeLists.txt          # 13 test executables
 │   ├── test_malloc_fail.h      # Shared malloc/calloc wrappers
 │   ├── test_result.c           # 11 error codes + macro helpers
 │   ├── test_version.c
@@ -248,14 +274,17 @@ libzen/
 │   ├── test_ring_malloc_fail.c # 2 sub-tests
 │   ├── test_benchmark.c
 │   ├── test_vector.c           # 20 sub-tests
-│   └── test_vector_malloc_fail.c # 6 sub-tests
+│   ├── test_vector_malloc_fail.c # 6 sub-tests
+│   ├── test_map.c              # 34 sub-tests
+│   └── test_map_malloc_fail.c  # 4 sub-tests
 ├── benchmarks/
-│   ├── CMakeLists.txt          # 5 benchmark executables (label: "benchmark")
+│   ├── CMakeLists.txt          # 6 benchmark executables (label: "benchmark")
 │   ├── benchmark_version.c
 │   ├── benchmark_state.c       # 3 cases (8-state, 1024-state, miss)
 │   ├── benchmark_arena.c       # 7 cases (arena vs malloc)
 │   ├── benchmark_ring.c        # 3 cases (seq 128B, seq 1K, full-miss)
-│   └── benchmark_vector.c      # 4 cases (seq push, push/pop, insert front, reserve+push)
+│   ├── benchmark_vector.c      # 4 cases (seq push, push/pop, insert front, reserve+push)
+│   └── benchmark_map.c         # 5 cases (insert, get hit/miss, rehash, foreach)
 ├── scripts/
 │   ├── benchmark_report.py     # CI benchmark log → BENCHMARK.md + charts
 │   └── checksum.py             # Release SHA-256 generator

@@ -23,6 +23,7 @@ add_library(zenit STATIC
   benchmark.c
   ring.c
   vector.c
+  map.c
 )
 
 target_include_directories(zenit
