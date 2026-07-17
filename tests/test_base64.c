@@ -129,7 +129,6 @@ static int test_decode_invalid(void) {
 static int test_decode_null_params(void) {
     size_t len;
     ASSERT(zenit_base64_decode(NULL, &len) == NULL, "decode NULL input");
-    /* NULL out_len is accepted (caller does not need the length) */
     {
         unsigned char *d = zenit_base64_decode("aGVsbG8=", NULL);
         ASSERT(d != NULL, "decode NULL out_len should still succeed");
@@ -139,7 +138,7 @@ static int test_decode_null_params(void) {
 }
 
 static int test_encode_null_data(void) {
-    char *enc = zenit_base64_encode(NULL, 10);
+    const char *enc = zenit_base64_encode(NULL, 10);
     ASSERT(enc == NULL, "encode NULL data should return NULL");
     return 0;
 }

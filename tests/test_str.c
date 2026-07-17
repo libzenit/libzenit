@@ -160,7 +160,7 @@ static int test_join_empty_delim(void) {
 }
 
 static int test_join_empty_parts(void) {
-    char *j = zenit_str_join(NULL, 0, ",");
+    const char *j = zenit_str_join(NULL, 0, ",");
     ASSERT(j == NULL, "join NULL parts should return NULL");
     return 0;
 }

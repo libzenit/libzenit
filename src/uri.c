@@ -76,12 +76,13 @@ char *zenit_uri_decode(const char *encoded) {
     if (out == NULL) return NULL;
 
     size_t o = 0;
-    for (size_t i = 0; i < len; i++) {
+    size_t i = 0;
+    while (i < len) {
         char c = encoded[i];
         if (c == '+') {
             out[o++] = ' ';
+            i++;
         } else if (c == '%') {
-            /* Need at least two more characters for a valid %XX sequence */
             if (i + 2 >= len) {
                 free(out);
                 return NULL;
@@ -93,9 +94,10 @@ char *zenit_uri_decode(const char *encoded) {
                 return NULL;
             }
             out[o++] = (char)((hi << 4) | lo);
-            i += 2;
+            i += 3;
         } else {
             out[o++] = c;
+            i++;
         }
     }
     out[o] = '\0';

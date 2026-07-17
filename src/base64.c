@@ -19,11 +19,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* Base64 alphabet — RFC 4648 */
 static const char enc_table[] =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
-/* Decode lookup: 0xFF marks invalid characters */
 static const unsigned char dec_table[256] = {
     0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
     0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
@@ -44,15 +42,31 @@ static const unsigned char dec_table[256] = {
 };
 
 size_t zenit_base64_encode_len(size_t input_len) {
-    /* 4 output chars per 3 input bytes, rounded up, plus null */
     return ((input_len + 2) / 3) * 4 + 1;
 }
 
 size_t zenit_base64_decode_len(const char *encoded) {
     if (encoded == NULL) return 0;
     size_t len = strlen(encoded);
-    /* 3 bytes per 4 input chars, ignoring padding */
     return (len / 4) * 3;
+}
+
+static int decode_quad(const char *encoded, size_t i, unsigned int *triple) {
+    unsigned char d0 = dec_table[(unsigned char)encoded[i]];
+    unsigned char d1 = dec_table[(unsigned char)encoded[i + 1]];
+    unsigned char d2 = dec_table[(unsigned char)encoded[i + 2]];
+    unsigned char d3 = dec_table[(unsigned char)encoded[i + 3]];
+    if (d0 == 0xFF || d1 == 0xFF) return -1;
+    *triple = ((unsigned int)d0 << 18) | ((unsigned int)d1 << 12);
+    if (encoded[i + 2] != '=') {
+        if (d2 == 0xFF) return -1;
+        *triple |= (unsigned int)d2 << 6;
+    }
+    if (encoded[i + 3] != '=') {
+        if (d3 == 0xFF) return -1;
+        *triple |= (unsigned int)d3;
+    }
+    return 0;
 }
 
 char *zenit_base64_encode(const unsigned char *data, size_t len) {
@@ -62,8 +76,9 @@ char *zenit_base64_encode(const unsigned char *data, size_t len) {
     char *out = malloc(out_len);
     if (out == NULL) return NULL;
 
-    size_t i = 0, o = 0;
-    /* Process full 3-byte groups */
+    size_t i = 0;
+    size_t o = 0;
+
     while (i + 3 <= len) {
         unsigned int a = data[i++];
         unsigned int b = data[i++];
@@ -74,7 +89,6 @@ char *zenit_base64_encode(const unsigned char *data, size_t len) {
         out[o++] = enc_table[c & 0x3F];
     }
 
-    /* Handle remaining bytes with padding */
     size_t remaining = len - i;
     if (remaining == 1) {
         unsigned int a = data[i];
@@ -99,56 +113,25 @@ unsigned char *zenit_base64_decode(const char *encoded, size_t *out_len) {
     if (encoded == NULL) return NULL;
 
     size_t len = strlen(encoded);
-    /* Minimum valid length is 4 chars, must be multiple of 4 */
     if (len < 4 || (len % 4) != 0) return NULL;
-
-    /* Count padding characters */
-    size_t padding = 0;
-    if (encoded[len - 1] == '=') padding++;
-    if (len > 1 && encoded[len - 2] == '=') padding++;
 
     size_t max_out = zenit_base64_decode_len(encoded);
     unsigned char *out = malloc(max_out);
     if (out == NULL) return NULL;
 
     size_t o = 0;
-    size_t i;
-    for (i = 0; i < len; i += 4) {
-        unsigned char d0 = dec_table[(unsigned char)encoded[i]];
-        unsigned char d1 = dec_table[(unsigned char)encoded[i + 1]];
-        unsigned char d2 = dec_table[(unsigned char)encoded[i + 2]];
-        unsigned char d3 = dec_table[(unsigned char)encoded[i + 3]];
-
-        /* Reject invalid characters */
-        if (d0 == 0xFF || d1 == 0xFF) {
+    for (size_t i = 0; i < len; i += 4) {
+        unsigned int triple;
+        if (decode_quad(encoded, i, &triple) != 0) {
             free(out);
             return NULL;
         }
-
-        unsigned int triple = (d0 << 18) | (d1 << 12);
-
+        out[o++] = (unsigned char)(triple >> 16);
         if (encoded[i + 2] != '=') {
-            if (d2 == 0xFF) {
-                free(out);
-                return NULL;
-            }
-            triple |= (d2 << 6);
-        }
-
-        if (encoded[i + 3] != '=') {
-            if (d3 == 0xFF) {
-                free(out);
-                return NULL;
-            }
-            triple |= d3;
-        }
-
-        out[o++] = (triple >> 16) & 0xFF;
-        if (encoded[i + 2] != '=') {
-            out[o++] = (triple >> 8) & 0xFF;
+            out[o++] = (unsigned char)(triple >> 8);
         }
         if (encoded[i + 3] != '=') {
-            out[o++] = triple & 0xFF;
+            out[o++] = (unsigned char)(triple);
         }
     }
 

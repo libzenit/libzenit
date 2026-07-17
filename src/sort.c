@@ -21,7 +21,6 @@
 
 /* Swap two elements of size @p es */
 static void swap_elements(void *a, void *b, size_t es) {
-    /* Use a small local buffer for small elements, malloc for large */
     if (es <= 64) {
         char tmp[64];
         memcpy(tmp, a, es);
@@ -29,7 +28,7 @@ static void swap_elements(void *a, void *b, size_t es) {
         memcpy(b, tmp, es);
     } else {
         void *tmp = malloc(es);
-        if (tmp == NULL) return; /* swap is best-effort for large elements */
+        if (tmp == NULL) return;
         memcpy(tmp, a, es);
         memcpy(a, b, es);
         memcpy(b, tmp, es);
@@ -37,29 +36,23 @@ static void swap_elements(void *a, void *b, size_t es) {
     }
 }
 
-/* Median-of-three: return the index of the median element */
 static size_t median_of_three(void *base, size_t es, size_t lo, size_t hi,
                                zenit_sort_compare_fn_t compare) {
     size_t mid = lo + (hi - lo) / 2;
     char *b = (char *)base;
-    /* Sort lo, mid, hi by swapping so b[lo] <= b[mid] <= b[hi] */
     if (compare(b + lo * es, b + mid * es) > 0) swap_elements(b + lo * es, b + mid * es, es);
     if (compare(b + lo * es, b + hi * es) > 0) swap_elements(b + lo * es, b + hi * es, es);
     if (compare(b + mid * es, b + hi * es) > 0) swap_elements(b + mid * es, b + hi * es, es);
     return mid;
 }
 
-/* Hoare-style partition using median-of-3 pivot */
 static size_t partition(void *base, size_t es, size_t lo, size_t hi,
                         zenit_sort_compare_fn_t compare) {
-    /* Choose pivot via median-of-three and move it to lo */
     size_t mid = median_of_three(base, es, lo, hi, compare);
     char *b = (char *)base;
-    /* The median is now at index mid after median_of_three's swaps.
-     * We want the pivot value at the lo position for the Hoare scheme. */
     swap_elements(b + lo * es, b + mid * es, es);
 
-    void *pivot = b + lo * es;
+    const void *pivot = b + lo * es;
     size_t i = lo - 1;
     size_t j = hi + 1;
 
@@ -71,12 +64,10 @@ static size_t partition(void *base, size_t es, size_t lo, size_t hi,
     }
 }
 
-/* Recursive quicksort */
 static void quicksort(void *base, size_t es, size_t lo, size_t hi,
                       zenit_sort_compare_fn_t compare) {
     if (lo < hi) {
         size_t p = partition(base, es, lo, hi, compare);
-        /* Recurse on the smaller partition first to limit stack depth */
         if (p - lo < hi - p) {
             quicksort(base, es, lo, p, compare);
             quicksort(base, es, p + 1, hi, compare);
@@ -97,15 +88,17 @@ void *zenit_binary_search(const void *key, const void *base, size_t count,
                           size_t elem_size, zenit_sort_compare_fn_t compare) {
     if (key == NULL || base == NULL || elem_size == 0 || compare == NULL) return NULL;
 
-    const char *b = (const char *)base;
+    char *b = (char *)base;
     size_t lo = 0;
     size_t hi = count;
+    void *result = NULL;
 
     while (lo < hi) {
         size_t mid = lo + (hi - lo) / 2;
         int cmp = compare(key, b + mid * elem_size);
         if (cmp == 0) {
-            return (void *)(b + mid * elem_size);
+            result = b + mid * elem_size;
+            break;
         } else if (cmp < 0) {
             hi = mid;
         } else {
@@ -113,5 +106,5 @@ void *zenit_binary_search(const void *key, const void *base, size_t count,
         }
     }
 
-    return NULL;
+    return result;
 }

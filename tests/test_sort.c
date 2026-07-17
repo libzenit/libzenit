@@ -112,7 +112,7 @@ static int test_sort_with_duplicates(void) {
 static int test_binary_search_found(void) {
     int arr[] = {1, 3, 5, 7, 9};
     int key = 5;
-    int *found = (int *)zenit_binary_search(&key, arr, 5, sizeof(int), cmp_int);
+    const int *found = (const int *)zenit_binary_search(&key, arr, 5, sizeof(int), cmp_int);
     ASSERT(found != NULL, "binary_search found returned NULL");
     ASSERT(*found == 5, "binary_search found wrong value");
     return 0;
@@ -121,7 +121,7 @@ static int test_binary_search_found(void) {
 static int test_binary_search_not_found(void) {
     int arr[] = {1, 3, 5, 7, 9};
     int key = 4;
-    void *found = zenit_binary_search(&key, arr, 5, sizeof(int), cmp_int);
+    const void *found = zenit_binary_search(&key, arr, 5, sizeof(int), cmp_int);
     ASSERT(found == NULL, "binary_search not found should return NULL");
     return 0;
 }
@@ -129,7 +129,7 @@ static int test_binary_search_not_found(void) {
 static int test_binary_search_first(void) {
     int arr[] = {1, 3, 5, 7, 9};
     int key = 1;
-    int *found = (int *)zenit_binary_search(&key, arr, 5, sizeof(int), cmp_int);
+    const int *found = (const int *)zenit_binary_search(&key, arr, 5, sizeof(int), cmp_int);
     ASSERT(found != NULL, "binary_search first returned NULL");
     ASSERT(*found == 1, "binary_search first wrong value");
     return 0;
@@ -138,7 +138,7 @@ static int test_binary_search_first(void) {
 static int test_binary_search_last(void) {
     int arr[] = {1, 3, 5, 7, 9};
     int key = 9;
-    int *found = (int *)zenit_binary_search(&key, arr, 5, sizeof(int), cmp_int);
+    const int *found = (const int *)zenit_binary_search(&key, arr, 5, sizeof(int), cmp_int);
     ASSERT(found != NULL, "binary_search last returned NULL");
     ASSERT(*found == 9, "binary_search last wrong value");
     return 0;
@@ -146,7 +146,7 @@ static int test_binary_search_last(void) {
 
 static int test_binary_search_empty(void) {
     int key = 5;
-    void *found = zenit_binary_search(&key, NULL, 0, sizeof(int), cmp_int);
+    const void *found = zenit_binary_search(&key, NULL, 0, sizeof(int), cmp_int);
     ASSERT(found == NULL, "binary_search empty should return NULL");
     found = zenit_binary_search(&key, (int[]){1}, 0, sizeof(int), cmp_int);
     ASSERT(found == NULL, "binary_search zero count should return NULL");

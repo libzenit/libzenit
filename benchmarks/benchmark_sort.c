@@ -19,7 +19,6 @@
 #include <libzenit/sort.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
 
 static int cmp_int(const void *a, const void *b) {
     int ia = *(const int *)a;
@@ -29,7 +28,6 @@ static int cmp_int(const void *a, const void *b) {
     return 0;
 }
 
-/* Pre-allocated array that we re-fill before each call */
 #define SORT_SIZE 10000
 
 typedef struct {
@@ -38,28 +36,37 @@ typedef struct {
 } sort_ctx_t;
 
 static void bench_sort_random_fn(void *ctx) {
-    sort_ctx_t *c = (sort_ctx_t *)ctx;
-    /* Copy from reference (already randomised) so each call sorts the same */
+    const sort_ctx_t *c = (const sort_ctx_t *)ctx;
     memcpy(c->data, c->ref, SORT_SIZE * sizeof(int));
     zenit_sort_quick(c->data, SORT_SIZE, sizeof(int), cmp_int);
 }
 
 static void bench_sort_sorted_fn(void *ctx) {
-    sort_ctx_t *c = (sort_ctx_t *)ctx;
+    const sort_ctx_t *c = (const sort_ctx_t *)ctx;
     memcpy(c->data, c->ref, SORT_SIZE * sizeof(int));
     zenit_sort_quick(c->data, SORT_SIZE, sizeof(int), cmp_int);
 }
 
 static void bench_binary_search_hit_fn(void *ctx) {
-    sort_ctx_t *c = (sort_ctx_t *)ctx;
+    const sort_ctx_t *c = (const sort_ctx_t *)ctx;
     int key = c->data[SORT_SIZE / 2];
     zenit_binary_search(&key, c->data, SORT_SIZE, sizeof(int), cmp_int);
 }
 
 static void bench_binary_search_miss_fn(void *ctx) {
-    sort_ctx_t *c = (sort_ctx_t *)ctx;
+    const sort_ctx_t *c = (const sort_ctx_t *)ctx;
     int key = -999999;
     zenit_binary_search(&key, c->data, SORT_SIZE, sizeof(int), cmp_int);
+}
+
+/* Simple deterministic PRNG (xorshift32) */
+static unsigned xorshift32(unsigned *state) {
+    unsigned x = *state;
+    x ^= x << 13;
+    x ^= x >> 17;
+    x ^= x << 5;
+    *state = x;
+    return x;
 }
 
 int main(void) {
@@ -73,13 +80,11 @@ int main(void) {
         return 1;
     }
 
-    /* Seed and fill reference with random data */
-    srand(42);
+    unsigned rng = 42;
     for (int i = 0; i < SORT_SIZE; i++) {
-        ctx.ref[i] = rand();
+        ctx.ref[i] = (int)xorshift32(&rng);
     }
 
-    /* Sort random data */
     {
         zenit_bench_result_t r = zenit_bench_run(
             "sort_random_10K", bench_sort_random_fn, &ctx, 1000
@@ -87,8 +92,6 @@ int main(void) {
         zenit_bench_print(&r);
     }
 
-    /* Sort already-sorted data (best case) */
-    /* ctx.ref is now sorted from the previous call */
     {
         zenit_bench_result_t r = zenit_bench_run(
             "sort_sorted_10K", bench_sort_sorted_fn, &ctx, 1000
@@ -96,7 +99,6 @@ int main(void) {
         zenit_bench_print(&r);
     }
 
-    /* Binary search hit */
     {
         zenit_bench_result_t r = zenit_bench_run(
             "binary_search_hit", bench_binary_search_hit_fn, &ctx, 1000000
@@ -104,7 +106,6 @@ int main(void) {
         zenit_bench_print(&r);
     }
 
-    /* Binary search miss */
     {
         zenit_bench_result_t r = zenit_bench_run(
             "binary_search_miss", bench_binary_search_miss_fn, &ctx, 1000000

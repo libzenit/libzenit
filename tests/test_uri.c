@@ -91,13 +91,10 @@ static int test_decode_empty(void) {
 }
 
 static int test_decode_invalid(void) {
-    /* Incomplete %XX */
-    char *dec = zenit_uri_decode("%2");
+    const char *dec = zenit_uri_decode("%2");
     ASSERT(dec == NULL, "decode incomplete %%XX should return NULL");
-    /* Invalid hex */
     dec = zenit_uri_decode("%2G");
     ASSERT(dec == NULL, "decode invalid hex should return NULL");
-    /* Standalone % at end */
     dec = zenit_uri_decode("a%");
     ASSERT(dec == NULL, "decode trailing %% should return NULL");
     return 0;

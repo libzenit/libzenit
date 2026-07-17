@@ -136,7 +136,7 @@ static int test_decode_null_params(void) {
 }
 
 static int test_encode_null_data(void) {
-    char *enc = zenit_hex_encode(NULL, 10);
+    const char *enc = zenit_hex_encode(NULL, 10);
     ASSERT(enc == NULL, "encode NULL data should return NULL");
     return 0;
 }
