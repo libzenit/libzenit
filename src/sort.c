@@ -88,7 +88,7 @@ void *zenit_binary_search(const void *key, const void *base, size_t count,
                           size_t elem_size, zenit_sort_compare_fn_t compare) {
     if (key == NULL || base == NULL || elem_size == 0 || compare == NULL) return NULL;
 
-    char *b = (char *)base;
+    const char *b = (const char *)base;
     size_t lo = 0;
     size_t hi = count;
     void *result = NULL;
@@ -97,7 +97,7 @@ void *zenit_binary_search(const void *key, const void *base, size_t count,
         size_t mid = lo + (hi - lo) / 2;
         int cmp = compare(key, b + mid * elem_size);
         if (cmp == 0) {
-            result = b + mid * elem_size;
+            result = (void *)(b + mid * elem_size);
             break;
         } else if (cmp < 0) {
             hi = mid;

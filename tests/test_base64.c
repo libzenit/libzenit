@@ -88,21 +88,21 @@ static int test_encode_binary(void) {
 
 static int test_decode_basic(void) {
     size_t len;
-    unsigned char *dec = zenit_base64_decode("aGVsbG8=", &len);
+    const unsigned char *dec = zenit_base64_decode("aGVsbG8=", &len);
     ASSERT(dec != NULL, "decode 'hello' returned NULL");
     ASSERT(len == 5, "decode 'hello' length mismatch");
     ASSERT(memcmp(dec, "hello", 5) == 0, "decode 'hello' content mismatch");
-    free(dec);
+    free((void *)dec);
     return 0;
 }
 
 static int test_decode_no_padding(void) {
     size_t len;
-    unsigned char *dec = zenit_base64_decode("YWJj", &len);
+    const unsigned char *dec = zenit_base64_decode("YWJj", &len);
     ASSERT(dec != NULL, "decode 'abc' returned NULL");
     ASSERT(len == 3, "decode 'abc' length mismatch");
     ASSERT(memcmp(dec, "abc", 3) == 0, "decode 'abc' content mismatch");
-    free(dec);
+    free((void *)dec);
     return 0;
 }
 

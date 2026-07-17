@@ -188,29 +188,54 @@ static int test_sort_large_elements(void) {
     return 0;
 }
 
+static int run_test(const char *name, int (*fn)(void)) {
+    printf("  %s ... ", name);
+    int r = fn();
+    if (r) return r;
+    printf("PASS\n");
+    return 0;
+}
+
 int main(void) {
     int failed = 0;
+    const int (*tests[])(void) = {
+        test_sort_already_sorted,
+        test_sort_reverse,
+        test_sort_random,
+        test_sort_single,
+        test_sort_empty,
+        test_sort_doubles,
+        test_sort_with_duplicates,
+        test_binary_search_found,
+        test_binary_search_not_found,
+        test_binary_search_first,
+        test_binary_search_last,
+        test_binary_search_empty,
+        test_binary_search_null_params,
+        test_sort_large_elements,
+    };
+    const char *names[] = {
+        "sort_already_sorted",
+        "sort_reverse",
+        "sort_random",
+        "sort_single",
+        "sort_empty",
+        "sort_doubles",
+        "sort_with_duplicates",
+        "binary_search_found",
+        "binary_search_not_found",
+        "binary_search_first",
+        "binary_search_last",
+        "binary_search_empty",
+        "binary_search_null_params",
+        "sort_large_elements",
+    };
+    size_t n = sizeof(tests) / sizeof(tests[0]);
 
     printf("=== sort ===\n");
-
-    printf("  sort_already_sorted ... "); if (test_sort_already_sorted()) failed++; else printf("PASS\n");
-    printf("  sort_reverse ... "); if (test_sort_reverse()) failed++; else printf("PASS\n");
-    printf("  sort_random ... "); if (test_sort_random()) failed++; else printf("PASS\n");
-    printf("  sort_single ... "); if (test_sort_single()) failed++; else printf("PASS\n");
-    printf("  sort_empty ... "); if (test_sort_empty()) failed++; else printf("PASS\n");
-    printf("  sort_doubles ... "); if (test_sort_doubles()) failed++; else printf("PASS\n");
-    printf("  sort_with_duplicates ... "); if (test_sort_with_duplicates()) failed++; else printf("PASS\n");
-
-    printf("  binary_search_found ... "); if (test_binary_search_found()) failed++; else printf("PASS\n");
-    printf("  binary_search_not_found ... "); if (test_binary_search_not_found()) failed++; else printf("PASS\n");
-    printf("  binary_search_first ... "); if (test_binary_search_first()) failed++; else printf("PASS\n");
-    printf("  binary_search_last ... "); if (test_binary_search_last()) failed++; else printf("PASS\n");
-    printf("  binary_search_empty ... "); if (test_binary_search_empty()) failed++; else printf("PASS\n");
-    printf("  binary_search_null_params ... "); if (test_binary_search_null_params()) failed++;
-    else printf("PASS\n");
-
-    printf("  sort_large_elements ... "); if (test_sort_large_elements()) failed++;
-    else printf("PASS\n");
+    for (size_t i = 0; i < n; i++) {
+        if (run_test(names[i], tests[i])) failed++;
+    }
 
     printf("\n%d tests failed\n", failed);
     return failed != 0 ? 1 : 0;

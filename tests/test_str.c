@@ -192,34 +192,62 @@ static int test_join_null_param(void) {
     return 0;
 }
 
+static int run_test(const char *name, int (*fn)(void)) {
+    printf("  %s ... ", name);
+    int r = fn();
+    if (r) return r;
+    printf("PASS\n");
+    return 0;
+}
+
 int main(void) {
     int failed = 0;
+    const int (*tests[])(void) = {
+        test_trim_basic,
+        test_trim_left,
+        test_trim_right,
+        test_trim_none,
+        test_trim_all_whitespace,
+        test_trim_empty,
+        test_trim_null,
+        test_split_basic,
+        test_split_consecutive,
+        test_split_empty,
+        test_split_no_delimiter,
+        test_split_null_params,
+        test_join_basic,
+        test_join_empty_delim,
+        test_join_empty_parts,
+        test_join_zero_count,
+        test_join_one_part,
+        test_join_null_param,
+    };
+    const char *names[] = {
+        "trim_basic",
+        "trim_left",
+        "trim_right",
+        "trim_none",
+        "trim_all_whitespace",
+        "trim_empty",
+        "trim_null",
+        "split_basic",
+        "split_consecutive",
+        "split_empty",
+        "split_no_delimiter",
+        "split_null_params",
+        "join_basic",
+        "join_empty_delim",
+        "join_empty_parts",
+        "join_zero_count",
+        "join_one_part",
+        "join_null_param",
+    };
+    size_t n = sizeof(tests) / sizeof(tests[0]);
 
     printf("=== str ===\n");
-
-    /* trim */
-    printf("  trim_basic ... "); if (test_trim_basic()) failed++; else printf("PASS\n");
-    printf("  trim_left ... "); if (test_trim_left()) failed++; else printf("PASS\n");
-    printf("  trim_right ... "); if (test_trim_right()) failed++; else printf("PASS\n");
-    printf("  trim_none ... "); if (test_trim_none()) failed++; else printf("PASS\n");
-    printf("  trim_all_whitespace ... "); if (test_trim_all_whitespace()) failed++; else printf("PASS\n");
-    printf("  trim_empty ... "); if (test_trim_empty()) failed++; else printf("PASS\n");
-    printf("  trim_null ... "); if (test_trim_null()) failed++; else printf("PASS\n");
-
-    /* split */
-    printf("  split_basic ... "); if (test_split_basic()) failed++; else printf("PASS\n");
-    printf("  split_consecutive ... "); if (test_split_consecutive()) failed++; else printf("PASS\n");
-    printf("  split_empty ... "); if (test_split_empty()) failed++; else printf("PASS\n");
-    printf("  split_no_delimiter ... "); if (test_split_no_delimiter()) failed++; else printf("PASS\n");
-    printf("  split_null_params ... "); if (test_split_null_params()) failed++; else printf("PASS\n");
-
-    /* join */
-    printf("  join_basic ... "); if (test_join_basic()) failed++; else printf("PASS\n");
-    printf("  join_empty_delim ... "); if (test_join_empty_delim()) failed++; else printf("PASS\n");
-    printf("  join_empty_parts ... "); if (test_join_empty_parts()) failed++; else printf("PASS\n");
-    printf("  join_zero_count ... "); if (test_join_zero_count()) failed++; else printf("PASS\n");
-    printf("  join_one_part ... "); if (test_join_one_part()) failed++; else printf("PASS\n");
-    printf("  join_null_param ... "); if (test_join_null_param()) failed++; else printf("PASS\n");
+    for (size_t i = 0; i < n; i++) {
+        if (run_test(names[i], tests[i])) failed++;
+    }
 
     printf("\n%d tests failed\n", failed);
     return failed != 0 ? 1 : 0;

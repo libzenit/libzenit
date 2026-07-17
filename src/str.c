@@ -73,7 +73,7 @@ char **zenit_str_split(const char *s, const char *delim, size_t *out_count) {
         }
     }
 
-    char **result = malloc((tokens + 1) * sizeof(char *));
+    char **result = malloc((tokens + 2) * sizeof(char *));
     if (result == NULL) return NULL;
 
     size_t idx = 0;
