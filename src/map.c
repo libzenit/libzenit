@@ -16,24 +16,9 @@
 //
 
 #include <libzenit/map.h>
+#include "_hash_common.h"
 #include <stdlib.h>
 #include <string.h>
-
-/* ─── Slot states ───
- * Each slot in the hash table is one of three states:
- *   EMPTY   – never used (initial state)
- *   OCCUPIED – holds a live key-value pair
- *   DELETED  – tombstone; key was removed, probe chain continues
- */
-enum { MAP_SLOT_EMPTY = 0, MAP_SLOT_OCCUPIED = 1, MAP_SLOT_DELETED = 2 };
-
-/* Default initial capacity (must be a power of two) */
-#define MAP_DEFAULT_CAPACITY 16
-
-/* Load-factor threshold: when (occupied + deleted) > capacity * LIMIT,
- * the table is rehashed.  Stored as a numerator out of 100 to avoid floats. */
-#define MAP_LOAD_PERCENT 75
-#define MAP_GROWTH_FACTOR 2
 
 /**
  * @brief Internal hash map state.
@@ -52,39 +37,6 @@ struct zenit_map_t {
     size_t count;           /**< Number of live (OCCUPIED) entries */
     size_t deleted;         /**< Number of DELETED (tombstone) slots */
 };
-
-/* ─── Helper: round up to the next power of two ─── */
-static size_t round_pow2(size_t n) {
-    /* Decrement so that a perfect power of two rounds to itself */
-    n--;
-    /* Propagate the highest set bit through all lower bits */
-    n |= n >> 1;
-    n |= n >> 2;
-    n |= n >> 4;
-    n |= n >> 8;
-    n |= n >> 16;
-#if SIZE_MAX > 0xFFFFFFFFULL
-    n |= n >> 32;
-#endif
-    return n + 1;
-}
-
-/* ─── FNV-1a hash (64-bit) ───
- * Fowler–Noll–Vo hash function, variant 1a.  Operates on raw byte arrays.
- * The result is truncated to size_t on 32-bit platforms.
- */
-static size_t hash_fnv1a(const void *data, size_t len) {
-    /* FNV-1a offset basis for 64 bits */
-    size_t h = 14695981039346656037ULL;
-    /* FNV-1a prime for 64 bits */
-    const unsigned char *bytes = (const unsigned char *)data;
-    for (size_t i = 0; i < len; i++) {
-        /* XOR then multiply — the "1a" variant order */
-        h ^= (size_t)bytes[i];
-        h *= 1099511628211ULL;
-    }
-    return h;
-}
 
 /* ─── Probe: walk the slot array looking for a key ───
  * Returns the slot state (OCCUPIED, DELETED, or EMPTY) and writes the slot
@@ -112,17 +64,17 @@ static int probe_slot(
     while (1) {
         unsigned char state = map->states[index];
 
-        if (state == MAP_SLOT_EMPTY) {
+        if (state == HASH_SLOT_EMPTY) {
             /* Prefer reclaiming a tombstone over an empty slot */
             if (found_deleted) {
                 *out_index = first_deleted;
-                return MAP_SLOT_DELETED;
+                return HASH_SLOT_DELETED;
             }
             *out_index = index;
-            return MAP_SLOT_EMPTY;
+            return HASH_SLOT_EMPTY;
         }
 
-        if (state == MAP_SLOT_DELETED) {
+        if (state == HASH_SLOT_DELETED) {
             if (!found_deleted) {
                 first_deleted = index;
                 found_deleted = 1;
@@ -135,7 +87,7 @@ static int probe_slot(
         const unsigned char *slot = map->slots + index * map->slot_size;
         if (memcmp(slot, key, map->key_size) == 0) {
             *out_index = index;
-            return MAP_SLOT_OCCUPIED;
+            return HASH_SLOT_OCCUPIED;
         }
 
         index = (index + 1) & mask;
@@ -175,7 +127,7 @@ static zenit_result_t rehash(zenit_map_t *map, size_t new_capacity) {
     /* Re-insert every live entry from the old table */
     size_t mask = new_capacity - 1;
     for (size_t i = 0; i < old_capacity; i++) {
-        if (old_states[i] == MAP_SLOT_OCCUPIED) {
+        if (old_states[i] == HASH_SLOT_OCCUPIED) {
             /* Extract key and value from the old slot */
             const unsigned char *old_slot = old_slots + i * map->slot_size;
             const void *key = old_slot;
@@ -186,7 +138,7 @@ static zenit_result_t rehash(zenit_map_t *map, size_t new_capacity) {
             size_t index = hash & mask;
 
             /* Linear probe in the new table */
-            while (map->states[index] == MAP_SLOT_OCCUPIED) {
+            while (map->states[index] == HASH_SLOT_OCCUPIED) {
                 index = (index + 1) & mask;
             }
 
@@ -194,7 +146,7 @@ static zenit_result_t rehash(zenit_map_t *map, size_t new_capacity) {
             unsigned char *dest = map->slots + index * map->slot_size;
             memcpy(dest, key, map->key_size);
             memcpy(dest + map->key_size, value, map->value_size);
-            map->states[index] = MAP_SLOT_OCCUPIED;
+            map->states[index] = HASH_SLOT_OCCUPIED;
             map->count++;
         }
     }
@@ -214,9 +166,9 @@ static zenit_result_t ensure_load(zenit_map_t *map) {
     /* Load factor = (occupied + deleted) / capacity.
      * Rehash when occupied + deleted > capacity * 75 / 100. */
     size_t used = map->count + map->deleted;
-    if (used * 100 > map->capacity * MAP_LOAD_PERCENT) {
+    if (used * 100 > map->capacity * HASH_LOAD_PERCENT) {
         /* Double the capacity (always power of two if starting from one) */
-        size_t new_cap = map->capacity * MAP_GROWTH_FACTOR;
+        size_t new_cap = map->capacity * HASH_GROWTH_FACTOR;
         return rehash(map, new_cap);
     }
     return ZENIT_RESULT_OK;
@@ -226,7 +178,7 @@ static zenit_result_t ensure_load(zenit_map_t *map) {
 
 zenit_map_t *zenit_map_create(size_t key_size, size_t value_size) {
     /* Delegate to the full create function with default capacity */
-    return zenit_map_create_with_capacity(key_size, value_size, MAP_DEFAULT_CAPACITY);
+    return zenit_map_create_with_capacity(key_size, value_size, HASH_DEFAULT_CAPACITY);
 }
 
 zenit_map_t *zenit_map_create_with_capacity(
@@ -261,7 +213,7 @@ zenit_map_t *zenit_map_create_with_capacity(
         return NULL;
     }
 
-    /* Allocate state array — calloc gives all MAP_SLOT_EMPTY (0) */
+    /* Allocate state array — calloc gives all HASH_SLOT_EMPTY (0) */
     map->states = calloc(cap, 1);
     if (map->states == NULL) {
         free(map->slots);
@@ -300,7 +252,7 @@ zenit_result_t zenit_map_insert(
     size_t index = 0;
     int state = probe_slot(map, key, &index);
 
-    if (state == MAP_SLOT_OCCUPIED) {
+    if (state == HASH_SLOT_OCCUPIED) {
         /* Key exists — overwrite the value portion only */
         unsigned char *dest = map->slots + index * map->slot_size + map->key_size;
         memcpy(dest, value, map->value_size);
@@ -312,11 +264,11 @@ zenit_result_t zenit_map_insert(
     unsigned char *dest = map->slots + index * map->slot_size;
     memcpy(dest, key, map->key_size);
     memcpy(dest + map->key_size, value, map->value_size);
-    map->states[index] = MAP_SLOT_OCCUPIED;
+    map->states[index] = HASH_SLOT_OCCUPIED;
     map->count++;
 
     /* If we overwrote a DELETED slot, decrement the tombstone counter */
-    if (state == MAP_SLOT_DELETED) {
+    if (state == HASH_SLOT_DELETED) {
         map->deleted--;
     }
 
@@ -335,7 +287,7 @@ zenit_result_t zenit_map_get(
     size_t index = 0;
     int state = probe_slot(map, key, &index);
 
-    if (state != MAP_SLOT_OCCUPIED) {
+    if (state != HASH_SLOT_OCCUPIED) {
         return ZENIT_RESULT_ERROR(ZENIT_ERROR_NOT_FOUND);
     }
 
@@ -355,12 +307,12 @@ zenit_result_t zenit_map_remove(zenit_map_t *map, const void *key) {
     size_t index = 0;
     int state = probe_slot(map, key, &index);
 
-    if (state != MAP_SLOT_OCCUPIED) {
+    if (state != HASH_SLOT_OCCUPIED) {
         return ZENIT_RESULT_ERROR(ZENIT_ERROR_NOT_FOUND);
     }
 
     /* Leave a tombstone so that probe chains are not broken */
-    map->states[index] = MAP_SLOT_DELETED;
+    map->states[index] = HASH_SLOT_DELETED;
     map->count--;
     map->deleted++;
 
@@ -374,7 +326,7 @@ int zenit_map_contains(const zenit_map_t *map, const void *key) {
 
     /* Probe for the key — OCCUPIED means present */
     size_t index = 0;
-    return probe_slot(map, key, &index) == MAP_SLOT_OCCUPIED ? 1 : 0;
+    return probe_slot(map, key, &index) == HASH_SLOT_OCCUPIED ? 1 : 0;
 }
 
 size_t zenit_map_count(const zenit_map_t *map) {
@@ -396,7 +348,7 @@ void zenit_map_clear(zenit_map_t *map) {
         return;
     }
     /* Reset every slot state to EMPTY.  The data buffers are left intact. */
-    memset(map->states, MAP_SLOT_EMPTY, map->capacity);
+    memset(map->states, HASH_SLOT_EMPTY, map->capacity);
     map->count = 0;
     map->deleted = 0;
 }
@@ -410,7 +362,7 @@ void zenit_map_foreach(
 
     /* Walk every slot and invoke the callback for OCCUPIED entries */
     for (size_t i = 0; i < map->capacity; i++) {
-        if (map->states[i] == MAP_SLOT_OCCUPIED) {
+        if (map->states[i] == HASH_SLOT_OCCUPIED) {
             const unsigned char *slot = map->slots + i * map->slot_size;
             visit(slot, slot + map->key_size, ctx);
         }
