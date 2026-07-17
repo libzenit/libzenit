@@ -2,7 +2,7 @@
   <img src="media/logo.svg" alt="LibZenit" width="180">
 </p>
 
-Portable C library providing building blocks for systems programming: a **typed result type with error codes**, a **ring buffer**, a **finite-state machine engine**, a **fixed-block arena allocator**, a **benchmark framework**, a **dynamic array (vector)**, a **hash map**, a **hash set**, a **doubly linked list**, a **binary heap (priority queue)**, a **double-ended queue (deque)**, and a **version API**.
+Portable C library providing building blocks for systems programming: a **typed result type with error codes**, a **ring buffer**, a **finite-state machine engine**, a **fixed-block arena allocator**, a **benchmark framework**, a **dynamic array (vector)**, a **hash map**, a **hash set**, a **doubly linked list**, a **binary heap (priority queue)**, a **double-ended queue (deque)**, a **string builder**, a **bit set**, a **custom allocator interface**, and a **version API**.
 
 <p align="center">
 <a href="https://github.com/libzenit/libzenit/actions/workflows/ci.yml"><img src="https://github.com/libzenit/libzenit/actions/workflows/ci.yml/badge.svg?branch=master" alt="CI Status"></a>
@@ -323,6 +323,55 @@ Generic type-erased deque with a contiguous circular buffer. Amortized O(1) push
 
 ---
 
+### 12. String Builder — `include/libzenit/string.h`
+
+Dynamic string with null-terminated C string access. Internally backed by a `zenit_vector_t` — grows by 1.5x on demand. Supports custom allocators.
+
+| Function | Description |
+|---|---|
+| `zenit_string_create()` | Create empty string; returns `NULL` on OOM |
+| `zenit_string_create_from(cstr)` | Create from C string (may be NULL); returns `NULL` on OOM |
+| `zenit_string_destroy(s)` | Free all memory; NULL-safe |
+| `zenit_string_append(s, data, len)` | Append raw bytes |
+| `zenit_string_append_cstr(s, cstr)` | Append null-terminated C string |
+| `zenit_string_cstr(s)` | Get null-terminated C string (read-only) |
+| `zenit_string_length(s)` | Length excluding null terminator (0 if NULL) |
+| `zenit_string_capacity(s)` | Total allocated bytes (0 if NULL) |
+| `zenit_string_clear(s)` | Reset to empty; NULL-safe |
+| `zenit_string_reserve(s, cap)` | Pre-allocate capacity |
+| `zenit_string_shrink_to_fit(s)` | Reallocate to exact length |
+| `zenit_string_empty(s)` | 1 if empty or NULL |
+
+- **Source:** [`src/string.c`](src/string.c)
+- **Tests:** [`tests/test_string.c`](tests/test_string.c) (19 sub-tests: create/destroy, create_from, append, append_cstr, cstr, length, capacity, clear, reserve, shrink, empty, many appends, large append, NULL edge cases), [`tests/test_string_malloc_fail.c`](tests/test_string_malloc_fail.c) (3 sub-tests covering malloc/calloc/realloc failure via `--wrap`)
+- **Benchmark:** [`benchmarks/benchmark_string.c`](benchmarks/benchmark_string.c) — append_cstr 8B (100K), append 64B (100K)
+
+---
+
+### 13. Bit Set — `include/libzenit/bitset.h`
+
+Dynamically-sized bit array with automatic growth. Uses a contiguous byte array with popcount for counting. Supports custom allocators.
+
+| Function | Description |
+|---|---|
+| `zenit_bitset_create(num_bits)` | Create with initial capacity; returns `NULL` on OOM |
+| `zenit_bitset_destroy(bs)` | Free all memory; NULL-safe |
+| `zenit_bitset_set(bs, pos)` | Set bit to 1; auto-grows if needed |
+| `zenit_bitset_clear(bs, pos)` | Set bit to 0 |
+| `zenit_bitset_toggle(bs, pos)` | Flip bit |
+| `zenit_bitset_test(bs, pos)` | 1 if set, 0 if clear or out of range |
+| `zenit_bitset_set_all(bs)` | Set all bits to 1 |
+| `zenit_bitset_clear_all(bs)` | Clear all bits to 0 |
+| `zenit_bitset_count(bs)` | Number of 1-bits (popcount) |
+| `zenit_bitset_capacity(bs)` | Total bit capacity (0 if NULL) |
+| `zenit_bitset_resize(bs, num_bits)` | Grow or shrink the bit array |
+
+- **Source:** [`src/bitset.c`](src/bitset.c)
+- **Tests:** [`tests/test_bitset.c`](tests/test_bitset.c) (19 sub-tests: create/destroy, set/test, set/clear, toggle, set_all, clear_all, count, resize, auto-grow, NULL params)
+- **Benchmark:** [`benchmarks/benchmark_bitset.c`](benchmarks/benchmark_bitset.c) — set (100K), test (100K), count (100K)
+
+---
+
 ## Build Options
 
 | Option | Default | Description |
@@ -341,17 +390,20 @@ Custom sanitizer builds use the `-DSANITIZE=<type>` convention (see CI).
 
 ```
 libzen/
-├── CMakeLists.txt              # Root build (57 lines)
-├── cmake/                      # Custom CMake modules
+├── CMakeLists.txt              # Root build configuration
+├── cmake/                      # Custom CMake modules (empty)
 ├── include/
 │   ├── libzenit.h              # Umbrella header
 │   └── libzenit/
+│       ├── allocator.h         # Custom allocator interface
 │       ├── result.h            # Error codes & result type
 │       ├── version.h           # Version API
 │       ├── state.h             # State machine API
 │       ├── arena.h             # Arena allocator API
 │       ├── benchmark.h         # Benchmark framework API
+│       ├── bitset.h            # Bit set API
 │       ├── ring.h              # Ring buffer API
+│       ├── string.h            # String builder API
 │       ├── vector.h            # Dynamic array API
 │       ├── map.h               # Hash map API
 │       ├── set.h               # Hash set API
@@ -360,58 +412,22 @@ libzen/
 │       └── deque.h             # Double-ended queue API
 ├── src/
 │   ├── CMakeLists.txt          # Library target: static libzenit
-│   ├── result.c
-│   ├── version.c
-│   ├── state.c
-│   ├── arena.c
-│   ├── benchmark.c
-│   ├── ring.c
-│   ├── vector.c
-│   ├── map.c
-│   ├── set.c
-│   ├── list.c
-│   ├── heap.c
-│   └── deque.c
+│   ├── result.c / version.c / state.c / arena.c / benchmark.c
+│   ├── ring.c / _hash_common.h / vector.c / map.c / set.c
+│   ├── list.c / heap.c / deque.c / string.c / bitset.c
 ├── tests/
-│   ├── CMakeLists.txt          # 21 test executables
+│   ├── CMakeLists.txt          # 24 test executables (DRY helpers)
 │   ├── test_malloc_fail.h      # Shared malloc/calloc wrappers
-│   ├── test_result.c           # 11 error codes + macro helpers
-│   ├── test_version.c
-│   ├── test_state.c
-│   ├── test_state_malloc_fail.c
-│   ├── test_arena.c            # 16 sub-tests
-│   ├── test_arena_malloc_fail.c # 4 sub-tests
-│   ├── test_ring.c             # 13 sub-tests
-│   ├── test_ring_malloc_fail.c # 2 sub-tests
-│   ├── test_benchmark.c
-│   ├── test_vector.c           # 20 sub-tests
-│   ├── test_vector_malloc_fail.c # 6 sub-tests
-│   ├── test_map.c              # 34 sub-tests
-│   ├── test_map_malloc_fail.c  # 4 sub-tests
-│   ├── test_set.c              # 28 sub-tests
-│   ├── test_set_malloc_fail.c  # 5 sub-tests
-│   ├── test_list.c             # 24 sub-tests
-│   ├── test_list_malloc_fail.c # 4 sub-tests
-│   ├── test_heap.c             # 13 sub-tests
-│   ├── test_heap_malloc_fail.c # 3 sub-tests
-│   ├── test_deque.c            # 19 sub-tests
-│   └── test_deque_malloc_fail.c # 4 sub-tests
+│   ├── test_runner.h           # Shared test runner
+│   ├── test_result.c ... test_bitset.c  # One per module
+│   ├── test_*_malloc_fail.c    # Allocation-failure tests (--wrap)
 ├── benchmarks/
-│   ├── CMakeLists.txt          # 10 benchmark executables (label: "benchmark")
-│   ├── benchmark_version.c
-│   ├── benchmark_state.c       # 3 cases (8-state, 1024-state, miss)
-│   ├── benchmark_arena.c       # 7 cases (arena vs malloc)
-│   ├── benchmark_ring.c        # 3 cases (seq 128B, seq 1K, full-miss)
-│   ├── benchmark_vector.c      # 4 cases (seq push, push/pop, insert front, reserve+push)
-│   ├── benchmark_map.c         # 5 cases (insert, get hit/miss, rehash, foreach)
-│   ├── benchmark_set.c         # 5 cases (insert, contains hit/miss, rehash, foreach)
-│   ├── benchmark_list.c        # 4 cases (push_back, push_front, push_pop, foreach)
-│   ├── benchmark_heap.c        # 3 cases (push, push_pop, peek)
-│   └── benchmark_deque.c       # 3 cases (push_back, push_front, push_pop)
+│   ├── CMakeLists.txt          # 12 benchmark executables
+│   ├── benchmark_version.c ... benchmark_bitset.c
 ├── scripts/
 │   ├── benchmark_report.py     # CI benchmark log → BENCHMARK.md + charts
 │   └── checksum.py             # Release SHA-256 generator
-├── benchmark_charts/           # Auto-generated PNG charts (6 files)
+├── benchmark_charts/           # Auto-generated PNG charts
 ├── BENCHMARK.md                # Auto-generated benchmark report
 ├── AGENTS.md                   # AI agent guide (contributors)
 └── codecov.yaml                # Codecov configuration
@@ -454,4 +470,4 @@ libzen/
 
 ## Status
 
-Current version `0.1.0` — **alpha**. All eleven modules are implemented, fully tested, benchmarked, and passing CI across all platforms and sanitizers. The API is stable but may evolve before `1.0.0`.
+Current version `0.1.0` — **alpha**. All 13 modules are implemented, fully tested, benchmarked, and passing CI across all platforms and sanitizers. All containers support custom allocators. The API is stable but may evolve before `1.0.0`.
