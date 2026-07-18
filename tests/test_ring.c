@@ -357,6 +357,33 @@ static int test_reserve(void) {
     return 0;
 }
 
+/* ─── Test: reserve with wrapped data ─── */
+static int test_reserve_wrap(void) {
+    zenit_ring_t *r = zenit_ring_create(4);
+    if (r == NULL) { FAIL("create"); return 1; }
+
+    /* Force wrap-around */
+    if (zenit_ring_push(r, "ABC", 3).error != ZENIT_OK) { FAIL("push ABC"); return 1; }
+    size_t sz = 1;
+    char buf[8] = {0};
+    if (zenit_ring_pop(r, buf, &sz).error != ZENIT_OK) { FAIL("pop 1"); return 1; }
+    if (zenit_ring_push(r, "DE", 2).error != ZENIT_OK) { FAIL("push DE"); return 1; }
+
+    /* Now data is wrapped: [E, B, C, D], count=4, tail=1 */
+    if (zenit_ring_reserve(r, 8).error != ZENIT_OK) { FAIL("reserve wrap"); return 1; }
+    if (zenit_ring_capacity(r) != 8) { FAIL("capacity 8"); return 1; }
+    if (zenit_ring_count(r) != 4) { FAIL("count 4"); return 1; }
+
+    /* Verify data: BCDE (oldest first) */
+    sz = 4;
+    memset(buf, 0, 4);
+    if (zenit_ring_pop(r, buf, &sz).error != ZENIT_OK) { FAIL("pop after wrap reserve"); return 1; }
+    if (sz != 4 || memcmp(buf, "BCDE", 4) != 0) { FAIL("data after wrap reserve"); return 1; }
+
+    zenit_ring_destroy(r);
+    return 0;
+}
+
 /* ─── Test: shrink_to_fit ─── */
 static int test_shrink_to_fit(void) {
     zenit_ring_t *r = zenit_ring_create(64);
@@ -441,6 +468,7 @@ int main(void) {
     ret |= test_peek_empty();
     ret |= test_peek_wrap();
     ret |= test_reserve();
+    ret |= test_reserve_wrap();
     ret |= test_shrink_to_fit();
 
     if (failures > 0 || ret != 0) {
