@@ -304,7 +304,14 @@ static int test_size_nonexistent(void) {
 }
 
 static int test_write_bad_path(void) {
+#if defined(_WIN32)
+    /* On Windows, paths like /nonexistent_dir/file resolve to the
+     * current drive root where CI may have write permission, so
+     * they can succeed unexpectedly.  Use an OS-level invalid path. */
+    zenit_result_t r = zenit_file_write("", "data", 4);
+#else
     zenit_result_t r = zenit_file_write("/nonexistent_dir_libzenit_foo.tmp", "data", 4);
+#endif
     if (r.error != ZENIT_ERROR_NOT_FOUND) {
         FAIL("write to bad path should return ZENIT_ERROR_NOT_FOUND");
         return 1;
@@ -326,7 +333,11 @@ static int test_copy_nonexistent_src(void) {
 
 static int test_copy_bad_dst_dir(void) {
     zenit_file_write(TMPFILE, "content", 7);
+#if defined(_WIN32)
+    zenit_result_t r = zenit_file_copy(TMPFILE, "");
+#else
     zenit_result_t r = zenit_file_copy(TMPFILE, "/nonexistent_dir_libzenit_copy.tmp");
+#endif
     if (r.error != ZENIT_ERROR_NOT_FOUND) {
         FAIL("copy to bad dst dir should return ZENIT_ERROR_NOT_FOUND");
         return 1;
