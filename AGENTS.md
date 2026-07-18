@@ -501,7 +501,7 @@ libzen/
     │   ├── queue.c                 # FIFO queue (thin wrapper over deque)
     │   ├── timer.c                 # High-resolution stopwatch (clock_gettime/QPC)
     │   ├── pool.c                  # Fixed-capacity object pool (free-list)
-    │   └── io.c                    # File I/O (POSIX/Win32, chunked read/write)
+    │   └── io.c                    # File I/O (POSIX/Win32, chunked read/write, read_line)
     ├── tests/
     │   ├── CMakeLists.txt          # 46 test executables (via zenit_add_test helpers)
     │   ├── test_malloc_fail.h      # Shared malloc/calloc wrappers for --wrap tests
@@ -549,10 +549,12 @@ libzen/
     │   ├── test_pool_malloc_fail.c # Malloc failure via --wrap
     │   ├── test_io.c               # File read/write/append/exists/delete/size/copy
     │   ├── test_io_malloc_fail.c   # Malloc failure via --wrap
-    │   ├── test_hex_malloc_fail.c  # Malloc failure via --wrap
-    │   └── test_uri_malloc_fail.c  # Malloc failure via --wrap
+    │   ├── test_hex_malloc_fail.c       # Malloc failure via --wrap
+    │   ├── test_uri_malloc_fail.c       # Malloc failure via --wrap
+    │   ├── test_sort_malloc_fail.c      # Malloc failure via --wrap
+    │   └── test_allocator_malloc_fail.c # Malloc/calloc/realloc failure via --wrap
     ├── benchmarks/
-    │   ├── CMakeLists.txt          # 23 benchmark executables (label: "benchmark")
+    │   ├── CMakeLists.txt          # 25 benchmark executables (label: "benchmark")
     │   ├── benchmark_version.c     # Version call throughput
     │   ├── benchmark_state.c       # State-machine transition throughput
     │   ├── benchmark_arena.c       # Arena allocator throughput (vs malloc baseline)
@@ -575,7 +577,9 @@ libzen/
     │   ├── benchmark_queue.c       # Queue enqueue/enqueue-dequeue/peek throughput
     │   ├── benchmark_timer.c       # Timer now/elapsed throughput
     │   ├── benchmark_pool.c        # Pool acquire/acquire-release/small throughput
-    │   └── benchmark_io.c          # File write/read 1KB throughput
+    │   ├── benchmark_io.c          # File write/read 1KB throughput
+    │   ├── benchmark_allocator.c   # Allocator throughput (malloc/zenit/realloc fallback)
+    │   └── benchmark_result.c      # Error string throughput
     ├── scripts/
     │   ├── checksum.py             # Release checksum generator
     │   └── benchmark_report.py     # Benchmark log parser & report generator (BENCHMARK.md + charts)

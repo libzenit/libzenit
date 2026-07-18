@@ -96,8 +96,10 @@ Generic deterministic finite-state machine driven by a transition table. Opaque 
 | Function | Description |
 |---|---|
 | `zenit_state_allocate(table, count, initial)` | Create a state machine; returns `NULL` on allocation failure |
+| `zenit_state_allocate_with_allocator(table, count, initial, allocator)` | Create with custom allocator |
 | `zenit_state_process_event(state, event, ctx)` | Feed an event; returns `zenit_result_t` (`ZENIT_OK` / `ZENIT_ERROR_NOT_FOUND`) |
-| `zenit_get_last_state(state)` | Read current state (no side-effect) |
+| `zenit_state_current(state)` | Read current state (no side-effect) |
+| `zenit_state_reset(state, new_state)` | Reset to a given state without processing an event |
 | `zenit_state_deallocate(state)` | Free all memory; NULL-safe |
 
 **Key types:** `zenit_state_transition_t` (from, event, to, callback), `zenit_state_callback_t`
@@ -161,6 +163,8 @@ Fixed-capacity byte-level circular FIFO buffer with wrap-around support. Push fa
 | `zenit_ring_count(ring)` | Bytes currently stored (0 if NULL) |
 | `zenit_ring_capacity(ring)` | Maximum bytes (0 if NULL) |
 | `zenit_ring_clear(ring)` | Reset without freeing; NULL-safe |
+| `zenit_ring_reserve(ring, new_capacity)` | Resize capacity, preserving existing data |
+| `zenit_ring_shrink_to_fit(ring)` | Shrink buffer to exactly fit current data |
 
 - **Source:** [`src/ring.c`](src/ring.c)
 - **Tests:** [`tests/test_ring.c`](tests/test_ring.c) (10 sub-tests: create/destroy, push/pop, full, empty, peek, wrap-around, clear, edge cases, chunks), [`tests/test_ring_malloc_fail.c`](tests/test_ring_malloc_fail.c) (allocation failure via shared `test_malloc_fail.h`)
@@ -387,7 +391,8 @@ Recursive-descent JSON parser and serializer with DOM-style value tree, custom a
 | `zenit_json_value_null(json)` / `_bool` / `_number` / `_string` / `_array` / `_object` | Construct values within a document |
 | `zenit_json_array_count` / `_get` / `_append` / `_remove` / `_insert` | Array manipulation |
 | `zenit_json_object_count` / `_key` / `_value_at` / `_get` / `_set` / `_remove` | Object manipulation |
-| `zenit_json_serialize(json)` / `zenit_json_value_serialize(val)` | Serialise to JSON string (caller frees) |
+| `zenit_json_serialize(json)` / `zenit_json_serialize_with_allocator(json, allocator)` | Serialise document to JSON string (caller frees) |
+| `zenit_json_value_serialize(val)` / `zenit_json_value_serialize_with_allocator(val, allocator)` | Serialise value subtree to JSON string (caller frees) |
 
 **Number formatting:** Uses shortest-round-trip representation — formats with `%.17g` then progressively shortens while ensuring `strtod` reproduces the same double.
 
@@ -460,12 +465,11 @@ Common string manipulation helpers — trim, split, and join. All functions retu
 
 | Function | Description |
 |---|---|
-| Function | Description |
-|---|---|---|
 | `zenit_str_trim(s)` | Remove leading and trailing whitespace (default allocator) |
 | `zenit_str_trim_with_allocator(s, allocator)` | Trim with a custom allocator |
 | `zenit_str_split(s, delim, out_count)` | Split into substrings (default allocator) |
 | `zenit_str_split_with_allocator(s, delim, out_count, allocator)` | Split with a custom allocator |
+| `zenit_str_split_free(result, count, allocator)` | Free a split result with the correct allocator |
 | `zenit_str_join(parts, count, delim)` | Join an array of strings (default allocator) |
 | `zenit_str_join_with_allocator(parts, count, delim, allocator)` | Join with a custom allocator |
 
@@ -591,6 +595,8 @@ Portable file operations with a unified API across POSIX and Windows. Supports c
 | `zenit_file_delete(path)` | Delete a file |
 | `zenit_file_size(path, out_size)` | Get file size in bytes |
 | `zenit_file_copy(src, dst)` | Copy file (chunked, no full load into memory) |
+| `zenit_file_read_line(path, out_line)` | Read first line into allocated buffer (default allocator) |
+| `zenit_file_read_line_with_allocator(path, out_line, allocator)` | Read first line with a custom allocator |
 
 - **Source:** [`src/io.c`](src/io.c)
 - **Tests:** [`tests/test_io.c`](tests/test_io.c) (9 sub-tests: write/read, allocator variant, append, exists, delete, size, copy, NULL params, nonexistent), [`tests/test_io_malloc_fail.c`](tests/test_io_malloc_fail.c) (allocation failure via `--wrap=malloc`)
@@ -655,13 +661,13 @@ libzen/
 │   ├── base64.c / hex.c / uri.c / str.c / sort.c
 │   ├── stack.c / queue.c / timer.c / pool.c / io.c
 ├── tests/
-│   ├── CMakeLists.txt          # 46 test executables (DRY helpers)
+│   ├── CMakeLists.txt          # 48 test executables (DRY helpers)
 │   ├── test_malloc_fail.h      # Shared malloc/calloc wrappers
 │   ├── test_runner.h           # Shared test runner
 │   ├── test_result.c ... test_bitset.c  # One per module
 │   ├── test_*_malloc_fail.c    # Allocation-failure tests (--wrap)
 ├── benchmarks/
-│   ├── CMakeLists.txt          # 23 benchmark executables
+│   ├── CMakeLists.txt          # 25 benchmark executables
 │   ├── benchmark_version.c ... benchmark_json.c ... benchmark_base64.c ... benchmark_sort.c
 │   ├── benchmark_stack.c / benchmark_queue.c / benchmark_timer.c
 │   ├── benchmark_pool.c / benchmark_io.c
