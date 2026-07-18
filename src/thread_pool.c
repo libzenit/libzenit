@@ -39,6 +39,7 @@ struct zenit_thread_pool_t {
     task_t queue[POOL_QUEUE_CAPACITY];
     volatile size_t queue_head;
     volatile size_t queue_tail;
+    volatile size_t active;
 
 #if defined(_WIN32)
     HANDLE *threads;
@@ -72,11 +73,16 @@ static DWORD WINAPI worker_thread(LPVOID arg) {
         size_t index = pool->queue_tail % POOL_QUEUE_CAPACITY;
         task_t task = pool->queue[index];
         pool->queue_tail++;
+        pool->active++;
 
         LeaveCriticalSection(&pool->mutex);
         WakeConditionVariable(&pool->cv_not_full);
 
         task.fn(task.ctx);
+
+        EnterCriticalSection(&pool->mutex);
+        pool->active--;
+        LeaveCriticalSection(&pool->mutex);
     }
 
     return 0;
@@ -100,11 +106,16 @@ static void* worker_thread(void *arg) {
         size_t index = pool->queue_tail % POOL_QUEUE_CAPACITY;
         task_t task = pool->queue[index];
         pool->queue_tail++;
+        pool->active++;
 
         pthread_mutex_unlock(&pool->mutex);
         pthread_cond_signal(&pool->cv_not_full);
 
         task.fn(task.ctx);
+
+        pthread_mutex_lock(&pool->mutex);
+        pool->active--;
+        pthread_mutex_unlock(&pool->mutex);
     }
 
     return NULL;
@@ -125,6 +136,7 @@ zenit_thread_pool_t* zenit_thread_pool_create(size_t thread_count) {
     pool->running = 1;
     pool->queue_head = 0;
     pool->queue_tail = 0;
+    pool->active = 0;
 
 #if defined(_WIN32)
     pool->threads = malloc(thread_count * sizeof(HANDLE));
@@ -288,7 +300,7 @@ void zenit_thread_pool_wait(zenit_thread_pool_t *pool) {
 
 #if defined(_WIN32)
     EnterCriticalSection(&pool->mutex);
-    while (pool->queue_head != pool->queue_tail) {
+    while (pool->queue_head != pool->queue_tail || pool->active > 0) {
         LeaveCriticalSection(&pool->mutex);
         SwitchToThread();
         EnterCriticalSection(&pool->mutex);
@@ -296,7 +308,7 @@ void zenit_thread_pool_wait(zenit_thread_pool_t *pool) {
     LeaveCriticalSection(&pool->mutex);
 #else
     pthread_mutex_lock(&pool->mutex);
-    while (pool->queue_head != pool->queue_tail) {
+    while (pool->queue_head != pool->queue_tail || pool->active > 0) {
         pthread_mutex_unlock(&pool->mutex);
         sched_yield();
         pthread_mutex_lock(&pool->mutex);
