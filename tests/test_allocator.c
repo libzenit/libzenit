@@ -55,7 +55,7 @@ static int test_default_alloc_realloc_free(void) {
         return 1;
     }
     /* Check first 64 bytes survived the realloc */
-    unsigned char *buf = (unsigned char *)q;
+    const unsigned char *buf = (const unsigned char *)q;
     for (int i = 0; i < 64; i++) {
         if (buf[i] != 0xAB) {
             fprintf(stderr, "FAIL: default_realloc data corrupted at byte %d\n", i);
@@ -77,7 +77,7 @@ static int test_alloc_zero_zeroes_memory(void) {
         fprintf(stderr, "FAIL: alloc_zero returned NULL\n");
         return 1;
     }
-    int *arr = (int *)p;
+    const int *arr = (const int *)p;
     for (int i = 0; i < 10; i++) {
         if (arr[i] != 0) {
             fprintf(stderr, "FAIL: alloc_zero memory not zeroed at index %d\n", i);
@@ -113,7 +113,7 @@ static int test_realloc_fallback_no_realloc_fn(void) {
         return 1;
     }
 
-    unsigned char *buf = (unsigned char *)q;
+    const unsigned char *buf = (const unsigned char *)q;
     for (int i = 0; i < 32; i++) {
         if (buf[i] != 0xCD) {
             fprintf(stderr, "FAIL: realloc fallback data corrupted at byte %d\n", i);
@@ -171,7 +171,7 @@ static int test_realloc_fallback_shrink(void) {
         return 1;
     }
 
-    unsigned char *buf = (unsigned char *)q;
+    const unsigned char *buf = (const unsigned char *)q;
     for (int i = 0; i < 16; i++) {
         if (buf[i] != 0xEF) {
             fprintf(stderr, "FAIL: realloc fallback shrink data corrupted at byte %d\n", i);
