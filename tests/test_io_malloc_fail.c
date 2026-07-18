@@ -21,7 +21,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#define TMPFILE "/tmp/libzenit_test_io_mf.tmp"
+#define TMPFILE "libzenit_test_io_mf.tmp"
 
 int main(void) {
     int failed = 0;
