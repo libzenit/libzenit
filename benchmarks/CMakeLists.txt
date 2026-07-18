@@ -129,6 +129,36 @@ target_link_libraries(benchmark_str PRIVATE zenit)
 add_test(NAME benchmark_str COMMAND benchmark_str)
 set_tests_properties(benchmark_str PROPERTIES LABELS "benchmark")
 
+# Stack throughput
+add_executable(benchmark_stack benchmark_stack.c)
+target_link_libraries(benchmark_stack PRIVATE zenit)
+add_test(NAME benchmark_stack COMMAND benchmark_stack)
+set_tests_properties(benchmark_stack PROPERTIES LABELS "benchmark")
+
+# Queue throughput
+add_executable(benchmark_queue benchmark_queue.c)
+target_link_libraries(benchmark_queue PRIVATE zenit)
+add_test(NAME benchmark_queue COMMAND benchmark_queue)
+set_tests_properties(benchmark_queue PROPERTIES LABELS "benchmark")
+
+# Timer throughput
+add_executable(benchmark_timer benchmark_timer.c)
+target_link_libraries(benchmark_timer PRIVATE zenit)
+add_test(NAME benchmark_timer COMMAND benchmark_timer)
+set_tests_properties(benchmark_timer PROPERTIES LABELS "benchmark")
+
+# Object pool throughput
+add_executable(benchmark_pool benchmark_pool.c)
+target_link_libraries(benchmark_pool PRIVATE zenit)
+add_test(NAME benchmark_pool COMMAND benchmark_pool)
+set_tests_properties(benchmark_pool PROPERTIES LABELS "benchmark")
+
+# File I/O throughput
+add_executable(benchmark_io benchmark_io.c)
+target_link_libraries(benchmark_io PRIVATE zenit)
+add_test(NAME benchmark_io COMMAND benchmark_io)
+set_tests_properties(benchmark_io PROPERTIES LABELS "benchmark")
+
 # Sort throughput
 add_executable(benchmark_sort benchmark_sort.c)
 target_link_libraries(benchmark_sort PRIVATE zenit)
@@ -136,7 +166,7 @@ add_test(NAME benchmark_sort COMMAND benchmark_sort)
 set_tests_properties(benchmark_sort PROPERTIES LABELS "benchmark")
 
 if(LIBZENIT_BUILD_COVERAGE)
-  foreach(tgt benchmark_version benchmark_state benchmark_arena benchmark_ring benchmark_vector benchmark_map benchmark_set benchmark_string benchmark_list benchmark_heap benchmark_deque benchmark_bitset benchmark_json benchmark_base64 benchmark_hex benchmark_uri benchmark_str benchmark_sort)
+  foreach(tgt benchmark_version benchmark_state benchmark_arena benchmark_ring benchmark_vector benchmark_map benchmark_set benchmark_string benchmark_list benchmark_heap benchmark_deque benchmark_bitset benchmark_json benchmark_base64 benchmark_hex benchmark_uri benchmark_str benchmark_sort benchmark_stack benchmark_queue benchmark_timer benchmark_pool benchmark_io)
     target_compile_options(${tgt} PRIVATE --coverage -g -O0)
     target_link_options(${tgt} PRIVATE --coverage)
   endforeach()
@@ -165,6 +195,11 @@ add_custom_target(benchmark
   COMMAND "$<TARGET_FILE:benchmark_uri>"
   COMMAND "$<TARGET_FILE:benchmark_str>"
   COMMAND "$<TARGET_FILE:benchmark_sort>"
+  COMMAND "$<TARGET_FILE:benchmark_stack>"
+  COMMAND "$<TARGET_FILE:benchmark_queue>"
+  COMMAND "$<TARGET_FILE:benchmark_timer>"
+  COMMAND "$<TARGET_FILE:benchmark_pool>"
+  COMMAND "$<TARGET_FILE:benchmark_io>"
   COMMAND ${CMAKE_COMMAND} -E echo ""
   COMMAND ${CMAKE_COMMAND} -E echo "===== Done ====="
   USES_TERMINAL

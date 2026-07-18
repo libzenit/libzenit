@@ -15,7 +15,7 @@
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //
 
-#include <libzenit/base64.h>
+#include <libzenit/hex.h>
 #include "test_malloc_fail.h"
 #include <stdio.h>
 #include <string.h>
@@ -23,31 +23,31 @@
 int main(void) {
     int failed = 0;
 
-    /* encode: first malloc fails */
+    /* encode: first alloc fails */
     {
         malloc_fail_countdown = 0;
-        char *enc = zenit_base64_encode((const unsigned char *)"hello", 5);
+        char *enc = zenit_hex_encode((const unsigned char *)"hello", 5);
         malloc_fail_countdown = -1;
         if (enc != NULL) {
-            fprintf(stderr, "FAIL: encode with malloc_fail_countdown=0 should return NULL\n");
+            fprintf(stderr, "FAIL: hex_encode alloc fail should return NULL\n");
             failed++;
         } else {
-            printf("PASS: encode malloc fail\n");
+            printf("PASS: hex_encode alloc fail\n");
         }
         free(enc);
     }
 
-    /* decode: first malloc fails */
+    /* decode: first alloc fails */
     {
         malloc_fail_countdown = 0;
         size_t len;
-        unsigned char *dec = zenit_base64_decode("aGVsbG8=", &len);
+        unsigned char *dec = zenit_hex_decode("68656c6c6f", &len);
         malloc_fail_countdown = -1;
         if (dec != NULL) {
-            fprintf(stderr, "FAIL: decode with malloc_fail_countdown=0 should return NULL\n");
+            fprintf(stderr, "FAIL: hex_decode alloc fail should return NULL\n");
             failed++;
         } else {
-            printf("PASS: decode malloc fail\n");
+            printf("PASS: hex_decode alloc fail\n");
         }
         free(dec);
     }
@@ -55,13 +55,13 @@ int main(void) {
     /* encode_with_allocator: first alloc fails */
     {
         malloc_fail_countdown = 0;
-        char *enc = zenit_base64_encode_with_allocator((const unsigned char *)"hello", 5, ZENIT_ALLOCATOR_DEFAULT);
+        char *enc = zenit_hex_encode_with_allocator((const unsigned char *)"hello", 5, ZENIT_ALLOCATOR_DEFAULT);
         malloc_fail_countdown = -1;
         if (enc != NULL) {
-            fprintf(stderr, "FAIL: encode_with_allocator with countdown=0 should return NULL\n");
+            fprintf(stderr, "FAIL: hex_encode_with_allocator alloc fail should return NULL\n");
             failed++;
         } else {
-            printf("PASS: encode_with_allocator alloc fail\n");
+            printf("PASS: hex_encode_with_allocator alloc fail\n");
         }
         free(enc);
     }
@@ -70,13 +70,13 @@ int main(void) {
     {
         malloc_fail_countdown = 0;
         size_t len;
-        unsigned char *dec = zenit_base64_decode_with_allocator("aGVsbG8=", &len, ZENIT_ALLOCATOR_DEFAULT);
+        unsigned char *dec = zenit_hex_decode_with_allocator("68656c6c6f", &len, ZENIT_ALLOCATOR_DEFAULT);
         malloc_fail_countdown = -1;
         if (dec != NULL) {
-            fprintf(stderr, "FAIL: decode_with_allocator with countdown=0 should return NULL\n");
+            fprintf(stderr, "FAIL: hex_decode_with_allocator alloc fail should return NULL\n");
             failed++;
         } else {
-            printf("PASS: decode_with_allocator alloc fail\n");
+            printf("PASS: hex_decode_with_allocator alloc fail\n");
         }
         free(dec);
     }

@@ -79,6 +79,50 @@ int main(void) {
         free(parts);
     }
 
+    /* split_with_allocator: first alloc fails */
+    {
+        malloc_fail_countdown = 0;
+        size_t count;
+        char **parts = zenit_str_split_with_allocator("a,b,c", ",", &count, ZENIT_ALLOCATOR_DEFAULT);
+        malloc_fail_countdown = -1;
+        if (parts != NULL) {
+            fprintf(stderr, "FAIL: split_with_allocator countdown=0 should return NULL\n");
+            failed++;
+        } else {
+            printf("PASS: split_with_allocator first alloc fail\n");
+        }
+        free(parts);
+    }
+
+    /* trim_with_allocator: alloc fails */
+    {
+        malloc_fail_countdown = 0;
+        char *trimmed = zenit_str_trim_with_allocator("  hello  ", ZENIT_ALLOCATOR_DEFAULT);
+        malloc_fail_countdown = -1;
+        if (trimmed != NULL) {
+            fprintf(stderr, "FAIL: trim_with_allocator countdown=0 should return NULL\n");
+            failed++;
+        } else {
+            printf("PASS: trim_with_allocator alloc fail\n");
+        }
+        free(trimmed);
+    }
+
+    /* join_with_allocator: alloc fails */
+    {
+        const char *parts[] = {"a", "b", "c"};
+        malloc_fail_countdown = 0;
+        char *joined = zenit_str_join_with_allocator(parts, 3, ",", ZENIT_ALLOCATOR_DEFAULT);
+        malloc_fail_countdown = -1;
+        if (joined != NULL) {
+            fprintf(stderr, "FAIL: join_with_allocator countdown=0 should return NULL\n");
+            failed++;
+        } else {
+            printf("PASS: join_with_allocator alloc fail\n");
+        }
+        free(joined);
+    }
+
     if (failed > 0) {
         fprintf(stderr, "%d tests failed\n", failed);
         return 1;

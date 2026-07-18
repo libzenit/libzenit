@@ -16,11 +16,10 @@
 //
 
 #include <libzenit/uri.h>
+#include <libzenit/allocator.h>
 #include <stdlib.h>
 #include <string.h>
 
-/* Test whether a character is "unreserved" per RFC 3986 and does not
- * need percent-encoding: ALPHA, DIGIT, '-', '_', '.', '~'. */
 static int is_unreserved(char c) {
     return (c >= 'A' && c <= 'Z') ||
            (c >= 'a' && c <= 'z') ||
@@ -28,13 +27,11 @@ static int is_unreserved(char c) {
            c == '-' || c == '_' || c == '.' || c == '~';
 }
 
-/* Hex digit for percent-encoding */
 static char hex_digit(unsigned char v) {
     v &= 0x0F;
     return v < 10 ? (char)('0' + v) : (char)('A' + v - 10);
 }
 
-/* Convert a hex character to a value (0-15), or 0xFF on invalid input */
 static unsigned char hex_val(char c) {
     if (c >= '0' && c <= '9') return (unsigned char)(c - '0');
     if (c >= 'a' && c <= 'f') return (unsigned char)(c - 'a' + 10);
@@ -42,13 +39,12 @@ static unsigned char hex_val(char c) {
     return 0xFF;
 }
 
-char *zenit_uri_encode(const char *input) {
+static char *encode_impl(const char *input, zenit_allocator_t a) {
     if (input == NULL) return NULL;
 
     size_t len = strlen(input);
-    /* Worst case: every byte becomes %XX — 3x + null */
     size_t max_out = len * 3 + 1;
-    char *out = malloc(max_out);
+    char *out = a.alloc_fn(max_out, a.ctx);
     if (out == NULL) return NULL;
 
     size_t o = 0;
@@ -67,12 +63,11 @@ char *zenit_uri_encode(const char *input) {
     return out;
 }
 
-char *zenit_uri_decode(const char *encoded) {
+static char *decode_impl(const char *encoded, zenit_allocator_t a) {
     if (encoded == NULL) return NULL;
 
     size_t len = strlen(encoded);
-    /* Decoded string is never longer than the encoded one */
-    char *out = malloc(len + 1);
+    char *out = a.alloc_fn(len + 1, a.ctx);
     if (out == NULL) return NULL;
 
     size_t o = 0;
@@ -84,13 +79,13 @@ char *zenit_uri_decode(const char *encoded) {
             i++;
         } else if (c == '%') {
             if (i + 2 >= len) {
-                free(out);
+                a.free_fn(out, a.ctx);
                 return NULL;
             }
             unsigned char hi = hex_val(encoded[i + 1]);
             unsigned char lo = hex_val(encoded[i + 2]);
             if (hi == 0xFF || lo == 0xFF) {
-                free(out);
+                a.free_fn(out, a.ctx);
                 return NULL;
             }
             out[o++] = (char)((hi << 4) | lo);
@@ -103,4 +98,20 @@ char *zenit_uri_decode(const char *encoded) {
     out[o] = '\0';
 
     return out;
+}
+
+char *zenit_uri_encode(const char *input) {
+    return zenit_uri_encode_with_allocator(input, ZENIT_ALLOCATOR_DEFAULT);
+}
+
+char *zenit_uri_encode_with_allocator(const char *input, zenit_allocator_t allocator) {
+    return encode_impl(input, allocator);
+}
+
+char *zenit_uri_decode(const char *encoded) {
+    return zenit_uri_decode_with_allocator(encoded, ZENIT_ALLOCATOR_DEFAULT);
+}
+
+char *zenit_uri_decode_with_allocator(const char *encoded, zenit_allocator_t allocator) {
+    return decode_impl(encoded, allocator);
 }

@@ -62,6 +62,19 @@ zenit_add_test(test_bitset      test_bitset.c)
 zenit_add_test(test_json        test_json.c)
 zenit_add_test(test_json_cov    test_json_cov.c)
 
+# ─── Stack & queue tests ───
+zenit_add_test(test_stack       test_stack.c)
+zenit_add_test(test_queue       test_queue.c)
+
+# ─── Timer test (no alloc, no malloc-fail) ───
+zenit_add_test(test_timer       test_timer.c)
+
+# ─── Pool test ───
+zenit_add_test(test_pool        test_pool.c)
+
+# ─── I/O tests ───
+zenit_add_test(test_io          test_io.c)
+
 # ─── Encoding / string / sort tests ───
 zenit_add_test(test_base64      test_base64.c)
 zenit_add_test(test_hex         test_hex.c)
@@ -69,13 +82,19 @@ zenit_add_test(test_uri         test_uri.c)
 zenit_add_test(test_str         test_str.c)
 zenit_add_test(test_sort        test_sort.c)
 
-# ─── Malloc-fail tests (--wrap) ───
+# ─── Malloc-fail tests (--wrap=malloc,calloc) ───
 zenit_add_malloc_fail_test(test_ring_malloc_fail   test_ring_malloc_fail.c)
 zenit_add_malloc_fail_test(test_state_malloc_fail  test_state_malloc_fail.c)
 zenit_add_malloc_fail_test(test_arena_malloc_fail  test_arena_malloc_fail.c)
 zenit_add_malloc_fail_test(test_map_malloc_fail    test_map_malloc_fail.c)
 zenit_add_malloc_fail_test(test_set_malloc_fail    test_set_malloc_fail.c)
 zenit_add_malloc_fail_test(test_list_malloc_fail   test_list_malloc_fail.c)
+zenit_add_malloc_fail_test(test_stack_malloc_fail  test_stack_malloc_fail.c)
+zenit_add_malloc_fail_test(test_queue_malloc_fail  test_queue_malloc_fail.c)
+zenit_add_malloc_fail_test(test_pool_malloc_fail   test_pool_malloc_fail.c)
+zenit_add_malloc_fail_test(test_io_malloc_fail     test_io_malloc_fail.c)
+zenit_add_malloc_fail_test(test_hex_malloc_fail    test_hex_malloc_fail.c)
+zenit_add_malloc_fail_test(test_uri_malloc_fail    test_uri_malloc_fail.c)
 
 # Malloc-fail tests that also need --wrap=realloc
 function(zenit_add_malloc_fail_realloc_test name source)

@@ -268,10 +268,12 @@ zenit_state_transition_t table[] = {
 ### 4.10 Custom allocator pattern
 
 Containers accept a `zenit_allocator_t` via `_with_allocator` constructor variants.
+Encoding/utility functions that allocate memory (base64, hex, uri, str) also have `_with_allocator` variants where the allocator is the last parameter.
 
 | Rule | Example |
 |------|---------|
 | Allocator is **last** parameter in constructor | `zenit_vector_create_with_allocator(elem_size, allocator)` |
+| Allocator is **last** parameter in encoding/utility functions | `zenit_base64_encode_with_allocator(data, len, allocator)` |
 | `_with_allocator` constructors allocate the handle via `allocator.alloc_fn` | `allocator.alloc_fn(sizeof(zenit_vector_t), allocator.ctx)` |
 | Existing constructors delegate to `_with_allocator` with `ZENIT_ALLOCATOR_DEFAULT` | `return zenit_vector_create_with_allocator(elem_size, ZENIT_ALLOCATOR_DEFAULT);` |
 | Store allocator in the internal struct | `vector->allocator = allocator;` |
@@ -289,22 +291,6 @@ Containers accept a `zenit_allocator_t` via `_with_allocator` constructor varian
 - If a function is not thread-safe, document it clearly.
 - Do **not** use: `VLAs`, `strcpy`, `sprintf`, `gets`, `strncpy` without explicit bounds.
 - Use `size_t` for sizes and counts.
-
-### 4.11 Custom allocator pattern
-
-Containers accept a `zenit_allocator_t` via `_with_allocator` constructor variants.
-
-| Rule | Example |
-|------|---------|
-| Allocator is **last** parameter in constructor | `zenit_vector_create_with_allocator(elem_size, allocator)` |
-| `_with_allocator` constructors allocate the handle via `allocator.alloc_fn` | `allocator.alloc_fn(sizeof(zenit_vector_t), allocator.ctx)` |
-| Existing constructors delegate to `_with_allocator` with `ZENIT_ALLOCATOR_DEFAULT` | `return zenit_vector_create_with_allocator(elem_size, ZENIT_ALLOCATOR_DEFAULT);` |
-| Store allocator in the internal struct | `vector->allocator = allocator;` |
-| Replace `malloc` → `a.alloc_fn(size, a.ctx)` | `a.alloc_fn(new_cap * es, a.ctx)` |
-| Replace `calloc` → `zenit_allocator_alloc_zero(a, nmemb, size)` | `zenit_allocator_alloc_zero(a, capacity, elem_size)` |
-| Replace `realloc` → `zenit_allocator_realloc(a, ptr, old_size, new_size)` | `zenit_allocator_realloc(a, buf, old_cap * es, new_cap * es)` |
-| Replace `free(ptr)` → `a.free_fn(ptr, a.ctx)` | `a.free_fn(vector->buffer, a.ctx)` |
-| Helpers access allocator via struct field | `zenit_allocator_t a = vector->allocator;` |
 
 ## 5. License Header Template
 
@@ -482,7 +468,12 @@ libzen/
     │       ├── set.h               # Hash set API
     │       ├── list.h              # Doubly linked list API
     │       ├── heap.h              # Binary heap / priority queue API
-    │       └── deque.h             # Double-ended queue API
+    │       ├── deque.h             # Double-ended queue API
+    │       ├── stack.h             # LIFO stack wrapper over vector
+    │       ├── queue.h             # FIFO queue wrapper over deque
+    │       ├── timer.h             # High-resolution stopwatch (value type)
+    │       ├── pool.h              # Fixed-capacity object pool
+    │       └── io.h                # File I/O (read/write/append/copy/delete)
     ├── src/
     │   ├── CMakeLists.txt
     │   ├── result.c                # Error string conversion
@@ -505,9 +496,14 @@ libzen/
     │   ├── hex.c                   # Hex encoding/decoding
     │   ├── uri.c                   # URI percent-encoding
     │   ├── str.c                   # String utilities (trim/split/join)
-    │   └── sort.c                  # Quicksort + binary search
+    │   ├── sort.c                  # Quicksort + binary search
+    │   ├── stack.c                 # LIFO stack (thin wrapper over vector)
+    │   ├── queue.c                 # FIFO queue (thin wrapper over deque)
+    │   ├── timer.c                 # High-resolution stopwatch (clock_gettime/QPC)
+    │   ├── pool.c                  # Fixed-capacity object pool (free-list)
+    │   └── io.c                    # File I/O (POSIX/Win32, chunked read/write)
     ├── tests/
-    │   ├── CMakeLists.txt          # 33 test executables (via zenit_add_test helpers)
+    │   ├── CMakeLists.txt          # 46 test executables (via zenit_add_test helpers)
     │   ├── test_malloc_fail.h      # Shared malloc/calloc wrappers for --wrap tests
     │   ├── test_runner.h           # Shared test runner (macros, globals, test_run_all)
     │   ├── test_result.c           # Error code & macro validation
@@ -543,9 +539,20 @@ libzen/
     │   ├── test_uri.c              # URI encode/decode, unreserved, reserved, plus, edge cases
     │   ├── test_str.c              # String trim/split/join happy path, edge cases, null params
     │   ├── test_str_malloc_fail.c  # Malloc failure via --wrap
-    │   └── test_sort.c             # Quicksort + binary search, large elements, duplicates, edge cases
+    │   ├── test_sort.c             # Quicksort + binary search, large elements, duplicates, edge cases
+    │   ├── test_stack.c            # Stack happy path, edge cases, many elements, struct, allocator
+    │   ├── test_stack_malloc_fail.c  # Malloc failure via --wrap
+    │   ├── test_queue.c            # Queue happy path, edge cases, mixed ordering, struct, allocator
+    │   ├── test_queue_malloc_fail.c  # Malloc failure via --wrap
+    │   ├── test_timer.c            # Timer now/elapsed/add/sub/cmp edge cases
+    │   ├── test_pool.c             # Pool happy path, acquire/release, double-free, clear
+    │   ├── test_pool_malloc_fail.c # Malloc failure via --wrap
+    │   ├── test_io.c               # File read/write/append/exists/delete/size/copy
+    │   ├── test_io_malloc_fail.c   # Malloc failure via --wrap
+    │   ├── test_hex_malloc_fail.c  # Malloc failure via --wrap
+    │   └── test_uri_malloc_fail.c  # Malloc failure via --wrap
     ├── benchmarks/
-    │   ├── CMakeLists.txt          # 18 benchmark executables (label: "benchmark")
+    │   ├── CMakeLists.txt          # 23 benchmark executables (label: "benchmark")
     │   ├── benchmark_version.c     # Version call throughput
     │   ├── benchmark_state.c       # State-machine transition throughput
     │   ├── benchmark_arena.c       # Arena allocator throughput (vs malloc baseline)
@@ -563,7 +570,12 @@ libzen/
     │   ├── benchmark_hex.c         # Hex encode/decode throughput
     │   ├── benchmark_uri.c         # URI encode/decode throughput
     │   ├── benchmark_str.c         # String trim/split/join throughput
-    │   └── benchmark_sort.c        # Quicksort + binary search throughput
+    │   ├── benchmark_sort.c        # Quicksort + binary search throughput
+    │   ├── benchmark_stack.c       # Stack push/push-pop/peek throughput
+    │   ├── benchmark_queue.c       # Queue enqueue/enqueue-dequeue/peek throughput
+    │   ├── benchmark_timer.c       # Timer now/elapsed throughput
+    │   ├── benchmark_pool.c        # Pool acquire/acquire-release/small throughput
+    │   └── benchmark_io.c          # File write/read 1KB throughput
     ├── scripts/
     │   ├── checksum.py             # Release checksum generator
     │   └── benchmark_report.py     # Benchmark log parser & report generator (BENCHMARK.md + charts)
