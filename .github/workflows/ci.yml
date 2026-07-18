@@ -6,7 +6,6 @@ on:
     tags: ['v*']
   pull_request:
     branches: [master]
-  workflow_dispatch:
 
 jobs:
   build:
@@ -50,11 +49,6 @@ jobs:
           - os: macos-latest
             compiler: clang
             build_type: Debug
-          - os: windows-latest
-            compiler: gcc
-            build_type: Debug
-            coverage: true
-            shell: msys2 {0}
 
     runs-on: ${{ matrix.os }}
     defaults:
@@ -64,29 +58,15 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Set up MSYS2 (Windows gcc)
-        if: matrix.compiler == 'gcc' && startsWith(matrix.os, 'windows')
-        uses: msys2/setup-msys2@v2
-        with:
-          msystem: MINGW64
-          install: >-
-            mingw-w64-x86_64-gcc
-            mingw-w64-x86_64-cmake
-            mingw-w64-x86_64-ninja
-            mingw-w64-x86_64-lcov
-
       - name: Set up compiler
         if: matrix.compiler != 'msvc'
         run: |
           echo "CC=${{ matrix.compiler == 'gcc' && 'gcc' || 'clang' }}" >> $GITHUB_ENV
           echo "CXX=${{ matrix.compiler == 'gcc' && 'g++' || 'clang++' }}" >> $GITHUB_ENV
-          echo "CMAKE_C_COMPILER=${{ matrix.compiler == 'gcc' && 'gcc' || 'clang' }}" >> $GITHUB_ENV
 
       - name: Configure
         run: >
           cmake -B build
-          ${{ matrix.compiler == 'gcc' && startsWith(matrix.os, 'windows') && '-G Ninja' || '' }}
-          ${{ startsWith(matrix.os, 'windows') && matrix.compiler == 'gcc' && '-DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++' || '' }}
           -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
           -DLIBZENIT_BUILD_TESTS=ON
           ${{ matrix.coverage && '-DLIBZENIT_BUILD_COVERAGE=ON' || '' }}
@@ -98,7 +78,7 @@ jobs:
         run: ctest --test-dir build --output-on-failure -C ${{ matrix.build_type }} --parallel -V -LE benchmark
 
       - name: Install lcov
-        if: matrix.coverage && !startsWith(matrix.os, 'windows')
+        if: matrix.coverage
         run: |
           if [ "$RUNNER_OS" = "macOS" ]; then
             brew install lcov
