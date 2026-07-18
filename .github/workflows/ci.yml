@@ -104,7 +104,7 @@ jobs:
         run: |
           lcov --capture -d build --output-file coverage.info \
             --rc lcov_branch_coverage=1 \
-            --ignore-errors version,empty,inconsistent,mismatch
+            --ignore-errors empty,inconsistent,mismatch
           lcov --remove coverage.info -o coverage.clean \
             '/usr/*' '*/_deps/*' '*/tests/*' \
             '*/googletest/*' \
