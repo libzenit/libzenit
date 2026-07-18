@@ -49,5 +49,6 @@
 #include <libzenit/trie.h>
 #include <libzenit/dir.h>
 #include <libzenit/bloom.h>
+#include <libzenit/graph.h>
 
 #endif

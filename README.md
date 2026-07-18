@@ -2,7 +2,7 @@
   <img src="media/logo.svg" alt="LibZenit" width="180">
 </p>
 
-Portable C library providing building blocks for systems programming: a **typed result type with error codes**, a **ring buffer**, a **finite-state machine engine**, a **fixed-block arena allocator**, a **benchmark framework**, a **dynamic array (vector)**, a **hash map**, a **hash set**, a **doubly linked list**, a **binary heap (priority queue)**, a **double-ended queue (deque)**, a **string builder**, a **bit set**, a **custom allocator interface**, and a **version API**.
+Portable C library providing building blocks for systems programming: a **typed result type with error codes**, a **ring buffer**, a **finite-state machine engine**, a **fixed-block arena allocator**, a **benchmark framework**, a **dynamic array (vector)**, a **hash map**, a **hash set**, a **doubly linked list**, a **binary heap (priority queue)**, a **double-ended queue (deque)**, a **string builder**, a **bit set**, a **Bloom filter**, a **trie (prefix tree)**, an **LRU cache**, a **graph (adjacency list)**, a **directory API**, **path utilities**, a **custom allocator interface**, and a **version API**.
 
 <p align="center">
 <a href="https://github.com/libzenit/libzenit/actions/workflows/ci.yml"><img src="https://github.com/libzenit/libzenit/actions/workflows/ci.yml/badge.svg?branch=master" alt="CI Status"></a>
@@ -604,6 +604,161 @@ Portable file operations with a unified API across POSIX and Windows. Supports c
 
 ---
 
+### 25. Bloom Filter — `include/libzenit/bloom.h`
+
+Probabilistic set membership test with a tunable false positive rate. False negatives are impossible. Uses FNV-1a double hashing.
+
+| Function | Description |
+|---|---|
+| `zenit_bloom_create(capacity, fpr)` | Create with expected capacity and false positive rate (optimal params computed automatically) |
+| `zenit_bloom_create_with_allocator(capacity, fpr, allocator)` | Create with a custom allocator |
+| `zenit_bloom_create_explicit(num_bits, num_hashes)` | Create with explicit parameters |
+| `zenit_bloom_create_explicit_with_allocator(num_bits, num_hashes, allocator)` | Create explicit with a custom allocator |
+| `zenit_bloom_destroy(bf)` | Free all memory; NULL-safe |
+| `zenit_bloom_insert(bf, data, len)` | Insert an element (sets hash bits) |
+| `zenit_bloom_contains(bf, data, len)` | 1 if possibly present, 0 if definitely absent |
+| `zenit_bloom_clear(bf)` | Reset all bits; NULL-safe |
+| `zenit_bloom_false_positive_rate(bf)` | Return the configured false positive rate |
+| `zenit_bloom_count(bf)` | Approximate number of inserted items |
+| `zenit_bloom_num_bits(bf)` | Total number of bits in the bit array |
+| `zenit_bloom_num_hashes(bf)` | Number of hash functions used |
+
+- **Source:** [`src/bloom.c`](src/bloom.c)
+- **Tests:** [`tests/test_bloom.c`](tests/test_bloom.c) (15 sub-tests: create/destroy, insert/contains, clear, FPR, explicit params, NULL safety, many insertions, edge cases), [`tests/test_bloom_malloc_fail.c`](tests/test_bloom_malloc_fail.c) (allocation failure via `--wrap=malloc,calloc`)
+- **Benchmark:** [`benchmarks/benchmark_bloom.c`](benchmarks/benchmark_bloom.c) — insert 100K, contains hit 100K, contains miss 100K
+
+---
+
+### 26. Trie / Prefix Tree — `include/libzenit/trie.h`
+
+26-ary trie (a–z, case-insensitive) with integer payload per key. Supports insertion, search, prefix query, and deletion.
+
+| Function | Description |
+|---|---|
+| `zenit_trie_create()` / `_with_allocator` | Create an empty trie; returns NULL on OOM |
+| `zenit_trie_destroy(trie)` | Free all nodes; NULL-safe |
+| `zenit_trie_insert(trie, key, value)` | Insert a key with integer payload |
+| `zenit_trie_search(trie, key, out_value)` | 1 if found, 0 otherwise |
+| `zenit_trie_starts_with(trie, prefix)` | 1 if any key begins with prefix |
+| `zenit_trie_delete(trie, key)` | Remove a key; returns NOT_FOUND if absent |
+| `zenit_trie_count(trie)` | Number of keys stored (0 if NULL) |
+| `zenit_trie_clear(trie)` | Remove all keys; NULL-safe |
+
+- **Source:** [`src/trie.c`](src/trie.c)
+- **Tests:** [`tests/test_trie.c`](tests/test_trie.c) (12 sub-tests: create/destroy, insert/search, starts_with, delete, clear, count, prefix sharing, case folding, NULL safety, allocator variant), [`tests/test_trie_malloc_fail.c`](tests/test_trie_malloc_fail.c) (allocation failure via `--wrap=malloc,calloc`)
+- **Benchmark:** [`benchmarks/benchmark_trie.c`](benchmarks/benchmark_trie.c) — insert 100K, search hit/miss 100K, starts_with 100K
+
+---
+
+### 27. LRU Cache — `include/libzenit/lru.h`
+
+Fixed-capacity LRU cache with O(1) put / get. Uses a hash map with open-addressing and a doubly-linked list for the eviction order. Eviction callback support.
+
+| Function | Description |
+|---|---|
+| `zenit_lru_create(key_size, value_size, capacity)` | Create empty cache; returns NULL on OOM |
+| `zenit_lru_create_with_allocator(...)` | Create with a custom allocator |
+| `zenit_lru_create_with_evict(key_size, value_size, capacity, evict_fn, ctx)` | Create with eviction callback |
+| `zenit_lru_create_with_evict_and_allocator(...)` | Create with evict callback + custom allocator |
+| `zenit_lru_destroy(cache)` | Free all memory; NULL-safe |
+| `zenit_lru_put(cache, key, value)` | Insert or update; evicts LRU entry if full |
+| `zenit_lru_get(cache, key, out_value)` | Retrieve and promote; returns 1 if found |
+| `zenit_lru_peek(cache, key, out_value)` | Retrieve without promoting; returns 1 if found |
+| `zenit_lru_contains(cache, key)` | 1 if present, 0 otherwise |
+| `zenit_lru_remove(cache, key)` | Remove a single key |
+| `zenit_lru_clear(cache)` | Remove all entries; NULL-safe |
+| `zenit_lru_count(cache)` | Number of entries (0 if NULL) |
+| `zenit_lru_capacity(cache)` | Maximum entries (0 if NULL) |
+
+- **Source:** [`src/lru.c`](src/lru.c)
+- **Tests:** [`tests/test_lru.c`](tests/test_lru.c) (19 sub-tests: create/destroy, put/get, eviction order, peek, update, remove, contains, clear, NULL safety, many ops, allocator, evict callback), [`tests/test_lru_malloc_fail.c`](tests/test_lru_malloc_fail.c) (allocation failure via `--wrap=malloc,calloc`)
+- **Benchmark:** [`benchmarks/benchmark_lru.c`](benchmarks/benchmark_lru.c) — put 100K, get hit 100K, put evict 100K
+
+---
+
+### 28. Graph — `include/libzenit/graph.h`
+
+Adjacency-list graph supporting directed and undirected modes. Dynamic vertex allocation with tombstone compaction. BFS and DFS traversals with a visit callback.
+
+| Function | Description |
+|---|---|
+| `zenit_graph_create(capacity, directed)` / `_with_allocator` | Create empty graph; returns NULL on OOM |
+| `zenit_graph_destroy(g)` | Free all memory; NULL-safe |
+| `zenit_graph_add_vertex(g)` | Add a new vertex |
+| `zenit_graph_remove_vertex(g, vertex)` | Remove vertex + incident edges |
+| `zenit_graph_add_edge(g, from, to)` | Add edge (undirected adds reverse) |
+| `zenit_graph_remove_edge(g, from, to)` | Remove edge |
+| `zenit_graph_has_edge(g, from, to)` | 1 if edge exists |
+| `zenit_graph_get_neighbors(g, vertex, out, out_count)` | Get malloc'd copy of neighbors (caller frees) |
+| `zenit_graph_vertex_count(g)` | Number of active vertices (0 if NULL) |
+| `zenit_graph_edge_count(g)` | Number of logical edges (0 if NULL) |
+| `zenit_graph_is_directed(g)` | 1 if directed, 0 if undirected |
+| `zenit_graph_clear(g)` | Remove all vertices + edges; NULL-safe |
+| `zenit_graph_bfs(g, start, visit, ctx)` | Breadth-first traversal |
+| `zenit_graph_dfs(g, start, visit, ctx)` | Depth-first traversal |
+
+- **Source:** [`src/graph.c`](src/graph.c)
+- **Tests:** [`tests/test_graph.c`](tests/test_graph.c) (34 sub-tests: directed/undirected, add/remove vertices, add/remove edges, has_edge, get_neighbors, BFS, DFS, clear, NULL safety, many vertices), [`tests/test_graph_malloc_fail.c`](tests/test_graph_malloc_fail.c) (allocation failure via `--wrap=malloc,calloc`)
+- **Benchmark:** [`benchmarks/benchmark_graph.c`](benchmarks/benchmark_graph.c) — add_vertex 100K, add_edge 100K, BFS, get_neighbors
+
+---
+
+### 29. Directory API — `include/libzenit/dir.h`
+
+Platform-independent directory operations: create (mkdir -p), remove, exists, iteration, and bulk listing. Uses `#ifdef _WIN32` / POSIX `dirent.h` internally.
+
+| Function | Description |
+|---|---|
+| `zenit_dir_create(path)` | Create directory (mkdir -p); returns `ZENIT_RESULT_OK` on success |
+| `zenit_dir_remove(path)` | Remove empty directory |
+| `zenit_dir_exists(path)` | 1 if directory exists, 0 otherwise |
+| `zenit_dir_iter(path)` | Create directory iterator; returns NULL on error |
+| `zenit_dir_next(iter, out_entry)` | 1 if entry read, 0 at end |
+| `zenit_dir_iter_destroy(iter)` | Free iterator; NULL-safe |
+| `zenit_dir_list(path, out_names, out_count)` | List all entries (caller frees strings + array) |
+
+- **Source:** [`src/dir.c`](src/dir.c)
+- **Tests:** [`tests/test_dir.c`](tests/test_dir.c) (9 sub-tests: create/exists, nested create, list empty/with entries, iterate, remove, nonexistent, NULL params), [`tests/test_dir_malloc_fail.c`](tests/test_dir_malloc_fail.c) (allocation failure via `--wrap=malloc,calloc`)
+- **Benchmark:** [`benchmarks/benchmark_dir.c`](benchmarks/benchmark_dir.c) — dir_list throughput
+
+---
+
+### 30. Path Utilities — `include/libzenit/path.h`
+
+String-based path manipulation functions. All functions return newly allocated strings (caller frees). All have `_with_allocator` variants.
+
+| Function | Description |
+|---|---|
+| `zenit_path_join(a, b)` | Join two path components |
+| `zenit_path_dirname(path)` | Return parent directory path |
+| `zenit_path_basename(path)` | Return final path component |
+| `zenit_path_extension(path)` | Return extension including the dot |
+| `zenit_path_normalize(path)` | Resolve `.` / `..`, collapse `//`, remove trailing `/` |
+
+- **Source:** [`src/path.c`](src/path.c)
+- **Tests:** [`tests/test_path.c`](tests/test_path.c) (21 sub-tests: join, dirname, basename, extension, normalize, hidden files, multi-dot, NULL params, allocator variants), [`tests/test_path_malloc_fail.c`](tests/test_path_malloc_fail.c) (allocation failure via `--wrap=malloc,calloc`)
+- **Benchmark:** [`benchmarks/benchmark_path.c`](benchmarks/benchmark_path.c) — join/dirname/basename/normalize 100K each
+
+---
+
+### 31. Sort Improvements — `include/libzenit/sort.h`
+
+The sort module now includes a **stable merge sort** (`zenit_sort_stable`) and **bound-based binary searches** (`zenit_lower_bound`, `zenit_upper_bound`) in addition to the existing quicksort and binary search.
+
+| Function | Description |
+|---|---|
+| `zenit_sort_quick(base, count, elem_size, compare)` | In-place quicksort (not stable) |
+| `zenit_sort_stable(base, count, elem_size, compare)` | Stable merge sort (O(n) temp buffer) |
+| `zenit_binary_search(key, base, count, elem_size, compare)` | Any matching element (unspecified which) |
+| `zenit_lower_bound(key, base, count, elem_size, compare)` | First element >= key |
+| `zenit_upper_bound(key, base, count, elem_size, compare)` | First element > key |
+
+- **Source:** [`src/sort.c`](src/sort.c)
+- **Tests:** [`tests/test_sort.c`](tests/test_sort.c) (27 sub-tests: quicksort, binary search, lower_bound, upper_bound, stable_sort, stability, edge cases, NULL safety)
+- **Benchmark:** [`benchmarks/benchmark_sort.c`](benchmarks/benchmark_sort.c) — sort_random, sort_sorted, stable_sort_random, stable_sort_sorted, binary_search hit/miss
+
+---
+
 ## Build Options
 
 | Option | Default | Description |
@@ -650,9 +805,15 @@ libzen/
 │       ├── deque.h             # Double-ended queue API
 │       ├── stack.h             # LIFO stack wrapper over vector
 │       ├── queue.h             # FIFO queue wrapper over deque
-│       ├── timer.h             # High-resolution stopwatch (value type)
+│       │       ├── timer.h             # High-resolution stopwatch (value type)
 │       ├── pool.h              # Fixed-capacity object pool
-│       └── io.h                # File I/O (read/write/append/copy/delete)
+│       ├── io.h                # File I/O (read/write/append/copy/delete)
+│       ├── bloom.h             # Bloom filter API
+│       ├── trie.h              # Trie (prefix tree) API
+│       ├── lru.h               # LRU cache API
+│       ├── graph.h             # Graph (adjacency list) API
+│       ├── dir.h               # Directory API
+│       └── path.h              # Path utilities (join/dirname/basename/normalize)
 ├── src/
 │   ├── CMakeLists.txt          # Library target: static libzenit
 │   ├── result.c / version.c / state.c / arena.c / benchmark.c
@@ -660,17 +821,16 @@ libzen/
 │   ├── list.c / heap.c / deque.c / string.c / bitset.c / json.c
 │   ├── base64.c / hex.c / uri.c / str.c / sort.c
 │   ├── stack.c / queue.c / timer.c / pool.c / io.c
+│   ├── path.c / lru.c / graph.c / trie.c / bloom.c / dir.c
 ├── tests/
-│   ├── CMakeLists.txt          # 47 test executables (DRY helpers)
+│   ├── CMakeLists.txt          # 60 test executables (DRY helpers)
 │   ├── test_malloc_fail.h      # Shared malloc/calloc wrappers
 │   ├── test_runner.h           # Shared test runner
-│   ├── test_result.c ... test_bitset.c  # One per module
+│   ├── test_result.c ... test_graph.c  # One per module
 │   ├── test_*_malloc_fail.c    # Allocation-failure tests (--wrap)
 ├── benchmarks/
-│   ├── CMakeLists.txt          # 25 benchmark executables
-│   ├── benchmark_version.c ... benchmark_json.c ... benchmark_base64.c ... benchmark_sort.c
-│   ├── benchmark_stack.c / benchmark_queue.c / benchmark_timer.c
-│   ├── benchmark_pool.c / benchmark_io.c
+│   ├── CMakeLists.txt          # 30 benchmark executables
+│   ├── benchmark_version.c ... benchmark_graph.c  # All modules
 ├── scripts/
 │   ├── benchmark_report.py     # CI benchmark log → BENCHMARK.md + charts
 │   └── checksum.py             # Release SHA-256 generator
@@ -717,4 +877,4 @@ libzen/
 
 ## Status
 
-Current version `0.1.0` — **alpha**. All 24 modules are implemented, fully tested, benchmarked, and passing CI across all platforms and sanitizers. All containers support custom allocators. Encoding/utility functions (base64, hex, uri, str) also support custom allocators via `_with_allocator` variants. The API is stable but may evolve before `1.0.0`.
+Current version `0.1.0` — **alpha**. All 31 modules are implemented, fully tested, benchmarked, and passing CI across all platforms and sanitizers. All containers support custom allocators. Encoding/utility functions (base64, hex, uri, str, path) also support custom allocators via `_with_allocator` variants. The API is stable but may evolve before `1.0.0`.

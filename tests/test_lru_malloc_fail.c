@@ -115,6 +115,8 @@ int main(void) {
         }
     }
 
+    malloc_fail_countdown = -1;
+
     if (failures > 0) {
         fprintf(stderr, "%d failure(s)\n", failures);
         return 1;

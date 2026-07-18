@@ -207,8 +207,14 @@ target_link_libraries(benchmark_trie PRIVATE zenit)
 add_test(NAME benchmark_trie COMMAND benchmark_trie)
 set_tests_properties(benchmark_trie PROPERTIES LABELS "benchmark")
 
+# Graph throughput
+add_executable(benchmark_graph benchmark_graph.c)
+target_link_libraries(benchmark_graph PRIVATE zenit)
+add_test(NAME benchmark_graph COMMAND benchmark_graph)
+set_tests_properties(benchmark_graph PROPERTIES LABELS "benchmark")
+
 if(LIBZENIT_BUILD_COVERAGE)
-  foreach(tgt benchmark_version benchmark_state benchmark_arena benchmark_ring benchmark_vector benchmark_map benchmark_set benchmark_string benchmark_list benchmark_heap benchmark_deque benchmark_bitset benchmark_json benchmark_base64 benchmark_hex benchmark_uri benchmark_str benchmark_path benchmark_sort benchmark_lru benchmark_stack benchmark_queue benchmark_timer benchmark_pool benchmark_io benchmark_dir benchmark_allocator benchmark_result benchmark_bloom benchmark_trie)
+  foreach(tgt benchmark_version benchmark_state benchmark_arena benchmark_ring benchmark_vector benchmark_map benchmark_set benchmark_string benchmark_list benchmark_heap benchmark_deque benchmark_bitset benchmark_json benchmark_base64 benchmark_hex benchmark_uri benchmark_str benchmark_path benchmark_sort benchmark_lru benchmark_stack benchmark_queue benchmark_timer benchmark_pool benchmark_io benchmark_dir benchmark_allocator benchmark_result benchmark_bloom benchmark_trie benchmark_graph)
     target_compile_options(${tgt} PRIVATE --coverage -g -O0)
     target_link_options(${tgt} PRIVATE --coverage)
   endforeach()
@@ -249,6 +255,7 @@ add_custom_target(benchmark
   COMMAND "$<TARGET_FILE:benchmark_result>"
   COMMAND "$<TARGET_FILE:benchmark_bloom>"
   COMMAND "$<TARGET_FILE:benchmark_trie>"
+  COMMAND "$<TARGET_FILE:benchmark_graph>"
   COMMAND ${CMAKE_COMMAND} -E echo ""
   COMMAND ${CMAKE_COMMAND} -E echo "===== Done ====="
   USES_TERMINAL

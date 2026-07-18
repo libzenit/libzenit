@@ -47,6 +47,7 @@ add_library(zenit STATIC
   graph.c
   trie.c
   bloom.c
+  dir.c
 )
 
 target_include_directories(zenit

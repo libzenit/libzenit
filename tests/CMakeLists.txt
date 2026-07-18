@@ -87,6 +87,9 @@ zenit_add_test(test_trie       test_trie.c)
 # ─── LRU cache tests ───
 zenit_add_test(test_lru        test_lru.c)
 
+# ─── Graph tests ───
+zenit_add_test(test_graph      test_graph.c)
+
 # ─── Allocator test ───
 zenit_add_test(test_allocator   test_allocator.c)
 
@@ -143,3 +146,4 @@ zenit_add_malloc_fail_test(test_dir_malloc_fail   test_dir_malloc_fail.c)
 zenit_add_malloc_fail_test(test_base64_malloc_fail test_base64_malloc_fail.c)
 zenit_add_malloc_fail_test(test_bloom_malloc_fail test_bloom_malloc_fail.c)
 zenit_add_malloc_fail_test(test_trie_malloc_fail test_trie_malloc_fail.c)
+zenit_add_malloc_fail_test(test_graph_malloc_fail test_graph_malloc_fail.c)
