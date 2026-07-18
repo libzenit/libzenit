@@ -25,19 +25,19 @@ typedef struct {
 } bench_ctx_t;
 
 static void bench_malloc_free(void *ctx) {
-    bench_ctx_t *c = (bench_ctx_t *)ctx;
+    const bench_ctx_t *c = (const bench_ctx_t *)ctx;
     void *p = malloc(c->size);
     if (p) free(p);
 }
 
 static void bench_zenit_alloc_free(void *ctx) {
-    bench_ctx_t *c = (bench_ctx_t *)ctx;
+    const bench_ctx_t *c = (const bench_ctx_t *)ctx;
     void *p = c->a.alloc_fn(c->size, c->a.ctx);
     if (p) c->a.free_fn(p, c->a.ctx);
 }
 
 static void bench_realloc_fallback(void *ctx) {
-    bench_ctx_t *c = (bench_ctx_t *)ctx;
+    const bench_ctx_t *c = (const bench_ctx_t *)ctx;
     void *p = c->a.alloc_fn(c->size, c->a.ctx);
     if (p) {
         void *q = zenit_allocator_realloc(c->a, p, c->size, c->size * 2);

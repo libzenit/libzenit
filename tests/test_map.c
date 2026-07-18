@@ -692,6 +692,42 @@ static int test_map_values(void) {
     return 0;
 }
 
+static int test_map_keys_free_func(void) {
+    TEST("map_keys_free");
+    zenit_map_t *m = zenit_map_create(sizeof(int), sizeof(int));
+    ASSERT(m != NULL, "create");
+    int k1 = 1;
+    int v1 = 100;
+    zenit_map_insert(m, &k1, &v1);
+    int *keys = NULL;
+    size_t count = 0;
+    ASSERT(zenit_map_keys(m, (void**)&keys, &count).error == ZENIT_OK, "keys");
+    ASSERT(zenit_map_keys_free(m, keys, count).error == ZENIT_OK, "keys_free");
+    ASSERT(zenit_map_keys_free(NULL, keys, count).error == ZENIT_ERROR_NULL, "keys_free NULL map");
+    ASSERT(zenit_map_keys_free(m, NULL, count).error == ZENIT_ERROR_NULL, "keys_free NULL keys");
+    zenit_map_destroy(m);
+    PASS();
+    return 0;
+}
+
+static int test_map_values_free_func(void) {
+    TEST("map_values_free");
+    zenit_map_t *m = zenit_map_create(sizeof(int), sizeof(int));
+    ASSERT(m != NULL, "create");
+    int k1 = 1;
+    int v1 = 100;
+    zenit_map_insert(m, &k1, &v1);
+    int *values = NULL;
+    size_t count = 0;
+    ASSERT(zenit_map_values(m, (void**)&values, &count).error == ZENIT_OK, "values");
+    ASSERT(zenit_map_values_free(m, values, count).error == ZENIT_OK, "values_free");
+    ASSERT(zenit_map_values_free(NULL, values, count).error == ZENIT_ERROR_NULL, "values_free NULL map");
+    ASSERT(zenit_map_values_free(m, NULL, count).error == ZENIT_ERROR_NULL, "values_free NULL values");
+    zenit_map_destroy(m);
+    PASS();
+    return 0;
+}
+
 static int test_values_empty(void) {
     TEST("map_values empty");
     zenit_map_t *m = zenit_map_create(sizeof(int), sizeof(int));
@@ -747,6 +783,8 @@ int main(void) {
         { test_map_keys,            "map_keys" },
         { test_map_values,          "map_values" },
         { test_values_empty,        "map_values empty" },
+        { test_map_keys_free_func,  "map_keys_free" },
+        { test_map_values_free_func, "map_values_free" },
         { test_create_with_allocator, "create_with_allocator" },
         { 0, 0 }
     };

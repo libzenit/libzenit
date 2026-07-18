@@ -516,6 +516,23 @@ static int test_set_to_array(void) {
 }
 
 /* ─── Test: create_with_allocator ─── */
+static int test_set_to_array_free_func(void) {
+    TEST("set_to_array_free");
+    zenit_set_t *s = zenit_set_create(sizeof(int));
+    ASSERT(s != NULL, "create");
+    int k1 = 1;
+    zenit_set_insert(s, &k1);
+    int *keys = NULL;
+    size_t count = 0;
+    ASSERT(zenit_set_to_array(s, (void**)&keys, &count).error == ZENIT_OK, "to_array");
+    ASSERT(zenit_set_to_array_free(s, keys, count).error == ZENIT_OK, "to_array_free");
+    ASSERT(zenit_set_to_array_free(NULL, keys, count).error == ZENIT_ERROR_NULL, "to_array_free NULL set");
+    ASSERT(zenit_set_to_array_free(s, NULL, count).error == ZENIT_ERROR_NULL, "to_array_free NULL keys");
+    zenit_set_destroy(s);
+    PASS();
+    return 0;
+}
+
 static int test_create_with_allocator(void) {
     TEST("create_with_allocator");
     zenit_set_t *s = zenit_set_create_with_allocator(sizeof(int), ZENIT_ALLOCATOR_DEFAULT);
@@ -558,6 +575,7 @@ int main(void) {
         { test_count_ops,           "count_ops" },
         { test_set_iter,            "set_iter" },
         { test_set_to_array,        "set_to_array" },
+        { test_set_to_array_free_func, "set_to_array_free" },
         { test_create_with_allocator, "create_with_allocator" },
         { 0, 0 }
     };

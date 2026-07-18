@@ -145,6 +145,16 @@ static int test_split_many(void) {
     return 0;
 }
 
+static int test_split_free_func(void) {
+    char **parts = zenit_str_split("a,b,c", ",", &(size_t){0});
+    ASSERT(parts != NULL, "split");
+    size_t count;
+    zenit_str_split("a,b,c", ",", &count);
+    zenit_str_split_free(parts, count, ZENIT_ALLOCATOR_DEFAULT);
+    PASS();
+    return 0;
+}
+
 static int test_split_null_params(void) {
     size_t count;
     ASSERT(zenit_str_split(NULL, ",", &count) == NULL, "split NULL s");
@@ -221,6 +231,7 @@ int main(void) {
         &test_split_no_delimiter,
         &test_split_many,
         &test_split_null_params,
+        &test_split_free_func,
         &test_join_basic,
         &test_join_empty_delim,
         &test_join_empty_parts,

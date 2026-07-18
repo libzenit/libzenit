@@ -45,13 +45,13 @@ static int test_default_alloc_fail(void) {
 }
 
 static int test_default_realloc_fail(void) {
-    void *p = zenit_default_alloc(64, NULL);
+    void * const p = zenit_default_alloc(64, NULL);
     if (p == NULL) {
         fprintf(stderr, "FAIL: setup alloc failed\n");
         return 1;
     }
     malloc_fail_countdown = 0;
-    void *q = zenit_default_realloc(p, 128, NULL);
+    const void * const q = zenit_default_realloc(p, 128, NULL);
     malloc_fail_countdown = -1;
     if (q != NULL) {
         fprintf(stderr, "FAIL: zenit_default_realloc should return NULL on realloc failure\n");
@@ -67,14 +67,14 @@ static int test_default_realloc_fail(void) {
 static int test_allocator_realloc_default_fail(void) {
     /* Test that zenit_allocator_realloc with default allocator returns NULL
      * when the underlying realloc fails */
-    void *p = zenit_default_alloc(32, NULL);
+    void * const p = zenit_default_alloc(32, NULL);
     if (p == NULL) {
         fprintf(stderr, "FAIL: setup alloc failed\n");
         return 1;
     }
 
     malloc_fail_countdown = 0;
-    void *q = zenit_allocator_realloc(ZENIT_ALLOCATOR_DEFAULT, p, 32, 64);
+    const void * const q = zenit_allocator_realloc(ZENIT_ALLOCATOR_DEFAULT, p, 32, 64);
     malloc_fail_countdown = -1;
     if (q != NULL) {
         fprintf(stderr, "FAIL: zenit_allocator_realloc should return NULL on realloc failure\n");

@@ -125,31 +125,35 @@ zenit_result_t zenit_file_read_line_with_allocator(const char *path, char **out_
         return ZENIT_RESULT_ERROR(ZENIT_ERROR_ALLOC);
     }
 
-    for (;;) {
-        char c;
-        DWORD bytes_read;
-        if (!ReadFile(h, &c, 1, &bytes_read, NULL)) {
-            allocator.free_fn(buf, allocator.ctx);
-            CloseHandle(h);
-            return ZENIT_RESULT_ERROR(ZENIT_ERROR_NOT_FOUND);
-        }
-        if (bytes_read == 0) {
-            break;
-        }
-        if (len + 2 > cap) {
-            cap *= 2;
-            size_t old_size = cap / 2;
-            char *tmp = zenit_allocator_realloc(allocator, buf, old_size, cap);
-            if (tmp == NULL) {
+    {
+        int done = 0;
+        while (!done) {
+            char c;
+            DWORD bytes_read;
+            if (!ReadFile(h, &c, 1, &bytes_read, NULL)) {
                 allocator.free_fn(buf, allocator.ctx);
                 CloseHandle(h);
-                return ZENIT_RESULT_ERROR(ZENIT_ERROR_ALLOC);
+                return ZENIT_RESULT_ERROR(ZENIT_ERROR_NOT_FOUND);
             }
-            buf = tmp;
-        }
-        buf[len++] = c;
-        if (c == '\n') {
-            break;
+            if (bytes_read == 0) {
+                done = 1;
+            } else {
+                if (len + 2 > cap) {
+                    cap *= 2;
+                    size_t old_size = cap / 2;
+                    char *tmp = zenit_allocator_realloc(allocator, buf, old_size, cap);
+                    if (tmp == NULL) {
+                        allocator.free_fn(buf, allocator.ctx);
+                        CloseHandle(h);
+                        return ZENIT_RESULT_ERROR(ZENIT_ERROR_ALLOC);
+                    }
+                    buf = tmp;
+                }
+                buf[len++] = c;
+                if (c == '\n') {
+                    done = 1;
+                }
+            }
         }
     }
 
@@ -171,31 +175,35 @@ zenit_result_t zenit_file_read_line_with_allocator(const char *path, char **out_
         return ZENIT_RESULT_ERROR(ZENIT_ERROR_ALLOC);
     }
 
-    for (;;) {
-        char c;
-        ssize_t n = read(fd, &c, 1);
-        if (n < 0) {
-            allocator.free_fn(buf, allocator.ctx);
-            close(fd);
-            return ZENIT_RESULT_ERROR(ZENIT_ERROR_NOT_FOUND);
-        }
-        if (n == 0) {
-            break;
-        }
-        if (len + 2 > cap) {
-            cap *= 2;
-            size_t old_size = cap / 2;
-            char *tmp = zenit_allocator_realloc(allocator, buf, old_size, cap);
-            if (tmp == NULL) {
+    {
+        int done = 0;
+        while (!done) {
+            char c;
+            ssize_t n = read(fd, &c, 1);
+            if (n < 0) {
                 allocator.free_fn(buf, allocator.ctx);
                 close(fd);
-                return ZENIT_RESULT_ERROR(ZENIT_ERROR_ALLOC);
+                return ZENIT_RESULT_ERROR(ZENIT_ERROR_NOT_FOUND);
             }
-            buf = tmp;
-        }
-        buf[len++] = c;
-        if (c == '\n') {
-            break;
+            if (n == 0) {
+                done = 1;
+            } else {
+                if (len + 2 > cap) {
+                    cap *= 2;
+                    size_t old_size = cap / 2;
+                    char *tmp = zenit_allocator_realloc(allocator, buf, old_size, cap);
+                    if (tmp == NULL) {
+                        allocator.free_fn(buf, allocator.ctx);
+                        close(fd);
+                        return ZENIT_RESULT_ERROR(ZENIT_ERROR_ALLOC);
+                    }
+                    buf = tmp;
+                }
+                buf[len++] = c;
+                if (c == '\n') {
+                    done = 1;
+                }
+            }
         }
     }
 
