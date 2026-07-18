@@ -204,6 +204,45 @@ char* zenit_path_extension_with_allocator(const char *path, zenit_allocator_t al
     return extension_impl(path, allocator);
 }
 
+/* ─── Normalize helpers ─── */
+
+/*
+ * Skip consecutive '/' characters in path starting at i.
+ * Returns the new position (first non-slash, or len if at end).
+ */
+static size_t skip_slashes(const char *path, size_t len, size_t i) {
+    while (i < len && path[i] == '/') i++;
+    return i;
+}
+
+/*
+ * Extract the next component from path starting at i.
+ * Sets *start and *clen to describe the component, and returns
+ * the position after the component.  Returns len if at end.
+ */
+static size_t next_component(const char *path, size_t len, size_t i, size_t *start, size_t *clen) {
+    if (i >= len) {
+        *start = len;
+        *clen = 0;
+        return len;
+    }
+    *start = i;
+    while (i < len && path[i] != '/') i++;
+    *clen = i - *start;
+    return i;
+}
+
+/*
+ * Pop one path component from stack[0..pos).
+ * Does not pop below min_pos (1 for absolute paths, 0 for relative).
+ */
+static void pop_component(char *stack, size_t *pos, size_t min_pos) {
+    if (*pos <= min_pos) return;
+    (*pos)--;
+    while (*pos > min_pos && stack[*pos - 1] != '/') (*pos)--;
+    if (*pos > min_pos) (*pos)--;
+}
+
 /* ─── zenit_path_normalize ─── */
 
 static char* normalize_impl(const char *path, zenit_allocator_t a) {
@@ -214,82 +253,48 @@ static char* normalize_impl(const char *path, zenit_allocator_t a) {
         return strdup_with_allocator("/", a);
     }
 
-    /* Allocate a working buffer large enough for the result (worst case: same length + 1) */
     size_t cap = len + 1;
     char *stack = a.alloc_fn(cap, a.ctx);
     if (stack == NULL) return NULL;
 
-    size_t pos = 0;   /* write position in stack */
-    size_t i = 0;     /* read position in path */
-
-    /* Track whether the result starts with '/' for root-anchored paths */
+    size_t pos = 0;
+    size_t i = 0;
     int is_absolute = (path[0] == '/');
 
-    /* For absolute paths, start with the root separator */
     if (is_absolute) {
         stack[pos++] = '/';
     }
 
-    while (i <= len) {
-        /* Skip consecutive slashes */
-        while (i < len && path[i] == '/') i++;
-
-        /* If we hit the end after skipping slashes, we are done */
+    while (i < len) {
+        i = skip_slashes(path, len, i);
         if (i >= len) break;
 
-        /* Find the end of the current component */
-        size_t start = i;
-        while (i < len && path[i] != '/') i++;
-        size_t clen = i - start;
+        size_t start, clen;
+        i = next_component(path, len, i, &start, &clen);
 
         if (clen == 1 && path[start] == '.') {
-            /* Single dot → skip (stay in current directory) */
             continue;
         }
 
         if (clen == 2 && path[start] == '.' && path[start + 1] == '.') {
-            /* Double dot → pop one component if possible.
-               We must not pop above the root for absolute paths. */
             size_t min_pos = is_absolute ? 1 : 0;
-            if (pos > min_pos) {
-                /* Remove the last character of the component */
-                pos--;
-                /* Walk backward past the rest of the component name */
-                while (pos > min_pos && stack[pos - 1] != '/') pos--;
-                /* Remove the separator that preceded this component */
-                if (pos > min_pos) {
-                    pos--;
-                }
-            }
+            pop_component(stack, &pos, min_pos);
             continue;
         }
 
-        /* Regular component — add separator if needed.
-           Skip the separator for the very first component of an absolute path
-           (the root '/' is already in the buffer at that point). */
-        if (pos > 0) {
-            /* The root '/' is at pos=1 for abs paths; we never add '/' there. */
-            if (!(is_absolute && pos == 1)) {
-                stack[pos++] = '/';
-            }
+        if (pos > 0 && !(is_absolute && pos == 1)) {
+            stack[pos++] = '/';
         }
 
         memcpy(stack + pos, path + start, clen);
         pos += clen;
     }
 
-    /* If the result is empty, return the appropriate root representation */
     if (pos == 0) {
-        /* Free the working buffer and return "/" for absolute, "." for relative */
         a.free_fn(stack, a.ctx);
-        if (is_absolute) {
-            return strdup_with_allocator("/", a);
-        } else {
-            return strdup_with_allocator(".", a);
-        }
+        return strdup_with_allocator(is_absolute ? "/" : ".", a);
     }
 
-    /* Shrink-to-fit: allocate exact result and free the working buffer */
     char *out = a.alloc_fn(pos + 1, a.ctx);
     if (out == NULL) {
         a.free_fn(stack, a.ctx);

@@ -21,7 +21,7 @@
 #include <string.h>
 
 #if defined(_WIN32)
-#include <windows.h>
+#include <Windows.h>   /* Windows API — header name matches platform casing */
 #include <direct.h>
 #else
 #include <errno.h>
@@ -264,6 +264,8 @@ zenit_result_t zenit_dir_list(const char *path, char ***out_names, size_t *out_c
         return ZENIT_RESULT_ERROR(ZENIT_ERROR_NULL);
     }
 
+    zenit_dir_entry_t entry;
+
     /* First pass: open the directory and count entries */
     zenit_dir_iter_t *iter = zenit_dir_iter(path);
     if (iter == NULL) {
@@ -271,22 +273,20 @@ zenit_result_t zenit_dir_list(const char *path, char ***out_names, size_t *out_c
     }
 
     size_t count = 0;
-    zenit_dir_entry_t entry;
     while (zenit_dir_next(iter, &entry)) {
         count++;
     }
     zenit_dir_iter_destroy(iter);
 
-    /* Allocate the pointer array for all entry names */
-    char **names = NULL;
-    if (count > 0) {
-        names = malloc(sizeof(char *) * count);
-        if (names == NULL) {
-            return ZENIT_RESULT_ERROR(ZENIT_ERROR_ALLOC);
-        }
+    /* Allocate the pointer array for all entry names (zeroed so cleanup is safe) */
+    char **names = calloc(count, sizeof(char *));
+    if (count > 0 && names == NULL) {
+        return ZENIT_RESULT_ERROR(ZENIT_ERROR_ALLOC);
     }
 
-    /* Second pass: re-open and populate the array */
+    /* Second pass: re-open and populate the array.
+     * Use i as the actual write index, bounded by count from the first pass.
+     * If the directory changed between passes (more entries now), we stop at count. */
     iter = zenit_dir_iter(path);
     if (iter == NULL) {
         free(names);
@@ -295,20 +295,22 @@ zenit_result_t zenit_dir_list(const char *path, char ***out_names, size_t *out_c
 
     size_t i = 0;
     zenit_result_t result = ZENIT_RESULT_OK;
-    while (zenit_dir_next(iter, &entry)) {
-        /* Allocate and copy each entry name */
+    while (zenit_dir_next(iter, &entry) && i < count) {
         names[i] = malloc(strlen(entry.name) + 1);
         if (names[i] == NULL) {
             result = ZENIT_RESULT_ERROR(ZENIT_ERROR_ALLOC);
             break;
         }
-        strcpy(names[i], entry.name);
+        size_t slen = strlen(entry.name);
+        char *dst = names[i];
+        for (size_t c = 0; c <= slen; c++) {
+            dst[c] = entry.name[c];
+        }
         i++;
     }
 
     zenit_dir_iter_destroy(iter);
 
-    /* On failure, free everything we allocated so far */
     if (result.error != ZENIT_OK) {
         for (size_t j = 0; j < i; j++) {
             free(names[j]);
@@ -318,6 +320,6 @@ zenit_result_t zenit_dir_list(const char *path, char ***out_names, size_t *out_c
     }
 
     *out_names = names;
-    *out_count = count;
+    *out_count = i;
     return ZENIT_RESULT_OK;
 }

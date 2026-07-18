@@ -126,7 +126,8 @@ static int test_list_with_entries(void) {
     }
 
     /* We expect at least 2 entries (the two files, plus possibly . and ..) */
-    int found_a = 0, found_b = 0;
+    int found_a = 0;
+    int found_b = 0;
     for (size_t i = 0; i < count; i++) {
         if (strcmp(names[i], "file_a.txt") == 0) found_a = 1;
         if (strcmp(names[i], "file_b.txt") == 0) found_b = 1;

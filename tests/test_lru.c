@@ -56,7 +56,8 @@ static int test_put_get_hit(void) {
     zenit_lru_t *c = zenit_lru_create(sizeof(int), sizeof(int), 4);
     ASSERT(c != NULL, "create");
 
-    int k = 42, v = 100;
+    int k = 42;
+    int v = 100;
     zenit_result_t r = zenit_lru_put(c, &k, &v);
     ASSERT(r.error == ZENIT_OK, "put ok");
 
@@ -74,7 +75,8 @@ static int test_put_get_hit(void) {
 
 static int test_get_miss(void) {
     zenit_lru_t *c = zenit_lru_create(sizeof(int), sizeof(int), 4);
-    int k = 99, out = 0;
+    int k = 99;
+    int out = 0;
     int found = zenit_lru_get(c, &k, &out);
     ASSERT(found == 0, "get miss returns 0");
     zenit_lru_destroy(c);
@@ -108,7 +110,8 @@ static int test_put_get_miss_after_evict(void) {
 
 static int test_peek_does_not_change_order(void) {
     zenit_lru_t *c = zenit_lru_create(sizeof(int), sizeof(int), 2);
-    int k, v;
+    int k;
+    int v;
 
     /* Insert 0 and 1.  Cache: [1 (MRU), 0 (LRU)] */
     k = 0; v = 10; zenit_lru_put(c, &k, &v);
@@ -133,7 +136,8 @@ static int test_peek_does_not_change_order(void) {
 
 static int test_update_existing_key(void) {
     zenit_lru_t *c = zenit_lru_create(sizeof(int), sizeof(int), 3);
-    int k = 5, v;
+    int k = 5;
+    int v;
 
     v = 10; zenit_lru_put(c, &k, &v);
     v = 99; zenit_lru_put(c, &k, &v);
@@ -150,7 +154,8 @@ static int test_update_existing_key(void) {
 
 static int test_remove(void) {
     zenit_lru_t *c = zenit_lru_create(sizeof(int), sizeof(int), 4);
-    int k = 7, v = 42;
+    int k = 7;
+    int v = 42;
     zenit_lru_put(c, &k, &v);
 
     zenit_result_t r = zenit_lru_remove(c, &k);
@@ -194,7 +199,8 @@ static int test_clear(void) {
     }
 
     /* Cache should still work after clear */
-    int k = 10, v = 20;
+    int k = 10;
+    int v = 20;
     zenit_lru_put(c, &k, &v);
     ASSERT(zenit_lru_count(c) == 1, "count 1 after clear+put");
 
@@ -287,7 +293,8 @@ static int test_allocator_variant(void) {
     zenit_lru_t *c = zenit_lru_create_with_allocator(sizeof(int), sizeof(int), 4, a);
     ASSERT(c != NULL, "create with allocator");
 
-    int k = 1, v = 2;
+    int k = 1;
+    int v = 2;
     ASSERT(zenit_lru_put(c, &k, &v).error == ZENIT_OK, "put with allocator cache");
 
     int out = 0;
@@ -307,7 +314,8 @@ static int test_evict_with_evict_and_allocator(void) {
     );
     ASSERT(c != NULL, "create with evict and allocator");
 
-    int k, v;
+    int k;
+    int v;
     k = 0; v = 10; zenit_lru_put(c, &k, &v);
     k = 1; v = 20; zenit_lru_put(c, &k, &v);
     k = 2; v = 30; zenit_lru_put(c, &k, &v);
@@ -366,7 +374,8 @@ static int test_remove_does_not_trigger_evict(void) {
 
 static int test_get_promotes_to_mru(void) {
     zenit_lru_t *c = zenit_lru_create(sizeof(int), sizeof(int), 3);
-    int k, v;
+    int k;
+    int v;
 
     /* Insert 0, 1, 2.  LRU order: 2 (MRU), 1, 0 (LRU) */
     k = 0; v = 0; zenit_lru_put(c, &k, &v);
@@ -422,7 +431,8 @@ static int test_large_entries(void) {
     }
 
     /* Eviction should work with large entries */
-    large_t k9, v9;
+    large_t k9;
+    large_t v9;
     k9.id = 9; memset(k9.data, 'J', 128);
     v9.id = 90; memset(v9.data, 'j', 128);
     zenit_lru_put(c, &k9, &v9);
@@ -438,7 +448,8 @@ static int test_large_entries(void) {
 
 static int test_put_get_out_value_null(void) {
     zenit_lru_t *c = zenit_lru_create(sizeof(int), sizeof(int), 4);
-    int k = 42, v = 100;
+    int k = 42;
+    int v = 100;
 
     /* put, then get with NULL out_value to check hit/miss only */
     zenit_lru_put(c, &k, &v);

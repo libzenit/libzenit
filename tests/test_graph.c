@@ -303,7 +303,9 @@ static int test_get_neighbors_basic(void) {
     ASSERT(ret == 3, "get_neighbors count return 3");
     ASSERT(count == 3, "out_count 3");
 
-    int found1 = 0, found2 = 0, found3 = 0;
+    int found1 = 0;
+    int found2 = 0;
+    int found3 = 0;
     for (size_t i = 0; i < count; i++) {
         if (neighbors[i] == 1) found1 = 1;
         if (neighbors[i] == 2) found2 = 1;

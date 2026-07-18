@@ -73,7 +73,8 @@ static int test_create_adj_alloc_fail(void) {
 }
 
 int main(void) {
-    int passed = 0, failed = 0;
+    int passed = 0;
+    int failed = 0;
 
     /* Mark all countdowns as -1 for the tests themselves, then set
      * at the point of allocation. */

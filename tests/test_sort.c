@@ -269,7 +269,7 @@ static int test_stable_sort_preserves_order(void) {
     zenit_result_t r = zenit_sort_stable(arr, n, sizeof(stable_elem_t), cmp_stable);
     ASSERT(r.error == ZENIT_OK, "stable_sort stability failed");
 
-    /* After stable sort by key: (1,1) (1,2) (2,1) (2,2) (3,1) (3,2) */
+    /* Verify stable sort preserved insertion order for equal keys */
     ASSERT(arr[0].key == 1 && arr[0].order == 1, "stable elem 0");
     ASSERT(arr[1].key == 1 && arr[1].order == 2, "stable elem 1");
     ASSERT(arr[2].key == 2 && arr[2].order == 1, "stable elem 2");

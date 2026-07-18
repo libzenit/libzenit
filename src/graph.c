@@ -135,6 +135,27 @@ static zenit_result_t grow_adj_list(zenit_graph_t *g, int vertex) {
     return ZENIT_RESULT_OK;
 }
 
+/* ─── Remove all edges referencing a given vertex from another vertex's adjacency list ─── */
+
+/*
+ * Scan vertex i's adjacency list and remove every occurrence of 'vertex'.
+ * Decrements edge_count for each directed edge removed.
+ */
+static void remove_vertex_from_adj(zenit_graph_t *g, size_t i, int vertex) {
+    size_t j = 0;
+    while (j < g->counts[i]) {
+        if (g->adj[i][j] == vertex) {
+            memmove(g->adj[i] + j, g->adj[i] + j + 1, (g->counts[i] - j - 1) * sizeof(int));
+            g->counts[i]--;
+            if (g->directed) {
+                g->edge_count--;
+            }
+        } else {
+            j++;
+        }
+    }
+}
+
 /* ─── Create / Destroy ─── */
 
 /**
@@ -292,25 +313,9 @@ zenit_result_t zenit_graph_remove_vertex(zenit_graph_t *g, int vertex) {
     /* Walk every other active vertex and remove edges pointing to 'vertex' */
     for (size_t i = 0; i < g->vertex_capacity; i++) {
         if (g->removed[i]) {
-            continue; /* skip tombstones */
+            continue;
         }
-        /* Scan the adjacency list of vertex i for 'vertex' */
-        size_t j = 0;
-        while (j < g->counts[i]) {
-            if (g->adj[i][j] == vertex) {
-                /* Shift remaining elements left by one */
-                memmove(g->adj[i] + j, g->adj[i] + j + 1, (g->counts[i] - j - 1) * sizeof(int));
-                g->counts[i]--;
-                /* For directed: each incoming edge is a separate logical edge.
-                 * For undirected: each logical edge was already counted once via
-                 * counts[vertex], so skip the second decrement. */
-                if (g->directed) {
-                    g->edge_count--;
-                }
-            } else {
-                j++;
-            }
-        }
+        remove_vertex_from_adj(g, i, vertex);
     }
 
     /* Free the adjacency list of the removed vertex */

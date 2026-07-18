@@ -20,6 +20,16 @@
 #include <stdlib.h>
 #include <string.h>
 
+/* Deterministic PRNG (xorshift32) — not crypto-secure, adequate for benchmarking */
+static unsigned xorshift32(unsigned *state) {
+    unsigned x = *state;
+    x ^= x << 13;
+    x ^= x >> 17;
+    x ^= x << 5;
+    *state = x;
+    return x;
+}
+
 #define N 100000
 #define SMALL_CAPACITY 128
 
@@ -75,9 +85,11 @@ static void teardown_put_ctx(lru_ctx_t *ctx) {
     free(ctx);
 }
 
+static unsigned put_rng = 42;
+
 static void bench_put_fn(void *vctx) {
     lru_ctx_t *ctx = (lru_ctx_t *)vctx;
-    int k = rand() % N;
+    int k = (int)(xorshift32(&put_rng) % N);
     int v = k;
     zenit_lru_put(ctx->cache, &k, &v);
 }
@@ -121,9 +133,11 @@ static void teardown_get_ctx(lru_ctx_t *ctx) {
     free(ctx);
 }
 
+static unsigned get_rng = 137;
+
 static void bench_get_hit_fn(void *vctx) {
     lru_ctx_t *ctx = (lru_ctx_t *)vctx;
-    int k = rand() % N;
+    int k = (int)(xorshift32(&get_rng) % N);
     int out = 0;
     zenit_lru_get(ctx->cache, &k, &out);
 }

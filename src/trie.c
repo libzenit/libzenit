@@ -57,15 +57,12 @@ struct zenit_trie_t {
  * -------------------------------------------------------------------------*/
 
 static inline int char_to_index(char c) {
-    /* Uppercase letter 'A'..'Z' → 0..25 */
     if (c >= 'A' && c <= 'Z') {
-        return (int)(c - 'A');
+        return c - 'A';
     }
-    /* Lowercase letter 'a'..'z' → 0..25 */
     if (c >= 'a' && c <= 'z') {
-        return (int)(c - 'a');
+        return c - 'a';
     }
-    /* Non-alphabetic — skip */
     return -1;
 }
 
@@ -198,17 +195,15 @@ int zenit_trie_search(const zenit_trie_t* trie, const char* key, int* out_value)
     }
 
     /* Walk the tree following the characters of the key */
-    struct zenit_trie_node_t* node = trie->root;
+    const struct zenit_trie_node_t* node = trie->root;
 
     for (const char* p = key; *p != '\0'; p++) {
         int idx = char_to_index(*p);
 
-        /* Skip non-alphabetic characters */
         if (idx < 0 || idx >= TRIE_ALPHABET_SIZE) {
             continue;
         }
 
-        /* Missing child → key cannot exist */
         if (node->children[idx] == NULL) {
             return 0;
         }
@@ -216,12 +211,10 @@ int zenit_trie_search(const zenit_trie_t* trie, const char* key, int* out_value)
         node = node->children[idx];
     }
 
-    /* Key found only if the terminal node is marked as end-of-key */
     if (!node->is_end) {
         return 0;
     }
 
-    /* Optionally write back the stored value */
     if (out_value != NULL) {
         *out_value = node->value;
     }
@@ -230,13 +223,11 @@ int zenit_trie_search(const zenit_trie_t* trie, const char* key, int* out_value)
 }
 
 int zenit_trie_starts_with(const zenit_trie_t* trie, const char* prefix) {
-    /* NULL inputs → no match */
     if (trie == NULL || prefix == NULL) {
         return 0;
     }
 
-    /* Walk the tree following the prefix characters */
-    struct zenit_trie_node_t* node = trie->root;
+    const struct zenit_trie_node_t* node = trie->root;
 
     for (const char* p = prefix; *p != '\0'; p++) {
         int idx = char_to_index(*p);
