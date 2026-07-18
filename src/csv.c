@@ -47,19 +47,19 @@ static int buf_append(char **buf, size_t *cap, size_t *len, char c, zenit_csv_re
 static int read_quoted(const char **p, char **buf, size_t *cap, size_t *len, zenit_csv_record_t *out, zenit_allocator_t a) {
     (*p)++;
     while (**p != '\0') {
-        if (**p == '"') {
-            if (*(*p + 1) == '"') {
-                (*p)++;
-                if (!buf_append(buf, cap, len, '"', out, a)) return 0;
-                (*p)++;
-            } else {
-                (*p)++;
-                return 1;
-            }
-        } else {
+        if (**p != '"') {
             if (!buf_append(buf, cap, len, **p, out, a)) return 0;
             (*p)++;
+            continue;
         }
+        if (*(*p + 1) == '"') {
+            (*p)++;
+            (*p)++;
+            if (!buf_append(buf, cap, len, '"', out, a)) return 0;
+            continue;
+        }
+        (*p)++;
+        return 1;
     }
     return 1;
 }

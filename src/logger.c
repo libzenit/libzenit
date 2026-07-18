@@ -16,14 +16,13 @@
 //
 
 #include <libzenit/logger.h>
-#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 
 #if defined(_WIN32)
-#include <Windows.h>
+#include <windows.h>
 #endif
 
 /* Internal buffer size for formatted log messages */
@@ -95,17 +94,15 @@ zenit_log_level_t zenit_logger_get_level(const zenit_logger_t *logger) {
     return logger->level;
 }
 
-void zenit_logger_log(zenit_logger_t *logger, zenit_log_level_t level, const char *fmt, ...) {
+void zenit_logger_vlog(zenit_logger_t *logger, zenit_log_level_t level, const char *msg) {
     if (logger == NULL) {
         return;
     }
 
-    /* Filter by level */
     if (level < logger->level) {
         return;
     }
 
-    /* Get current timestamp */
     time_t now = time(NULL);
     const struct tm *tm_info;
 
@@ -117,7 +114,6 @@ void zenit_logger_log(zenit_logger_t *logger, zenit_log_level_t level, const cha
     tm_info = localtime_r(&now, &tm_result);
 #endif
 
-    /* Format: "HH:MM:SS LEVEL message" */
     char timestamp[32] = {0};
     if (tm_info != NULL) {
         strftime(timestamp, sizeof(timestamp), "%H:%M:%S", tm_info);
@@ -125,33 +121,16 @@ void zenit_logger_log(zenit_logger_t *logger, zenit_log_level_t level, const cha
         memcpy(timestamp, "??:??:??", 9);
     }
 
-    /* Format the user message */
-    char user_msg[LOGGER_BUF_SIZE];
-    va_list args;
-    va_start(args, fmt);
-    int user_len = vsnprintf(user_msg, sizeof(user_msg), fmt, args);
-    va_end(args);
-
-    if (user_len < 0) {
-        /* Format error — still try to log something */
-        user_msg[0] = '\0';
-    } else if ((size_t)user_len >= sizeof(user_msg)) {
-        /* Truncated — message is safe, just clipped */
-    }
-
-    /* Build final message: "HH:MM:SS LEVEL msg" */
     char final_msg[LOGGER_BUF_SIZE + 64];
     int final_len = snprintf(final_msg, sizeof(final_msg), "%s %-5s %s",
-                             timestamp, level_label(level), user_msg);
+                             timestamp, level_label(level), msg ? msg : "");
 
     if (final_len < 0) {
         final_msg[0] = '\0';
     }
 
-    /* Send to sink */
     logger->sink(final_msg, logger->sink_ctx);
 
-    /* FATAL → abort after logging */
     if (level == ZENIT_LOG_FATAL) {
         abort();
     }

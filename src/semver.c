@@ -68,25 +68,22 @@ zenit_result_t zenit_semver_parse(const char *str, zenit_semver_t *out) {
         return ZENIT_RESULT_ERROR(ZENIT_ERROR_PARAM);
     }
 
-    /* Parse pre-release or build metadata (stops at stop_char or \0) */
-    if (*p == '-' || *p == '+') {
-        char *dest = (*p == '-') ? out->pre_release : out->build;
-        size_t max_len = (*p == '-') ? ZENIT_SEMVER_MAX_PRERELEASE : ZENIT_SEMVER_MAX_BUILD;
-        char stop = (*p == '-') ? '+' : '\0';
+    /* Parse pre-release (-) */
+    if (*p == '-') {
         p++;
         size_t i = 0;
-        while (*p != '\0' && *p != stop) {
-            if (i >= max_len - 1) {
+        while (*p != '\0' && *p != '+') {
+            if (i >= ZENIT_SEMVER_MAX_PRERELEASE - 1) {
                 return ZENIT_RESULT_ERROR(ZENIT_ERROR_PARAM);
             }
-            dest[i++] = *p;
+            out->pre_release[i++] = *p;
             p++;
         }
-        dest[i] = '\0';
+        out->pre_release[i] = '\0';
         if (i == 0) return ZENIT_RESULT_ERROR(ZENIT_ERROR_PARAM);
     }
 
-    /* Check for build metadata */
+    /* Parse build metadata (+) */
     if (*p == '+') {
         p++;
         size_t i = 0;
@@ -192,37 +189,33 @@ static int cmp_pre_id(const char *a_start, size_t a_len, const char *b_start, si
     return 0;
 }
 
-/* Return pointer to first '.' in s, or NULL if none. */
-static const char* find_dot(const char *s) {
-    for (; *s; s++) {
-        if (*s == '.') return s;
+/* Extract the next dot-separated identifier from *sp.
+   Sets *out_start, *out_len and advances *sp past the dot. */
+static int next_ident(const char **sp, const char **out_start, size_t *out_len) {
+    if (**sp == '\0') return 0;
+    const char *dot = NULL;
+    for (const char *s = *sp; *s; s++) {
+        if (*s == '.') { dot = s; break; }
     }
-    return NULL;
+    *out_start = *sp;
+    *out_len = dot ? (size_t)(dot - *sp) : strlen(*sp);
+    *sp = dot ? dot + 1 : *sp + *out_len;
+    return 1;
 }
 
 /* Compare pre-release strings per SemVer 2.0.0 precedence rules. */
 static int cmp_prerelease(const char *a, const char *b) {
-    if (a[0] == '\0' && b[0] == '\0') return 0;
-    if (a[0] == '\0') return 1;
-    if (b[0] == '\0') return -1;
-
-    const char *ap = a;
-    const char *bp = b;
-    while (1) {
-        const char *a_dot = find_dot(ap);
-        const char *b_dot = find_dot(bp);
-        size_t a_len = a_dot ? (size_t)(a_dot - ap) : strlen(ap);
-        size_t b_len = b_dot ? (size_t)(b_dot - bp) : strlen(bp);
-
-        int c = cmp_pre_id(ap, a_len, bp, b_len);
+    for (;;) {
+        const char *a_start;
+        const char *b_start;
+        size_t a_len;
+        size_t b_len;
+        int has_a = next_ident(&a, &a_start, &a_len);
+        int has_b = next_ident(&b, &b_start, &b_len);
+        if (has_a != has_b) return has_a ? 1 : -1;
+        if (!has_a) return 0;
+        int c = cmp_pre_id(a_start, a_len, b_start, b_len);
         if (c != 0) return c;
-
-        if (a_dot == NULL && b_dot == NULL) return 0;
-        if (a_dot == NULL) return -1;
-        if (b_dot == NULL) return 1;
-
-        ap = a_dot + 1;
-        bp = b_dot + 1;
     }
 }
 

@@ -99,15 +99,32 @@ void zenit_logger_set_level(zenit_logger_t *logger, zenit_log_level_t level);
 zenit_log_level_t zenit_logger_get_level(const zenit_logger_t *logger);
 
 /**
- * @brief Log a message with format string (printf-style).
+ * @brief Log a pre-formatted message at a given level (non-variadic).
+ *
+ * Internal function called by the zenit_logger_log macro.
  *
  * @param logger Logger handle.  If NULL, the message is silently dropped.
  * @param level  Severity level.  If below the configured minimum, the
  *               message is dropped.
- * @param fmt    printf-style format string.
- * @param ...    Format arguments.
+ * @param msg    Pre-formatted null-terminated message string.
  */
-void zenit_logger_log(zenit_logger_t *logger, zenit_log_level_t level, const char *fmt, ...);
+void zenit_logger_vlog(zenit_logger_t *logger, zenit_log_level_t level, const char *msg);
+
+/**
+ * @brief Log a message with printf-style formatting.
+ *
+ * Formats the message and dispatches to the logger's sink.
+ *
+ * @param logger Logger handle.  If NULL, the message is silently dropped.
+ * @param level  Severity level.
+ * @param ...    printf-style format string and arguments.
+ */
+#define zenit_logger_log(logger, level, ...) \
+    do { \
+        char _zlog_buf[4096]; \
+        snprintf(_zlog_buf, sizeof(_zlog_buf), __VA_ARGS__); \
+        zenit_logger_vlog((logger), (level), _zlog_buf); \
+    } while (0)
 
 /**
  * @brief Log a message at TRACE level.

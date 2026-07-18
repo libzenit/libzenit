@@ -127,8 +127,8 @@ static int test_null_params(void) {
 static int test_invalid_create(void) {
     zenit_spsc_t *s = zenit_spsc_create(0, 16);
     ASSERT(s == NULL, "spsc create zero elem_size");
-    s = zenit_spsc_create(sizeof(int), 0);
-    ASSERT(s == NULL, "spsc create zero capacity");
+    zenit_spsc_t *s2 = zenit_spsc_create(sizeof(int), 0);
+    ASSERT(s2 == NULL, "spsc create zero capacity");
     PASS();
     return 0;
 }
