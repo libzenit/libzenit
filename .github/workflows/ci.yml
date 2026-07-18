@@ -107,7 +107,6 @@ jobs:
 
       - name: Generate coverage report
         if: matrix.coverage
-        shell: ${{ runner.os == 'Windows' && 'msys2 {0}' || 'bash' }}
         run: |
           lcov --capture -d build --output-file coverage.info \
             --branch-coverage \
