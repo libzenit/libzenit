@@ -66,6 +66,26 @@ typedef struct {
 #define ZENIT_RESULT_ERROR(e) ((zenit_result_t){ .error = (e) })
 
 /**
+ * @brief Check if a result indicates success.
+ *
+ * @param r The result to check.
+ * @return Non-zero if the result is ZENIT_OK, zero otherwise.
+ */
+static inline int zenit_result_is_ok(zenit_result_t r) {
+    return r.error == ZENIT_OK;
+}
+
+/**
+ * @brief Check if a result indicates failure.
+ *
+ * @param r The result to check.
+ * @return Non-zero if the result is not ZENIT_OK, zero otherwise.
+ */
+static inline int zenit_result_is_error(zenit_result_t r) {
+    return r.error != ZENIT_OK;
+}
+
+/**
  * @brief Return a human-readable string describing an error code.
  *
  * The returned string is a static constant and must not be freed.
