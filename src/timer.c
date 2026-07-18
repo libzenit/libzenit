@@ -18,7 +18,7 @@
 #include <libzenit/timer.h>
 
 #if defined(_WIN32)
-#include <windows.h>
+#include <Windows.h>
 #else
 #include <time.h>
 #endif
@@ -26,7 +26,8 @@
 zenit_time_t zenit_time_now(void) {
     zenit_time_t t;
 #if defined(_WIN32)
-    LARGE_INTEGER freq, counter;
+    LARGE_INTEGER freq;
+    LARGE_INTEGER counter;
     QueryPerformanceFrequency(&freq);
     QueryPerformanceCounter(&counter);
     long long total_ns = (counter.QuadPart * 1000000000LL) / freq.QuadPart;

@@ -60,7 +60,7 @@ static void elapsed_teardown(elapsed_ctx_t *ctx) {
 }
 
 static void bench_elapsed_fn(void *ctx) {
-    elapsed_ctx_t *c = (elapsed_ctx_t *)ctx;
+    const elapsed_ctx_t *c = (const elapsed_ctx_t *)ctx;
     zenit_time_elapsed_ns(c->start, c->end);
 }
 

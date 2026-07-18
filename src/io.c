@@ -21,7 +21,7 @@
 #include <string.h>
 
 #if defined(_WIN32)
-#include <windows.h>
+#include <Windows.h>
 #else
 #include <errno.h>
 #include <sys/stat.h>

@@ -46,7 +46,7 @@ static void write_teardown(write_ctx_t *ctx) {
 static void bench_write_fn(void *ctx) {
     write_ctx_t *c = (write_ctx_t *)ctx;
     char path[64];
-    snprintf(path, sizeof(path), "/tmp/bench_io_write_%d.tmp", c->count);
+    snprintf(path, sizeof(path), "bench_io_write_%d.tmp", c->count);
     zenit_file_write(path, c->data, IO_CHUNK_SIZE);
     c->count++;
 }
@@ -59,7 +59,7 @@ static read_ctx_t* read_setup(void) {
     read_ctx_t *ctx = malloc(sizeof(read_ctx_t));
     if (ctx == NULL) return NULL;
 
-    snprintf(ctx->path, sizeof(ctx->path), "/tmp/bench_io_read.tmp");
+    snprintf(ctx->path, sizeof(ctx->path), "bench_io_read.tmp");
     unsigned char data[IO_CHUNK_SIZE];
     memset(data, 0xAB, IO_CHUNK_SIZE);
     zenit_file_write(ctx->path, data, IO_CHUNK_SIZE);
@@ -82,7 +82,7 @@ static void bench_read_fn(void *ctx) {
 static void cleanup_write_files(void) {
     for (int i = 0; i < IO_WRITE_COUNT; i++) {
         char path[64];
-        snprintf(path, sizeof(path), "/tmp/bench_io_write_%d.tmp", i);
+        snprintf(path, sizeof(path), "bench_io_write_%d.tmp", i);
         zenit_file_delete(path);
     }
 }

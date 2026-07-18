@@ -29,8 +29,9 @@ static int test_now(void) {
 static int test_elapsed_positive(void) {
     TEST("elapsed positive after busy-wait");
     zenit_time_t t1 = zenit_time_now();
-    volatile long long i = 0;
-    while (i < 5000000) i++;
+    for (int i = 0; i < 100; i++) {
+        zenit_time_now();
+    }
     zenit_time_t t2 = zenit_time_now();
     ASSERT(zenit_time_elapsed_s(t1, t2) > 0.0, "elapsed_s > 0");
     ASSERT(zenit_time_elapsed_ms(t1, t2) > 0.0, "elapsed_ms > 0");
@@ -43,8 +44,9 @@ static int test_elapsed_positive(void) {
 static int test_elapsed_reasonable(void) {
     TEST("elapsed within reasonable range (< 1s)");
     zenit_time_t t1 = zenit_time_now();
-    volatile long long i = 0;
-    while (i < 1000000) i++;
+    for (int i = 0; i < 20; i++) {
+        zenit_time_now();
+    }
     zenit_time_t t2 = zenit_time_now();
     double s = zenit_time_elapsed_s(t1, t2);
     ASSERT(s >= 0.0 && s < 1.0, "elapsed_s in [0, 1)");

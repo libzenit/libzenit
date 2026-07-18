@@ -40,7 +40,7 @@ static int test_create_destroy(void) {
 
 static int test_create_zero_object_size(void) {
     TEST("create zero object_size returns NULL");
-    zenit_pool_t *p = zenit_pool_create(0, 10);
+    const zenit_pool_t *p = zenit_pool_create(0, 10);
     ASSERT(p == NULL, "expected NULL");
     PASS();
     return 0;
@@ -48,7 +48,7 @@ static int test_create_zero_object_size(void) {
 
 static int test_create_zero_capacity(void) {
     TEST("create zero capacity returns NULL");
-    zenit_pool_t *p = zenit_pool_create(4, 0);
+    const zenit_pool_t *p = zenit_pool_create(4, 0);
     ASSERT(p == NULL, "expected NULL");
     PASS();
     return 0;
@@ -78,15 +78,15 @@ static int test_acquire_until_empty(void) {
     TEST("acquire until empty");
     zenit_pool_t *p = zenit_pool_create(8, 3);
     ASSERT(p != NULL, "create");
-    void *a = zenit_pool_acquire(p);
-    void *b = zenit_pool_acquire(p);
-    void *c = zenit_pool_acquire(p);
+    const void *a = zenit_pool_acquire(p);
+    const void *b = zenit_pool_acquire(p);
+    const void *c = zenit_pool_acquire(p);
     ASSERT(a != NULL, "acquire 1");
     ASSERT(b != NULL, "acquire 2");
     ASSERT(c != NULL, "acquire 3");
     ASSERT(zenit_pool_available(p) == 0, "available == 0");
     ASSERT(zenit_pool_count(p) == 3, "count == 3");
-    void *d = zenit_pool_acquire(p);
+    const void *d = zenit_pool_acquire(p);
     ASSERT(d == NULL, "4th acquire should return NULL");
     zenit_pool_destroy(p);
     PASS();
@@ -152,15 +152,15 @@ static int test_clear(void) {
     TEST("clear resets pool");
     zenit_pool_t *p = zenit_pool_create(4, 5);
     ASSERT(p != NULL, "create");
-    void *a = zenit_pool_acquire(p);
-    void *b = zenit_pool_acquire(p);
+    const void *a = zenit_pool_acquire(p);
+    const void *b = zenit_pool_acquire(p);
     ASSERT(a != NULL && b != NULL, "acquire two");
     ASSERT(zenit_pool_count(p) == 2, "count == 2");
     ASSERT(zenit_pool_available(p) == 3, "available == 3");
     zenit_pool_clear(p);
     ASSERT(zenit_pool_count(p) == 0, "count == 0 after clear");
     ASSERT(zenit_pool_available(p) == 5, "available == 5 after clear");
-    void *c = zenit_pool_acquire(p);
+    const void *c = zenit_pool_acquire(p);
     ASSERT(c != NULL, "acquire after clear");
     zenit_pool_destroy(p);
     PASS();
@@ -205,7 +205,7 @@ static int test_count_available_consistency(void) {
     void *a = zenit_pool_acquire(p);
     ASSERT(zenit_pool_count(p) + zenit_pool_available(p) == zenit_pool_capacity(p),
            "after acquire 1");
-    void *b = zenit_pool_acquire(p);
+    zenit_pool_acquire(p);
     ASSERT(zenit_pool_count(p) + zenit_pool_available(p) == zenit_pool_capacity(p),
            "after acquire 2");
     zenit_pool_release(p, a);
