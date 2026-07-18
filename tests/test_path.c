@@ -300,7 +300,7 @@ static int test_normalize_alloc_fail(void) {
 
     /* normalize_impl allocates stack buffer (first call succeeds),
      * then allocates output string (second call fails) */
-    char *r = zenit_path_normalize_with_allocator("foo/bar", a);
+    const char *r = zenit_path_normalize_with_allocator("foo/bar", a);
     ASSERT(r == NULL, "normalize should return NULL on second alloc failure");
     PASS();
     return 0;

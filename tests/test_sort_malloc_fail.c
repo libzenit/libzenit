@@ -21,7 +21,8 @@
 #include <stdlib.h>
 
 static int cmp_int(const void *a, const void *b) {
-    int ia = *(const int *)a, ib = *(const int *)b;
+    int ia = *(const int *)a;
+    int ib = *(const int *)b;
     return (ia > ib) - (ia < ib);
 }
 
