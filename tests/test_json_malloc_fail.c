@@ -153,7 +153,7 @@ static void test_object_set_key_fail(void) {
 
 static void fill_object(zenit_json_value_t *obj, zenit_json_t *doc, int n) {
     for (int i = 0; i < n; i++) {
-        char key[8];
+        char key[24];
         snprintf(key, sizeof(key), "k%d", i);
         zenit_json_value_t *nv = zenit_json_value_number(doc, (double)i);
         if (nv == NULL) { FAIL("create val"); return; }

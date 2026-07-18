@@ -53,6 +53,19 @@ static void bench_binary_search_hit_fn(void *ctx) {
     zenit_binary_search(&key, c->data, SORT_SIZE, sizeof(int), cmp_int);
 }
 
+static void bench_stable_sort_random_fn(void *ctx) {
+    const sort_ctx_t *c = (const sort_ctx_t *)ctx;
+    memcpy(c->data, c->ref, SORT_SIZE * sizeof(int));
+    zenit_sort_stable(c->data, SORT_SIZE, sizeof(int), cmp_int);
+}
+
+static void bench_stable_sort_sorted_fn(void *ctx) {
+    /* ref is already sorted — see main() */
+    const sort_ctx_t *c = (const sort_ctx_t *)ctx;
+    memcpy(c->data, c->ref, SORT_SIZE * sizeof(int));
+    zenit_sort_stable(c->data, SORT_SIZE, sizeof(int), cmp_int);
+}
+
 static void bench_binary_search_miss_fn(void *ctx) {
     const sort_ctx_t *c = (const sort_ctx_t *)ctx;
     int key = -999999;
@@ -109,6 +122,22 @@ int main(void) {
     {
         zenit_bench_result_t r = zenit_bench_run(
             "binary_search_miss", bench_binary_search_miss_fn, &ctx, 1000000
+        );
+        zenit_bench_print(&r);
+    }
+
+    {
+        zenit_bench_result_t r = zenit_bench_run(
+            "stable_sort_random_10K", bench_stable_sort_random_fn, &ctx, 1000
+        );
+        zenit_bench_print(&r);
+    }
+
+    /* Sort ref for the sorted benchmark */
+    zenit_sort_quick(ctx.ref, SORT_SIZE, sizeof(int), cmp_int);
+    {
+        zenit_bench_result_t r = zenit_bench_run(
+            "stable_sort_sorted_10K", bench_stable_sort_sorted_fn, &ctx, 1000
         );
         zenit_bench_print(&r);
     }

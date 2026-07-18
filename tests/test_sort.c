@@ -159,6 +159,157 @@ static int test_binary_search_null_params(void) {
     return 0;
 }
 
+/* ─── lower_bound ─── */
+
+static int test_lower_bound_basic(void) {
+    int arr[] = {1, 3, 5, 7, 9};
+    int key = 4;
+    const int *found = (const int *)zenit_lower_bound(&key, arr, 5, sizeof(int), cmp_int);
+    ASSERT(found != NULL, "lower_bound returned NULL");
+    ASSERT(*found == 5, "lower_bound should be first >= key");
+    return 0;
+}
+
+static int test_lower_bound_exact(void) {
+    int arr[] = {1, 3, 5, 7, 9};
+    int key = 5;
+    const int *found = (const int *)zenit_lower_bound(&key, arr, 5, sizeof(int), cmp_int);
+    ASSERT(found != NULL, "lower_bound exact returned NULL");
+    ASSERT(*found == 5, "lower_bound exact wrong value");
+    return 0;
+}
+
+static int test_lower_bound_all_less(void) {
+    int arr[] = {1, 3, 5, 7, 9};
+    int key = 10;
+    const void *found = zenit_lower_bound(&key, arr, 5, sizeof(int), cmp_int);
+    ASSERT(found == NULL, "lower_bound all less should be NULL");
+    return 0;
+}
+
+static int test_lower_bound_duplicates(void) {
+    int arr[] = {1, 3, 5, 5, 5, 7, 9};
+    int key = 5;
+    const int *found = (const int *)zenit_lower_bound(&key, arr, 7, sizeof(int), cmp_int);
+    ASSERT(found != NULL, "lower_bound duplicates returned NULL");
+    ASSERT(*found == 5, "lower_bound duplicates wrong value");
+    ASSERT(found == &arr[2], "lower_bound should be first of dupes");
+    return 0;
+}
+
+/* ─── upper_bound ─── */
+
+static int test_upper_bound_basic(void) {
+    int arr[] = {1, 3, 5, 7, 9};
+    int key = 4;
+    const int *found = (const int *)zenit_upper_bound(&key, arr, 5, sizeof(int), cmp_int);
+    ASSERT(found != NULL, "upper_bound returned NULL");
+    ASSERT(*found == 5, "upper_bound should be first > key");
+    return 0;
+}
+
+static int test_upper_bound_exact(void) {
+    int arr[] = {1, 3, 5, 7, 9};
+    int key = 5;
+    const int *found = (const int *)zenit_upper_bound(&key, arr, 5, sizeof(int), cmp_int);
+    ASSERT(found != NULL, "upper_bound exact returned NULL");
+    ASSERT(*found == 7, "upper_bound exact should be after last 5");
+    return 0;
+}
+
+static int test_upper_bound_all_less_equal(void) {
+    int arr[] = {1, 3, 5, 7, 9};
+    int key = 9;
+    const void *found = zenit_upper_bound(&key, arr, 5, sizeof(int), cmp_int);
+    ASSERT(found == NULL, "upper_bound all <= key should be NULL");
+    return 0;
+}
+
+static int test_upper_bound_duplicates(void) {
+    int arr[] = {1, 3, 5, 5, 5, 7, 9};
+    int key = 5;
+    const int *found = (const int *)zenit_upper_bound(&key, arr, 7, sizeof(int), cmp_int);
+    ASSERT(found != NULL, "upper_bound duplicates returned NULL");
+    ASSERT(*found == 7, "upper_bound duplicates should be after last 5");
+    ASSERT(found == &arr[5], "upper_bound duplicates wrong index");
+    return 0;
+}
+
+/* ─── stable_sort ─── */
+
+typedef struct {
+    int key;
+    int order;
+} stable_elem_t;
+
+static int cmp_stable(const void *a, const void *b) {
+    int ka = ((const stable_elem_t *)a)->key;
+    int kb = ((const stable_elem_t *)b)->key;
+    if (ka < kb) return -1;
+    if (ka > kb) return 1;
+    return 0;
+}
+
+static int test_stable_sort_basic(void) {
+    int arr[] = {3, 1, 4, 1, 5, 9};
+    size_t n = sizeof(arr) / sizeof(arr[0]);
+    zenit_result_t r = zenit_sort_stable(arr, n, sizeof(int), cmp_int);
+    ASSERT(r.error == ZENIT_OK, "stable_sort basic failed");
+    for (size_t i = 1; i < n; i++) {
+        ASSERT(arr[i - 1] <= arr[i], "stable sort not ascending");
+    }
+    return 0;
+}
+
+static int test_stable_sort_preserves_order(void) {
+    stable_elem_t arr[] = {
+        {3, 1}, {1, 1}, {3, 2}, {2, 1}, {1, 2}, {2, 2}
+    };
+    size_t n = sizeof(arr) / sizeof(arr[0]);
+    zenit_result_t r = zenit_sort_stable(arr, n, sizeof(stable_elem_t), cmp_stable);
+    ASSERT(r.error == ZENIT_OK, "stable_sort stability failed");
+
+    /* After stable sort by key: (1,1) (1,2) (2,1) (2,2) (3,1) (3,2) */
+    ASSERT(arr[0].key == 1 && arr[0].order == 1, "stable elem 0");
+    ASSERT(arr[1].key == 1 && arr[1].order == 2, "stable elem 1");
+    ASSERT(arr[2].key == 2 && arr[2].order == 1, "stable elem 2");
+    ASSERT(arr[3].key == 2 && arr[3].order == 2, "stable elem 3");
+    ASSERT(arr[4].key == 3 && arr[4].order == 1, "stable elem 4");
+    ASSERT(arr[5].key == 3 && arr[5].order == 2, "stable elem 5");
+    return 0;
+}
+
+static int test_stable_sort_empty(void) {
+    zenit_result_t r = zenit_sort_stable(NULL, 0, sizeof(int), cmp_int);
+    ASSERT(r.error == ZENIT_OK, "stable_sort NULL base OK");
+    int arr[] = {1};
+    r = zenit_sort_stable(arr, 0, sizeof(int), cmp_int);
+    ASSERT(r.error == ZENIT_OK, "stable_sort zero count OK");
+    ASSERT(arr[0] == 1, "stable_sort empty no-op");
+    r = zenit_sort_stable(arr, 1, sizeof(int), NULL);
+    ASSERT(r.error == ZENIT_OK, "stable_sort NULL compare OK");
+    return 0;
+}
+
+static int test_stable_sort_single(void) {
+    int arr[] = {42};
+    zenit_result_t r = zenit_sort_stable(arr, 1, sizeof(int), cmp_int);
+    ASSERT(r.error == ZENIT_OK, "stable_sort single");
+    ASSERT(arr[0] == 42, "stable_sort single unchanged");
+    return 0;
+}
+
+static int test_stable_sort_reverse(void) {
+    int arr[] = {5, 4, 3, 2, 1};
+    size_t n = sizeof(arr) / sizeof(arr[0]);
+    zenit_result_t r = zenit_sort_stable(arr, n, sizeof(int), cmp_int);
+    ASSERT(r.error == ZENIT_OK, "stable_sort reverse");
+    for (size_t i = 1; i < n; i++) {
+        ASSERT(arr[i - 1] <= arr[i], "stable sort reverse ascending");
+    }
+    return 0;
+}
+
 /* Large element type to exercise the malloc-based swap path */
 typedef struct {
     char data[128];
@@ -202,6 +353,19 @@ int main(void) {
         &test_binary_search_empty,
         &test_binary_search_null_params,
         &test_sort_large_elements,
+        &test_lower_bound_basic,
+        &test_lower_bound_exact,
+        &test_lower_bound_all_less,
+        &test_lower_bound_duplicates,
+        &test_upper_bound_basic,
+        &test_upper_bound_exact,
+        &test_upper_bound_all_less_equal,
+        &test_upper_bound_duplicates,
+        &test_stable_sort_basic,
+        &test_stable_sort_preserves_order,
+        &test_stable_sort_empty,
+        &test_stable_sort_single,
+        &test_stable_sort_reverse,
     };
     const char *names[] = {
         "sort_already_sorted",
@@ -218,6 +382,19 @@ int main(void) {
         "binary_search_empty",
         "binary_search_null_params",
         "sort_large_elements",
+        "lower_bound_basic",
+        "lower_bound_exact",
+        "lower_bound_all_less",
+        "lower_bound_duplicates",
+        "upper_bound_basic",
+        "upper_bound_exact",
+        "upper_bound_all_less_equal",
+        "upper_bound_duplicates",
+        "stable_sort_basic",
+        "stable_sort_preserves_order",
+        "stable_sort_empty",
+        "stable_sort_single",
+        "stable_sort_reverse",
     };
     ZENIT_RUN_TESTS("sort", tests, names);
 }
