@@ -661,7 +661,7 @@ libzen/
 │   ├── base64.c / hex.c / uri.c / str.c / sort.c
 │   ├── stack.c / queue.c / timer.c / pool.c / io.c
 ├── tests/
-│   ├── CMakeLists.txt          # 48 test executables (DRY helpers)
+│   ├── CMakeLists.txt          # 47 test executables (DRY helpers)
 │   ├── test_malloc_fail.h      # Shared malloc/calloc wrappers
 │   ├── test_runner.h           # Shared test runner
 │   ├── test_result.c ... test_bitset.c  # One per module

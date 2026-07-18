@@ -503,7 +503,7 @@ libzen/
     │   ├── pool.c                  # Fixed-capacity object pool (free-list)
     │   └── io.c                    # File I/O (POSIX/Win32, chunked read/write, read_line)
     ├── tests/
-    │   ├── CMakeLists.txt          # 46 test executables (via zenit_add_test helpers)
+    │   ├── CMakeLists.txt          # 47 test executables (via zenit_add_test helpers)
     │   ├── test_malloc_fail.h      # Shared malloc/calloc wrappers for --wrap tests
     │   ├── test_runner.h           # Shared test runner (macros, globals, test_run_all)
     │   ├── test_result.c           # Error code & macro validation
@@ -551,7 +551,6 @@ libzen/
     │   ├── test_io_malloc_fail.c   # Malloc failure via --wrap
     │   ├── test_hex_malloc_fail.c       # Malloc failure via --wrap
     │   ├── test_uri_malloc_fail.c       # Malloc failure via --wrap
-    │   ├── test_sort_malloc_fail.c      # Malloc failure via --wrap
     │   └── test_allocator_malloc_fail.c # Malloc/calloc/realloc failure via --wrap
     ├── benchmarks/
     │   ├── CMakeLists.txt          # 25 benchmark executables (label: "benchmark")

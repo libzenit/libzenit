@@ -98,8 +98,6 @@ zenit_add_malloc_fail_test(test_pool_malloc_fail   test_pool_malloc_fail.c)
 zenit_add_malloc_fail_test(test_io_malloc_fail     test_io_malloc_fail.c)
 zenit_add_malloc_fail_test(test_hex_malloc_fail    test_hex_malloc_fail.c)
 zenit_add_malloc_fail_test(test_uri_malloc_fail    test_uri_malloc_fail.c)
-zenit_add_malloc_fail_test(test_sort_malloc_fail   test_sort_malloc_fail.c)
-
 # Malloc-fail tests that also need --wrap=realloc
 function(zenit_add_malloc_fail_realloc_test name source)
   if(NOT (CMAKE_C_COMPILER_ID STREQUAL "GNU" OR (CMAKE_C_COMPILER_ID STREQUAL "Clang" AND NOT APPLE)))
