@@ -319,6 +319,69 @@ static int test_edge_cases(void) {
     return 0;
 }
 
+/* ─── Test: reserve (resize) ─── */
+static int test_reserve(void) {
+    zenit_ring_t *r = zenit_ring_create(8);
+    if (r == NULL) { FAIL("create"); return 1; }
+
+    /* Push 6 bytes */
+    if (zenit_ring_push(r, "ABCDEF", 6).error != ZENIT_OK) { FAIL("push"); return 1; }
+    if (zenit_ring_count(r) != 6) { FAIL("count 6"); return 1; }
+
+    /* Reserve larger */
+    if (zenit_ring_reserve(r, 16).error != ZENIT_OK) { FAIL("reserve"); return 1; }
+    if (zenit_ring_capacity(r) != 16) { FAIL("capacity 16"); return 1; }
+    if (zenit_ring_count(r) != 6) { FAIL("count still 6"); return 1; }
+
+    /* Data should be intact */
+    size_t sz = 6;
+    char buf[8] = {0};
+    if (zenit_ring_pop(r, buf, &sz).error != ZENIT_OK) { FAIL("pop after reserve"); return 1; }
+    if (sz != 6 || memcmp(buf, "ABCDEF", 6) != 0) { FAIL("data after reserve"); return 1; }
+
+    /* Reserve smaller than count */
+    if (zenit_ring_push(r, "123456", 6).error != ZENIT_OK) { FAIL("push again"); return 1; }
+    if (zenit_ring_reserve(r, 4).error != ZENIT_OK) { FAIL("reserve smaller"); return 1; }
+    if (zenit_ring_capacity(r) != 4) { FAIL("capacity 4"); return 1; }
+    if (zenit_ring_count(r) != 4) { FAIL("count clamped to 4"); return 1; }
+    sz = 4;
+    memset(buf, 0, 4);
+    if (zenit_ring_pop(r, buf, &sz).error != ZENIT_OK) { FAIL("pop after shrink"); return 1; }
+    if (sz != 4 || memcmp(buf, "1234", 4) != 0) { FAIL("data after shrink"); return 1; }
+
+    /* NULL / zero */
+    if (zenit_ring_reserve(NULL, 8).error != ZENIT_ERROR_NULL) { FAIL("reserve NULL"); return 1; }
+    if (zenit_ring_reserve(r, 0).error != ZENIT_ERROR_PARAM) { FAIL("reserve zero"); return 1; }
+
+    zenit_ring_destroy(r);
+    return 0;
+}
+
+/* ─── Test: shrink_to_fit ─── */
+static int test_shrink_to_fit(void) {
+    zenit_ring_t *r = zenit_ring_create(64);
+    if (r == NULL) { FAIL("create"); return 1; }
+
+    if (zenit_ring_push(r, "data", 4).error != ZENIT_OK) { FAIL("push"); return 1; }
+    if (zenit_ring_shrink_to_fit(r).error != ZENIT_OK) { FAIL("shrink"); return 1; }
+    if (zenit_ring_capacity(r) != 4) { FAIL("capacity should be 4"); return 1; }
+    if (zenit_ring_count(r) != 4) { FAIL("count should be 4"); return 1; }
+
+    size_t sz = 4;
+    char buf[8] = {0};
+    if (zenit_ring_pop(r, buf, &sz).error != ZENIT_OK) { FAIL("pop"); return 1; }
+    if (sz != 4 || memcmp(buf, "data", 4) != 0) { FAIL("data"); return 1; }
+
+    /* Shrink empty ring */
+    if (zenit_ring_shrink_to_fit(r).error != ZENIT_OK) { FAIL("shrink empty"); return 1; }
+    if (zenit_ring_capacity(r) != 1) { FAIL("capacity should be 1 after empty shrink"); return 1; }
+
+    if (zenit_ring_shrink_to_fit(NULL).error != ZENIT_ERROR_NULL) { FAIL("shrink NULL"); return 1; }
+
+    zenit_ring_destroy(r);
+    return 0;
+}
+
 /* ─── Test: push/pop larger chunks ─── */
 static int test_chunks(void) {
     zenit_ring_t *r = zenit_ring_create(256);
@@ -377,6 +440,8 @@ int main(void) {
     ret |= test_peek_size_zero();
     ret |= test_peek_empty();
     ret |= test_peek_wrap();
+    ret |= test_reserve();
+    ret |= test_shrink_to_fit();
 
     if (failures > 0 || ret != 0) {
         fprintf(stderr, "FAIL: %d test(s) had errors\n", failures);

@@ -331,6 +331,69 @@ static int test_copy_nonexistent_src(void) {
     return 0;
 }
 
+static int test_read_line_basic(void) {
+    /* Write a file with multiple lines */
+    if (zenit_file_write(TMPFILE, "line1\nline2\nline3", 17).error != ZENIT_OK) {
+        FAIL("write for read_line");
+        return 1;
+    }
+    char *line = NULL;
+    if (zenit_file_read_line(TMPFILE, &line).error != ZENIT_OK) {
+        FAIL("read_line basic");
+        return 1;
+    }
+    if (line == NULL || strcmp(line, "line1\n") != 0) {
+        FAIL("read_line content");
+        free(line);
+        return 1;
+    }
+    free(line);
+    PASS();
+    return 0;
+}
+
+static int test_read_line_with_allocator(void) {
+    if (zenit_file_write(TMPFILE, "hello", 5).error != ZENIT_OK) {
+        FAIL("write for read_line allocator");
+        return 1;
+    }
+    char *line = NULL;
+    if (zenit_file_read_line_with_allocator(TMPFILE, &line, ZENIT_ALLOCATOR_DEFAULT).error != ZENIT_OK) {
+        FAIL("read_line_with_allocator");
+        return 1;
+    }
+    if (line == NULL || strcmp(line, "hello") != 0) {
+        FAIL("read_line_with_allocator content");
+        free(line);
+        return 1;
+    }
+    free(line);
+    PASS();
+    return 0;
+}
+
+static int test_read_line_null_params(void) {
+    if (zenit_file_read_line(NULL, NULL).error != ZENIT_ERROR_NULL) {
+        FAIL("read_line NULL params");
+        return 1;
+    }
+    char *line;
+    if (zenit_file_read_line(NULL, &line).error != ZENIT_ERROR_NULL) {
+        FAIL("read_line NULL path");
+        return 1;
+    }
+    if (zenit_file_read_line(TMPFILE, NULL).error != ZENIT_ERROR_NULL) {
+        FAIL("read_line NULL out_line");
+        return 1;
+    }
+    if (zenit_file_read_line_with_allocator(NULL, &line, ZENIT_ALLOCATOR_DEFAULT).error != ZENIT_ERROR_NULL) {
+        FAIL("read_line_with_allocator NULL path");
+        return 1;
+    }
+    PASS();
+    return 0;
+}
+
 static int test_copy_bad_dst_dir(void) {
     zenit_file_write(TMPFILE, "content", 7);
 #if defined(_WIN32)
@@ -363,6 +426,9 @@ int main(void) {
         test_write_bad_path,
         test_null_params,
         test_read_nonexistent,
+        test_read_line_basic,
+        test_read_line_with_allocator,
+        test_read_line_null_params,
     };
     const char *names[] = {
         "write and read",
@@ -378,6 +444,9 @@ int main(void) {
         "write bad path",
         "NULL params",
         "read nonexistent",
+        "read_line basic",
+        "read_line with allocator",
+        "read_line NULL params",
     };
     ZENIT_RUN_TESTS("io", tests, names);
 

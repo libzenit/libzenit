@@ -99,7 +99,6 @@ zenit_add_malloc_fail_test(test_io_malloc_fail     test_io_malloc_fail.c)
 zenit_add_malloc_fail_test(test_hex_malloc_fail    test_hex_malloc_fail.c)
 zenit_add_malloc_fail_test(test_uri_malloc_fail    test_uri_malloc_fail.c)
 zenit_add_malloc_fail_test(test_sort_malloc_fail   test_sort_malloc_fail.c)
-zenit_add_malloc_fail_realloc_test(test_allocator_malloc_fail test_allocator_malloc_fail.c)
 
 # Malloc-fail tests that also need --wrap=realloc
 function(zenit_add_malloc_fail_realloc_test name source)
@@ -126,4 +125,5 @@ zenit_add_malloc_fail_realloc_test(test_deque_malloc_fail   test_deque_malloc_fa
 zenit_add_malloc_fail_realloc_test(test_string_malloc_fail  test_string_malloc_fail.c)
 zenit_add_malloc_fail_realloc_test(test_json_malloc_fail    test_json_malloc_fail.c)
 zenit_add_malloc_fail_realloc_test(test_str_malloc_fail test_str_malloc_fail.c)
+zenit_add_malloc_fail_realloc_test(test_allocator_malloc_fail test_allocator_malloc_fail.c)
 zenit_add_malloc_fail_test(test_base64_malloc_fail test_base64_malloc_fail.c)

@@ -287,7 +287,7 @@ void *zenit_list_get(const zenit_list_t *list, size_t index) {
     return n->data;
 }
 
-zenit_result_t zenit_list_set(const zenit_list_t *list, size_t index, const void *elem) {
+zenit_result_t zenit_list_set(zenit_list_t *list, size_t index, const void *elem) {
     if (list == NULL || elem == NULL) {
         return ZENIT_RESULT_ERROR(ZENIT_ERROR_NULL);
     }
