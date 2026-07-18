@@ -207,7 +207,7 @@ static int test_join_null_param(void) {
 }
 
 int main(void) {
-    const int (*tests[])(void) = {
+    int (*tests[])(void) = {
         &test_trim_basic,
         &test_trim_left,
         &test_trim_right,

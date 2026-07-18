@@ -187,7 +187,7 @@ static int test_sort_large_elements(void) {
 }
 
 int main(void) {
-    const int (*tests[])(void) = {
+    int (*tests[])(void) = {
         &test_sort_already_sorted,
         &test_sort_reverse,
         &test_sort_random,
