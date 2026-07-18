@@ -215,7 +215,11 @@ static int test_to_native(void) {
 
     p = zenit_path_to_native_with_allocator("a/b", ZENIT_ALLOCATOR_DEFAULT);
     ASSERT(p != NULL, "to_native allocator returned NULL");
-    ASSERT(strcmp(p, "a/b") == 0, "to_native allocator failed");
+#if defined(_WIN32)
+    ASSERT(strcmp(p, "a\\b") == 0, "to_native allocator failed on Windows");
+#else
+    ASSERT(strcmp(p, "a/b") == 0, "to_native allocator failed on POSIX");
+#endif
     free(p);
 
     PASS();
