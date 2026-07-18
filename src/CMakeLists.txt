@@ -42,6 +42,11 @@ add_library(zenit STATIC
   timer.c
   pool.c
   io.c
+  path.c
+  lru.c
+  graph.c
+  trie.c
+  bloom.c
 )
 
 target_include_directories(zenit
@@ -52,6 +57,10 @@ target_include_directories(zenit
 
 if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
   target_compile_options(zenit PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+
+if(UNIX)
+  target_link_libraries(zenit PRIVATE m)
 endif()
 
 if(LIBZENIT_BUILD_COVERAGE)

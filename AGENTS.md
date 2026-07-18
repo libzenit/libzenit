@@ -473,7 +473,10 @@ libzen/
     │       ├── queue.h             # FIFO queue wrapper over deque
     │       ├── timer.h             # High-resolution stopwatch (value type)
     │       ├── pool.h              # Fixed-capacity object pool
-    │       └── io.h                # File I/O (read/write/append/copy/delete)
+    │       ├── io.h                # File I/O (read/write/append/copy/delete)
+    │       ├── bloom.h             # Bloom filter API
+    │       ├── trie.h              # Trie (prefix tree) API
+    │       └── lru.h               # LRU cache API
     ├── src/
     │   ├── CMakeLists.txt
     │   ├── result.c                # Error string conversion
@@ -501,9 +504,14 @@ libzen/
     │   ├── queue.c                 # FIFO queue (thin wrapper over deque)
     │   ├── timer.c                 # High-resolution stopwatch (clock_gettime/QPC)
     │   ├── pool.c                  # Fixed-capacity object pool (free-list)
-    │   └── io.c                    # File I/O (POSIX/Win32, chunked read/write, read_line)
+    │   ├── io.c                    # File I/O (POSIX/Win32, chunked read/write, read_line)
+    │   ├── path.c                  # Directory/path operations
+    │   ├── lru.c                   # LRU cache
+    │   ├── graph.c                 # Graph data structure
+    │   ├── trie.c                  # Trie data structure
+    │   └── bloom.c                 # Bloom filter (bit array, double-hashing FNV-1a)
     ├── tests/
-    │   ├── CMakeLists.txt          # 47 test executables (via zenit_add_test helpers)
+    │   ├── CMakeLists.txt          # 53 test executables (via zenit_add_test helpers)
     │   ├── test_malloc_fail.h      # Shared malloc/calloc wrappers for --wrap tests
     │   ├── test_runner.h           # Shared test runner (macros, globals, test_run_all)
     │   ├── test_result.c           # Error code & macro validation
@@ -551,9 +559,15 @@ libzen/
     │   ├── test_io_malloc_fail.c   # Malloc failure via --wrap
     │   ├── test_hex_malloc_fail.c       # Malloc failure via --wrap
     │   ├── test_uri_malloc_fail.c       # Malloc failure via --wrap
-    │   └── test_allocator_malloc_fail.c # Malloc/calloc/realloc failure via --wrap
+    │   ├── test_allocator_malloc_fail.c # Malloc/calloc/realloc failure via --wrap
+    │       ├── test_bloom.c                 # Bloom filter happy path, edge cases, many insertions
+    │       ├── test_bloom_malloc_fail.c     # Malloc/calloc failure via --wrap
+    │       ├── test_trie.c                 # Trie happy path, insert/search/delete/clear, edge cases
+    │       ├── test_trie_malloc_fail.c     # Malloc failure via --wrap
+    │       ├── test_lru.c                  # LRU cache happy path, eviction, peek, remove, clear, allocator, callbacks
+    │       └── test_lru_malloc_fail.c      # Malloc/calloc failure via --wrap
     ├── benchmarks/
-    │   ├── CMakeLists.txt          # 25 benchmark executables (label: "benchmark")
+    │   ├── CMakeLists.txt          # 28 benchmark executables (label: "benchmark")
     │   ├── benchmark_version.c     # Version call throughput
     │   ├── benchmark_state.c       # State-machine transition throughput
     │   ├── benchmark_arena.c       # Arena allocator throughput (vs malloc baseline)
@@ -578,7 +592,10 @@ libzen/
     │   ├── benchmark_pool.c        # Pool acquire/acquire-release/small throughput
     │   ├── benchmark_io.c          # File write/read 1KB throughput
     │   ├── benchmark_allocator.c   # Allocator throughput (malloc/zenit/realloc fallback)
-    │   └── benchmark_result.c      # Error string throughput
+    │   ├── benchmark_result.c      # Error string throughput
+    │       ├── benchmark_bloom.c       # Bloom filter insert/contains hit/contains miss throughput
+    │       ├── benchmark_trie.c        # Trie insert/search hit/search miss/starts_with throughput
+    │       └── benchmark_lru.c         # LRU put, get hit, put-with-eviction throughput
     ├── scripts/
     │   ├── checksum.py             # Release checksum generator
     │   └── benchmark_report.py     # Benchmark log parser & report generator (BENCHMARK.md + charts)
