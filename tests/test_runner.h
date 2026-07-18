@@ -74,16 +74,7 @@ static inline int test_run_all(const char *suite, const TEST_ENTRY *tests) {
     return 0;
 }
 
-/*
- * Array-driven test runner for sequential test suites.
- *
- * Usage:
- *   int main(void) {
- *       const int (*tests[])(void) = { &test_a, &test_b, NULL };
- *       const char *names[] = { "test_a", "test_b" };
- *       return ZENIT_RUN_TESTS("suite", tests, names);
- *   }
- */
+/* Convenience macro: runs an array of test functions, printing PASS/FAIL. */
 #define ZENIT_RUN_TESTS(suite, tests, names) do { \
     size_t _n = sizeof(names) / sizeof(names[0]); \
     int _failed = 0; \

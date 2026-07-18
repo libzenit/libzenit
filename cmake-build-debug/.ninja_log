@@ -1,0 +1,16 @@
+# ninja log v6
+3	44	1784254749129436687	src/CMakeFiles/zenit.dir/list.c.o	baac489591801e56
+3	42	1784254749129436687	src/CMakeFiles/zenit.dir/map.c.o	c251c5c3180ec459
+2	45	1784254749129436687	src/CMakeFiles/zenit.dir/arena.c.o	c3cdf40e7433d5cd
+3	37	1784254749129436687	src/CMakeFiles/zenit.dir/vector.c.o	a821504067882d4b
+17	56	1784174983359068105	src/libzen.a	5c9cee900fa5ef86
+2	41	1784254749129436687	src/CMakeFiles/zenit.dir/ring.c.o	e7a1645296a50cd8
+4	39	1784254749133436677	src/CMakeFiles/zenit.dir/heap.c.o	9ec49cc7b04948d0
+3	39	1784254749129436687	src/CMakeFiles/zenit.dir/set.c.o	456ee03c927c6f69
+2	25	1784254749129436687	src/CMakeFiles/zenit.dir/benchmark.c.o	c0f2ba7131857935
+4	44	1784254749133436677	src/CMakeFiles/zenit.dir/deque.c.o	696fdec7237617e1
+0	17	1784174983343068188	src/CMakeFiles/zen.dir/version.c.o	898e115d5df31203
+45	89	1784254749173436554	src/libzenit.a	9381ab2befde920d
+1	19	1784254749129436687	src/CMakeFiles/zenit.dir/version.c.o	38f0dae907c378df
+1	19	1784254749129436687	src/CMakeFiles/zenit.dir/result.c.o	6933bede5fbdc2e2
+2	25	1784254749129436687	src/CMakeFiles/zenit.dir/state.c.o	59264476131ac779
