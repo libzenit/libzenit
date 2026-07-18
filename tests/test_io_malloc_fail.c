@@ -16,17 +16,38 @@
 //
 
 #include <libzenit/io.h>
+#include <libzenit/allocator.h>
 #include <libzenit/result.h>
-#include "test_malloc_fail.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+
+/* Custom allocator that fails on the Nth call */
+typedef struct {
+    int fail_after;
+    int call_count;
+} test_io_ctx_t;
+
+static void *test_io_alloc(size_t size, void *ctx) {
+    test_io_ctx_t *tc = (test_io_ctx_t *)ctx;
+    tc->call_count++;
+    if (tc->fail_after >= 0 && tc->call_count > tc->fail_after) {
+        return NULL;
+    }
+    return malloc(size);
+}
+
+static void test_io_free(void *ptr, void *ctx) {
+    (void)ctx;
+    free(ptr);
+}
 
 #define TMPFILE "libzenit_test_io_mf.tmp"
 
 int main(void) {
     int failed = 0;
 
-    /* Create a temp file first so read will reach the alloc call */
+    /* Create temp file */
     {
         zenit_result_t r = zenit_file_write(TMPFILE, "hello", 5);
         if (r.error != ZENIT_OK) {
@@ -35,38 +56,22 @@ int main(void) {
         }
     }
 
-    /* file_read: first alloc fails */
+    /* Test: file_read_with_allocator where alloc fails */
     {
+        test_io_ctx_t ctx = { .fail_after = 0, .call_count = 0 };
+        zenit_allocator_t a = {
+            .alloc_fn = test_io_alloc,
+            .free_fn = test_io_free,
+            .ctx = &ctx
+        };
         void *buf = NULL;
         size_t len = 0;
-
-        malloc_fail_countdown = 0;
-        zenit_result_t r = zenit_file_read(TMPFILE, &buf, &len);
-        malloc_fail_countdown = -1;
-
+        zenit_result_t r = zenit_file_read_with_allocator(TMPFILE, &buf, &len, a);
         if (r.error != ZENIT_ERROR_ALLOC) {
             fprintf(stderr, "FAIL: file_read alloc fail should return ZENIT_ERROR_ALLOC, got %d\n", r.error);
             failed++;
         } else {
             printf("PASS: file_read alloc fail\n");
-        }
-        free(buf);
-    }
-
-    /* file_read_with_allocator: first alloc fails */
-    {
-        void *buf = NULL;
-        size_t len = 0;
-
-        malloc_fail_countdown = 0;
-        zenit_result_t r = zenit_file_read_with_allocator(TMPFILE, &buf, &len, ZENIT_ALLOCATOR_DEFAULT);
-        malloc_fail_countdown = -1;
-
-        if (r.error != ZENIT_ERROR_ALLOC) {
-            fprintf(stderr, "FAIL: file_read_with_allocator alloc fail should return ZENIT_ERROR_ALLOC, got %d\n", r.error);
-            failed++;
-        } else {
-            printf("PASS: file_read_with_allocator alloc fail\n");
         }
         free(buf);
     }

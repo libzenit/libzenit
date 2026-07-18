@@ -59,7 +59,7 @@ jobs:
 
       - name: Set up MSYS2 (Windows gcc coverage)
         if: matrix.compiler == 'gcc' && startsWith(matrix.os, 'windows')
-        uses: msys2/setup-msys2@v2
+        uses: msys2/setup-msys2@66cd2cce69caa17b53920067426061ca1de3a884
         with:
           msystem: MINGW64
           install: >-
