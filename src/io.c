@@ -106,6 +106,17 @@ zenit_result_t zenit_file_read_with_allocator(const char *path, void **out_data,
 #endif
 }
 
+/* Grow buffer if needed.  Returns ZENIT_RESULT_OK or ZENIT_ERROR_ALLOC. */
+static zenit_result_t grow_line_buf(char **buf, size_t *cap, size_t len, zenit_allocator_t a) {
+    if (len + 2 <= *cap) return ZENIT_RESULT_OK;
+    size_t new_cap = *cap * 2;
+    char *tmp = zenit_allocator_realloc(a, *buf, *cap, new_cap);
+    if (tmp == NULL) return ZENIT_RESULT_ERROR(ZENIT_ERROR_ALLOC);
+    *buf = tmp;
+    *cap = new_cap;
+    return ZENIT_RESULT_OK;
+}
+
 zenit_result_t zenit_file_read_line_with_allocator(const char *path, char **out_line, zenit_allocator_t allocator) {
     if (path == NULL || out_line == NULL) {
         return ZENIT_RESULT_ERROR(ZENIT_ERROR_NULL);
@@ -138,21 +149,14 @@ zenit_result_t zenit_file_read_line_with_allocator(const char *path, char **out_
             if (bytes_read == 0) {
                 done = 1;
             } else {
-                if (len + 2 > cap) {
-                    cap *= 2;
-                    size_t old_size = cap / 2;
-                    char *tmp = zenit_allocator_realloc(allocator, buf, old_size, cap);
-                    if (tmp == NULL) {
-                        allocator.free_fn(buf, allocator.ctx);
-                        CloseHandle(h);
-                        return ZENIT_RESULT_ERROR(ZENIT_ERROR_ALLOC);
-                    }
-                    buf = tmp;
+                zenit_result_t grow_r = grow_line_buf(&buf, &cap, len, allocator);
+                if (grow_r.error != ZENIT_OK) {
+                    allocator.free_fn(buf, allocator.ctx);
+                    CloseHandle(h);
+                    return grow_r;
                 }
                 buf[len++] = c;
-                if (c == '\n') {
-                    done = 1;
-                }
+                if (c == '\n') done = 1;
             }
         }
     }
@@ -188,21 +192,14 @@ zenit_result_t zenit_file_read_line_with_allocator(const char *path, char **out_
             if (n == 0) {
                 done = 1;
             } else {
-                if (len + 2 > cap) {
-                    cap *= 2;
-                    size_t old_size = cap / 2;
-                    char *tmp = zenit_allocator_realloc(allocator, buf, old_size, cap);
-                    if (tmp == NULL) {
-                        allocator.free_fn(buf, allocator.ctx);
-                        close(fd);
-                        return ZENIT_RESULT_ERROR(ZENIT_ERROR_ALLOC);
-                    }
-                    buf = tmp;
+                zenit_result_t grow_r = grow_line_buf(&buf, &cap, len, allocator);
+                if (grow_r.error != ZENIT_OK) {
+                    allocator.free_fn(buf, allocator.ctx);
+                    close(fd);
+                    return grow_r;
                 }
                 buf[len++] = c;
-                if (c == '\n') {
-                    done = 1;
-                }
+                if (c == '\n') done = 1;
             }
         }
     }
