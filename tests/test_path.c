@@ -261,6 +261,51 @@ static int test_normalize_empty(void) {
     return 0;
 }
 
+/* ─── allocator helpers for test_normalize_alloc_fail ─── */
+
+typedef struct {
+    int count;
+    int fail_after;
+} alloc_test_ctx_t;
+
+static void* test_alloc_count(size_t size, void *ctx) {
+    alloc_test_ctx_t *c = (alloc_test_ctx_t*)ctx;
+    c->count++;
+    if (c->count > c->fail_after) return NULL;
+    return malloc(size);
+}
+
+static void test_free_count(void *ptr, void *ctx) {
+    (void)ctx;
+    free(ptr);
+}
+
+static int test_normalize_empty_absolute(void) {
+    char *n = zenit_path_normalize("//");
+    ASSERT(n != NULL, "normalize // returned NULL");
+    ASSERT(strcmp(n, "/") == 0, "normalize // should return /");
+    free(n);
+    return 0;
+}
+
+static int test_normalize_alloc_fail(void) {
+    alloc_test_ctx_t c_ctx = { .count = 0, .fail_after = 1 };
+
+    zenit_allocator_t a = {
+        .alloc_fn = test_alloc_count,
+        .realloc_fn = NULL,
+        .free_fn = test_free_count,
+        .ctx = &c_ctx,
+    };
+
+    /* normalize_impl allocates stack buffer (first call succeeds),
+     * then allocates output string (second call fails) */
+    char *r = zenit_path_normalize_with_allocator("foo/bar", a);
+    ASSERT(r == NULL, "normalize should return NULL on second alloc failure");
+    PASS();
+    return 0;
+}
+
 int main(void) {
     int (*tests[])(void) = {
         &test_join_basic,
@@ -288,6 +333,8 @@ int main(void) {
         &test_basename_empty,
         &test_extension_empty,
         &test_normalize_empty,
+        &test_normalize_empty_absolute,
+        &test_normalize_alloc_fail,
     };
     const char *names[] = {
         "join_basic",
@@ -315,6 +362,8 @@ int main(void) {
         "basename_empty",
         "extension_empty",
         "normalize_empty",
+        "normalize_empty_absolute",
+        "normalize_alloc_fail",
     };
     ZENIT_RUN_TESTS("path", tests, names);
 }

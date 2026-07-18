@@ -358,6 +358,15 @@ static int test_null_iter(void) {
     return 0;
 }
 
+static int test_create_trailing_slashes(void) {
+    zenit_result_t r = zenit_dir_create(TMP_DIR "/sub///");
+    ASSERT(r.error == ZENIT_OK, "create with trailing slashes");
+    ASSERT(zenit_dir_exists(TMP_DIR "/sub"), "dir with trailing slashes exists");
+    zenit_dir_remove(TMP_DIR "/sub");
+    PASS();
+    return 0;
+}
+
 int main(void) {
     cleanup();
 
@@ -378,6 +387,7 @@ int main(void) {
         test_list_second_pass,
         test_null_next,
         test_null_iter,
+        test_create_trailing_slashes,
     };
     const char *names[] = {
         "create and exists",
@@ -396,6 +406,7 @@ int main(void) {
         "list second pass",
         "NULL next",
         "NULL iter",
+        "create trailing slashes",
     };
     ZENIT_RUN_TESTS("dir", tests, names);
 

@@ -519,6 +519,13 @@ static int test_put_null_params(void) {
     return 0;
 }
 
+static int test_alloc_array_zero(void) {
+    ASSERT(zenit_lru_create(0, sizeof(int), 4) == NULL, "alloc_array zero key_size");
+    ASSERT(zenit_lru_create(sizeof(int), 0, 4) == NULL, "alloc_array zero value_size");
+    PASS();
+    return 0;
+}
+
 int main(void) {
     int (*tests[])(void) = {
         &test_create_destroy,
@@ -545,6 +552,7 @@ int main(void) {
         &test_remove_null_key,
         &test_contains_null_key,
         &test_put_null_params,
+        &test_alloc_array_zero,
     };
     const char *names[] = {
         "create_destroy",
@@ -571,6 +579,7 @@ int main(void) {
         "remove_null_key",
         "contains_null_key",
         "put_null_params",
+        "alloc_array_zero",
     };
     ZENIT_RUN_TESTS("lru", tests, names);
 }

@@ -635,7 +635,7 @@ static int test_create_with_allocator_fail_counts(void) {
     /* Alloc #0 = handle, #1 = adj, #2 = counts ← fail here */
     test_alloc_ctx_t ctx = { 0, 2, 0, -1 };
     zenit_allocator_t a = { test_alloc, test_realloc, test_free, &ctx };
-    zenit_graph_t *g = zenit_graph_create_with_allocator(4, 1, a);
+    const zenit_graph_t *g = zenit_graph_create_with_allocator(4, 1, a);
     ASSERT(g == NULL, "create should return NULL when counts alloc fails");
     return 0;
 }
