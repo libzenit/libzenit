@@ -68,34 +68,28 @@ zenit_result_t zenit_semver_parse(const char *str, zenit_semver_t *out) {
         return ZENIT_RESULT_ERROR(ZENIT_ERROR_PARAM);
     }
 
-    /* Parse pre-release (-) */
+    /* Parse pre-release and build metadata */
     if (*p == '-') {
         p++;
-        size_t i = 0;
         while (*p != '\0' && *p != '+') {
-            if (i >= ZENIT_SEMVER_MAX_PRERELEASE - 1) {
-                return ZENIT_RESULT_ERROR(ZENIT_ERROR_PARAM);
-            }
-            out->pre_release[i++] = *p;
+            size_t idx = strlen(out->pre_release);
+            if (idx >= ZENIT_SEMVER_MAX_PRERELEASE - 1) return ZENIT_RESULT_ERROR(ZENIT_ERROR_PARAM);
+            out->pre_release[idx] = *p;
+            out->pre_release[idx + 1] = '\0';
             p++;
         }
-        out->pre_release[i] = '\0';
-        if (i == 0) return ZENIT_RESULT_ERROR(ZENIT_ERROR_PARAM);
+        if (out->pre_release[0] == '\0') return ZENIT_RESULT_ERROR(ZENIT_ERROR_PARAM);
     }
-
-    /* Parse build metadata (+) */
     if (*p == '+') {
         p++;
-        size_t i = 0;
         while (*p != '\0') {
-            if (i >= ZENIT_SEMVER_MAX_BUILD - 1) {
-                return ZENIT_RESULT_ERROR(ZENIT_ERROR_PARAM);
-            }
-            out->build[i++] = *p;
+            size_t idx = strlen(out->build);
+            if (idx >= ZENIT_SEMVER_MAX_BUILD - 1) return ZENIT_RESULT_ERROR(ZENIT_ERROR_PARAM);
+            out->build[idx] = *p;
+            out->build[idx + 1] = '\0';
             p++;
         }
-        out->build[i] = '\0';
-        if (i == 0) return ZENIT_RESULT_ERROR(ZENIT_ERROR_PARAM);
+        if (out->build[0] == '\0') return ZENIT_RESULT_ERROR(ZENIT_ERROR_PARAM);
     }
 
     if (*p != '\0') {
@@ -155,37 +149,33 @@ zenit_result_t zenit_semver_format_with_allocator(const zenit_semver_t *v, char 
     return ZENIT_RESULT_OK;
 }
 
+/* Check if all characters in s[0..len) are digits. */
+static int is_numeric(const char *s, size_t len) {
+    for (size_t i = 0; i < len; i++) {
+        if (s[i] < '0' || s[i] > '9') return 0;
+    }
+    return 1;
+}
+
 /* Compare two pre-release identifiers.  Returns negative, zero, or positive. */
 static int cmp_pre_id(const char *a_start, size_t a_len, const char *b_start, size_t b_len) {
-    /* Check if both are numeric */
-    int a_num = 1;
-    int b_num = 1;
-    for (size_t i = 0; i < a_len; i++) {
-        if (a_start[i] < '0' || a_start[i] > '9') { a_num = 0; break; }
-    }
-    for (size_t i = 0; i < b_len; i++) {
-        if (b_start[i] < '0' || b_start[i] > '9') { b_num = 0; break; }
-    }
+    int a_num = is_numeric(a_start, a_len);
+    int b_num = is_numeric(b_start, b_len);
 
     if (a_num && b_num) {
-        /* Numeric comparison */
         int a_val = 0;
         int b_val = 0;
         for (size_t i = 0; i < a_len; i++) a_val = a_val * 10 + (a_start[i] - '0');
         for (size_t i = 0; i < b_len; i++) b_val = b_val * 10 + (b_start[i] - '0');
-        if (a_val < b_val) return -1;
-        if (a_val > b_val) return 1;
+        if (a_val != b_val) return a_val < b_val ? -1 : 1;
         return 0;
     }
 
-    /* Lexicographic ASCII comparison */
     size_t min_len = a_len < b_len ? a_len : b_len;
     for (size_t i = 0; i < min_len; i++) {
-        if (a_start[i] < b_start[i]) return -1;
-        if (a_start[i] > b_start[i]) return 1;
+        if (a_start[i] != b_start[i]) return a_start[i] < b_start[i] ? -1 : 1;
     }
-    if (a_len < b_len) return -1;
-    if (a_len > b_len) return 1;
+    if (a_len != b_len) return a_len < b_len ? -1 : 1;
     return 0;
 }
 
