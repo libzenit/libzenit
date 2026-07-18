@@ -135,7 +135,8 @@ zenit_result_t zenit_csv_parse_record_with_allocator(const char *line, char deli
             buf_cap++;
         }
         buf[buf_len] = '\0';
-        out->fields[fi++] = buf;
+        out->fields[fi] = buf;
+        out->count = ++fi;
 
         if (*p == delimiter) {
             p++;
@@ -144,7 +145,6 @@ zenit_result_t zenit_csv_parse_record_with_allocator(const char *line, char deli
         break;
     }
 
-    out->count = fi;
     return ZENIT_RESULT_OK;
 }
 

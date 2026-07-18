@@ -22,13 +22,13 @@
 #if defined(_WIN32)
 #include <windows.h>
 #define ATOMIC_INC(var) InterlockedIncrement(&var)
-#define ATOMIC_READ(var) ((int)InterlockedExchangeAdd(&var, 0))
+#define ATOMIC_READ(var) ((long)InterlockedExchangeAdd(&var, 0))
 #else
 #define ATOMIC_INC(var) __sync_fetch_and_add(&(var), 1)
 #define ATOMIC_READ(var) __sync_fetch_and_add(&(var), 0)
 #endif
 
-static volatile int test_counter = 0;
+static volatile long test_counter = 0;
 
 static void increment_task(void *ctx) {
     (void)ctx;
@@ -69,7 +69,7 @@ int main(void) {
         zenit_thread_pool_wait(pool);
 
         if (ATOMIC_READ(test_counter) != 10) {
-            fprintf(stderr, "FAIL: counter %d != 10\n", ATOMIC_READ(test_counter));
+            fprintf(stderr, "FAIL: counter %ld != 10\n", ATOMIC_READ(test_counter));
             zenit_thread_pool_destroy(pool);
             return 1;
         }
@@ -149,7 +149,7 @@ int main(void) {
         zenit_thread_pool_wait(pool);
 
         if (ATOMIC_READ(test_counter) != 5) {
-            fprintf(stderr, "FAIL: single thread counter %d != 5\n", ATOMIC_READ(test_counter));
+            fprintf(stderr, "FAIL: single thread counter %ld != 5\n", ATOMIC_READ(test_counter));
             zenit_thread_pool_destroy(pool);
             return 1;
         }
