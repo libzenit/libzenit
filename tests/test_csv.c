@@ -15,265 +15,208 @@
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //
 
+#include "test_runner.h"
 #include <libzenit/csv.h>
-#include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
+
+static int test_simple(void) {
+    zenit_csv_record_t rec;
+    zenit_result_t r = zenit_csv_parse_record("a,b,c", ',', &rec);
+    ASSERT(r.error == ZENIT_OK, "csv parse simple");
+    ASSERT(rec.count == 3, "csv count");
+    ASSERT(strcmp(rec.fields[0], "a") == 0, "field 0");
+    ASSERT(strcmp(rec.fields[1], "b") == 0, "field 1");
+    ASSERT(strcmp(rec.fields[2], "c") == 0, "field 2");
+    zenit_csv_record_destroy(&rec);
+    PASS();
+    return 0;
+}
+
+static int test_quoted(void) {
+    zenit_csv_record_t rec;
+    zenit_result_t r = zenit_csv_parse_record("\"hello, world\",\"foo\"\"bar\"", ',', &rec);
+    ASSERT(r.error == ZENIT_OK, "csv parse quoted");
+    ASSERT(rec.count == 2, "quoted count");
+    ASSERT(strcmp(rec.fields[0], "hello, world") == 0, "quoted field 0");
+    ASSERT(strcmp(rec.fields[1], "foo\"bar") == 0, "quoted field 1");
+    zenit_csv_record_destroy(&rec);
+    PASS();
+    return 0;
+}
+
+static int test_empty_fields(void) {
+    zenit_csv_record_t rec;
+    zenit_result_t r = zenit_csv_parse_record(",a,,b,", ',', &rec);
+    ASSERT(r.error == ZENIT_OK, "csv parse empty");
+    ASSERT(rec.count == 5, "empty count");
+    ASSERT(strcmp(rec.fields[0], "") == 0, "empty field 0");
+    ASSERT(strcmp(rec.fields[3], "b") == 0, "empty field 3");
+    zenit_csv_record_destroy(&rec);
+    PASS();
+    return 0;
+}
+
+static int test_serialise_simple(void) {
+    zenit_csv_record_t rec;
+    rec.count = 3;
+    rec.fields = malloc(3 * sizeof(char *));
+    rec.fields[0] = strdup("a");
+    rec.fields[1] = strdup("b");
+    rec.fields[2] = strdup("c");
+    char *out = NULL;
+    zenit_result_t r = zenit_csv_serialise_record(&rec, ',', &out);
+    ASSERT(r.error == ZENIT_OK, "csv serialise");
+    ASSERT(strcmp(out, "a,b,c") == 0, "csv serialise result");
+    free(out);
+    zenit_csv_record_destroy(&rec);
+    PASS();
+    return 0;
+}
+
+static int test_serialise_quoting(void) {
+    zenit_csv_record_t rec;
+    rec.count = 2;
+    rec.fields = malloc(2 * sizeof(char *));
+    rec.fields[0] = strdup("hello, world");
+    rec.fields[1] = strdup("foo\"bar");
+    char *out = NULL;
+    zenit_result_t r = zenit_csv_serialise_record(&rec, ',', &out);
+    ASSERT(r.error == ZENIT_OK, "csv serialise quoting");
+    ASSERT(strcmp(out, "\"hello, world\",\"foo\"\"bar\"") == 0, "csv serialise quoting result");
+    free(out);
+    zenit_csv_record_destroy(&rec);
+    PASS();
+    return 0;
+}
+
+static int test_round_trip(void) {
+    zenit_csv_record_t rec;
+    zenit_csv_parse_record("a,\"b,c\",\"hello\"\"world\",,d", ',', &rec);
+    char *out = NULL;
+    zenit_csv_serialise_record(&rec, ',', &out);
+    zenit_csv_record_t rec2;
+    zenit_csv_parse_record(out, ',', &rec2);
+    ASSERT(rec2.count == rec.count, "csv round-trip count");
+    for (size_t i = 0; i < rec.count; i++) {
+        ASSERT(strcmp(rec.fields[i], rec2.fields[i]) == 0, "csv round-trip field");
+    }
+    free(out);
+    zenit_csv_record_destroy(&rec);
+    zenit_csv_record_destroy(&rec2);
+    PASS();
+    return 0;
+}
+
+static int test_null_params(void) {
+    zenit_csv_record_t rec;
+    zenit_result_t r = zenit_csv_parse_record(NULL, ',', &rec);
+    ASSERT(r.error == ZENIT_ERROR_NULL, "csv parse NULL line");
+    r = zenit_csv_parse_record("a,b", ',', NULL);
+    ASSERT(r.error == ZENIT_ERROR_NULL, "csv parse NULL out");
+    r = zenit_csv_serialise_record(NULL, ',', NULL);
+    ASSERT(r.error == ZENIT_ERROR_NULL, "csv serialise NULL");
+    zenit_csv_record_destroy(NULL);
+    PASS();
+    return 0;
+}
+
+static int test_single_field(void) {
+    zenit_csv_record_t rec;
+    zenit_result_t r = zenit_csv_parse_record("hello", ',', &rec);
+    ASSERT(r.error == ZENIT_OK && rec.count == 1, "csv single");
+    ASSERT(strcmp(rec.fields[0], "hello") == 0, "csv single field");
+    zenit_csv_record_destroy(&rec);
+    PASS();
+    return 0;
+}
+
+static int test_tab_delimiter(void) {
+    zenit_csv_record_t rec;
+    zenit_result_t r = zenit_csv_parse_record("a\tb\tc", '\t', &rec);
+    ASSERT(r.error == ZENIT_OK && rec.count == 3, "csv tab");
+    zenit_csv_record_destroy(&rec);
+    PASS();
+    return 0;
+}
+
+static int test_empty_input(void) {
+    zenit_csv_record_t rec;
+    zenit_result_t r = zenit_csv_parse_record("", ',', &rec);
+    ASSERT(r.error == ZENIT_OK && rec.count == 1, "csv empty input");
+    ASSERT(rec.fields[0][0] == '\0', "csv empty field");
+    zenit_csv_record_destroy(&rec);
+    PASS();
+    return 0;
+}
+
+static int test_quoted_trailing(void) {
+    zenit_csv_record_t rec;
+    zenit_result_t r = zenit_csv_parse_record("\"hello\",world", ',', &rec);
+    ASSERT(r.error == ZENIT_OK && rec.count == 2, "csv quoted trailing");
+    ASSERT(strcmp(rec.fields[0], "hello") == 0, "qt field 0");
+    ASSERT(strcmp(rec.fields[1], "world") == 0, "qt field 1");
+    zenit_csv_record_destroy(&rec);
+    PASS();
+    return 0;
+}
+
+static int test_escaped_quote(void) {
+    zenit_csv_record_t rec;
+    zenit_result_t r = zenit_csv_parse_record("\"say \"\"hello\"\"\"", ',', &rec);
+    ASSERT(r.error == ZENIT_OK && rec.count == 1, "csv escaped quote");
+    ASSERT(strcmp(rec.fields[0], "say \"hello\"") == 0, "escaped content");
+    zenit_csv_record_destroy(&rec);
+    PASS();
+    return 0;
+}
+
+static int test_serialise_empty(void) {
+    zenit_csv_record_t rec;
+    rec.count = 1;
+    rec.fields = malloc(sizeof(char *));
+    rec.fields[0] = strdup("");
+    char *out = NULL;
+    zenit_result_t r = zenit_csv_serialise_record(&rec, ',', &out);
+    ASSERT(r.error == ZENIT_OK && strcmp(out, "\"\"") == 0, "csv serialise empty");
+    free(out);
+    free(rec.fields[0]);
+    free(rec.fields);
+    PASS();
+    return 0;
+}
 
 int main(void) {
-    /* Test 1: Parse simple CSV */
-    {
-        zenit_csv_record_t rec;
-        zenit_result_t r = zenit_csv_parse_record("a,b,c", ',', &rec);
-        if (r.error != ZENIT_OK) {
-            fprintf(stderr, "FAIL: csv parse simple\n");
-            return 1;
-        }
-        if (rec.count != 3 || strcmp(rec.fields[0], "a") || strcmp(rec.fields[1], "b") || strcmp(rec.fields[2], "c")) {
-            fprintf(stderr, "FAIL: csv parse fields mismatch\n");
-            zenit_csv_record_destroy(&rec);
-            return 1;
-        }
-        zenit_csv_record_destroy(&rec);
-    }
-    printf("PASS: csv parse simple\n");
-
-    /* Test 2: Parse with quoted fields */
-    {
-        zenit_csv_record_t rec;
-        zenit_result_t r = zenit_csv_parse_record("\"hello, world\",\"foo\"\"bar\"", ',', &rec);
-        if (r.error != ZENIT_OK) {
-            fprintf(stderr, "FAIL: csv parse quoted\n");
-            return 1;
-        }
-        if (rec.count != 2 ||
-            strcmp(rec.fields[0], "hello, world") ||
-            strcmp(rec.fields[1], "foo\"bar")) {
-            fprintf(stderr, "FAIL: csv parse quoted fields: '%s' '%s'\n", rec.fields[0], rec.fields[1]);
-            zenit_csv_record_destroy(&rec);
-            return 1;
-        }
-        zenit_csv_record_destroy(&rec);
-    }
-    printf("PASS: csv parse quoted\n");
-
-    /* Test 3: Parse empty fields */
-    {
-        zenit_csv_record_t rec;
-        zenit_result_t r = zenit_csv_parse_record(",a,,b,", ',', &rec);
-        if (r.error != ZENIT_OK) {
-            fprintf(stderr, "FAIL: csv parse empty\n");
-            return 1;
-        }
-        if (rec.count != 5 ||
-            strcmp(rec.fields[0], "") ||
-            strcmp(rec.fields[1], "a") ||
-            strcmp(rec.fields[2], "") ||
-            strcmp(rec.fields[3], "b") ||
-            strcmp(rec.fields[4], "")) {
-            fprintf(stderr, "FAIL: csv parse empty fields\n");
-            zenit_csv_record_destroy(&rec);
-            return 1;
-        }
-        zenit_csv_record_destroy(&rec);
-    }
-    printf("PASS: csv parse empty\n");
-
-    /* Test 4: Serialise simple record */
-    {
-        zenit_csv_record_t rec;
-        rec.count = 3;
-        rec.fields = malloc(3 * sizeof(char *));
-        rec.fields[0] = strdup("a");
-        rec.fields[1] = strdup("b");
-        rec.fields[2] = strdup("c");
-
-        char *out = NULL;
-        zenit_result_t r = zenit_csv_serialise_record(&rec, ',', &out);
-        if (r.error != ZENIT_OK) {
-            fprintf(stderr, "FAIL: csv serialise\n");
-            zenit_csv_record_destroy(&rec);
-            return 1;
-        }
-        if (strcmp(out, "a,b,c") != 0) {
-            fprintf(stderr, "FAIL: csv serialise got '%s'\n", out);
-            free(out);
-            zenit_csv_record_destroy(&rec);
-            return 1;
-        }
-        free(out);
-        zenit_csv_record_destroy(&rec);
-    }
-    printf("PASS: csv serialise\n");
-
-    /* Test 5: Serialise with quoting */
-    {
-        zenit_csv_record_t rec;
-        rec.count = 2;
-        rec.fields = malloc(2 * sizeof(char *));
-        rec.fields[0] = strdup("hello, world");
-        rec.fields[1] = strdup("foo\"bar");
-
-        char *out = NULL;
-        zenit_result_t r = zenit_csv_serialise_record(&rec, ',', &out);
-        if (r.error != ZENIT_OK) {
-            fprintf(stderr, "FAIL: csv serialise quoting\n");
-            zenit_csv_record_destroy(&rec);
-            return 1;
-        }
-        if (strcmp(out, "\"hello, world\",\"foo\"\"bar\"") != 0) {
-            fprintf(stderr, "FAIL: csv serialise quoting got '%s'\n", out);
-            free(out);
-            zenit_csv_record_destroy(&rec);
-            return 1;
-        }
-        free(out);
-        zenit_csv_record_destroy(&rec);
-    }
-    printf("PASS: csv serialise quoting\n");
-
-    /* Test 6: Round-trip */
-    {
-        zenit_csv_record_t rec;
-        zenit_csv_parse_record("a,\"b,c\",\"hello\"\"world\",,d", ',', &rec);
-        char *out = NULL;
-        zenit_csv_serialise_record(&rec, ',', &out);
-
-        zenit_csv_record_t rec2;
-        zenit_csv_parse_record(out, ',', &rec2);
-
-        if (rec2.count != rec.count) {
-            fprintf(stderr, "FAIL: csv round-trip count %zu != %zu\n", rec2.count, rec.count);
-            free(out);
-            zenit_csv_record_destroy(&rec);
-            zenit_csv_record_destroy(&rec2);
-            return 1;
-        }
-        for (size_t i = 0; i < rec.count; i++) {
-            if (strcmp(rec.fields[i], rec2.fields[i]) != 0) {
-                fprintf(stderr, "FAIL: csv round-trip field %zu mismatch\n", i);
-                free(out);
-                zenit_csv_record_destroy(&rec);
-                zenit_csv_record_destroy(&rec2);
-                return 1;
-            }
-        }
-
-        free(out);
-        zenit_csv_record_destroy(&rec);
-        zenit_csv_record_destroy(&rec2);
-    }
-    printf("PASS: csv round-trip\n");
-
-    /* Test 7: NULL params */
-    {
-        zenit_csv_record_t rec;
-        zenit_result_t r = zenit_csv_parse_record(NULL, ',', &rec);
-        if (r.error != ZENIT_ERROR_NULL) {
-            fprintf(stderr, "FAIL: csv parse NULL line\n");
-            return 1;
-        }
-        r = zenit_csv_parse_record("a,b", ',', NULL);
-        if (r.error != ZENIT_ERROR_NULL) {
-            fprintf(stderr, "FAIL: csv parse NULL out\n");
-            return 1;
-        }
-        r = zenit_csv_serialise_record(NULL, ',', NULL);
-        if (r.error != ZENIT_ERROR_NULL) {
-            fprintf(stderr, "FAIL: csv serialise NULL\n");
-            return 1;
-        }
-        zenit_csv_record_destroy(NULL);
-    }
-    printf("PASS: csv NULL params\n");
-
-    /* Test 8: Single field */
-    {
-        zenit_csv_record_t rec;
-        zenit_result_t r = zenit_csv_parse_record("hello", ',', &rec);
-        if (r.error != ZENIT_OK || rec.count != 1 || strcmp(rec.fields[0], "hello") != 0) {
-            fprintf(stderr, "FAIL: csv single field\n");
-            zenit_csv_record_destroy(&rec);
-            return 1;
-        }
-        zenit_csv_record_destroy(&rec);
-    }
-    printf("PASS: csv single field\n");
-
-    /* Test 9: Tab delimiter */
-    {
-        zenit_csv_record_t rec;
-        zenit_result_t r = zenit_csv_parse_record("a\tb\tc", '\t', &rec);
-        if (r.error != ZENIT_OK || rec.count != 3) {
-            fprintf(stderr, "FAIL: csv tab delimiter\n");
-            zenit_csv_record_destroy(&rec);
-            return 1;
-        }
-        zenit_csv_record_destroy(&rec);
-    }
-    printf("PASS: csv tab delimiter\n");
-
-    /* Test 10: Empty input */
-    {
-        zenit_csv_record_t rec;
-        zenit_result_t r = zenit_csv_parse_record("", ',', &rec);
-        if (r.error != ZENIT_OK || rec.count != 1 || rec.fields[0][0] != '\0') {
-            fprintf(stderr, "FAIL: csv empty input\n");
-            zenit_csv_record_destroy(&rec);
-            return 1;
-        }
-        zenit_csv_record_destroy(&rec);
-    }
-    printf("PASS: csv empty input\n");
-
-    /* Test 11: Quoted field with trailing text */
-    {
-        zenit_csv_record_t rec;
-        zenit_result_t r = zenit_csv_parse_record("\"hello\",world", ',', &rec);
-        if (r.error != ZENIT_OK || rec.count != 2 ||
-            strcmp(rec.fields[0], "hello") != 0 ||
-            strcmp(rec.fields[1], "world") != 0) {
-            fprintf(stderr, "FAIL: csv quoted trailing\n");
-            zenit_csv_record_destroy(&rec);
-            return 1;
-        }
-        zenit_csv_record_destroy(&rec);
-    }
-    printf("PASS: csv quoted trailing\n");
-
-    /* Test 12: Escaped quote in quoted field */
-    {
-        zenit_csv_record_t rec;
-        zenit_result_t r = zenit_csv_parse_record("\"say \"\"hello\"\"\"", ',', &rec);
-        if (r.error != ZENIT_OK || rec.count != 1 || strcmp(rec.fields[0], "say \"hello\"") != 0) {
-            fprintf(stderr, "FAIL: csv escaped quote: '%s'\n", rec.fields[0]);
-            zenit_csv_record_destroy(&rec);
-            return 1;
-        }
-        zenit_csv_record_destroy(&rec);
-    }
-    printf("PASS: csv escaped quote\n");
-
-    /* Test 13: Serialise empty field */
-    {
-        zenit_csv_record_t rec;
-        rec.count = 1;
-        rec.fields = malloc(sizeof(char *));
-        rec.fields[0] = strdup("");
-        char *out = NULL;
-        zenit_result_t r = zenit_csv_serialise_record(&rec, ',', &out);
-        if (r.error != ZENIT_OK || strcmp(out, "\"\"") != 0) {
-            fprintf(stderr, "FAIL: csv serialise empty: '%s'\n", out ? out : "NULL");
-            free(out);
-            free(rec.fields[0]);
-            free(rec.fields);
-            return 1;
-        }
-        free(out);
-        free(rec.fields[0]);
-        free(rec.fields);
-    }
-    printf("PASS: csv serialise empty\n");
-
-    printf("PASS: csv\n");
+    int (*tests[])(void) = {
+        test_simple,
+        test_quoted,
+        test_empty_fields,
+        test_serialise_simple,
+        test_serialise_quoting,
+        test_round_trip,
+        test_null_params,
+        test_single_field,
+        test_tab_delimiter,
+        test_empty_input,
+        test_quoted_trailing,
+        test_escaped_quote,
+        test_serialise_empty,
+    };
+    const char *names[] = {
+        "simple",
+        "quoted",
+        "empty_fields",
+        "serialise_simple",
+        "serialise_quoting",
+        "round_trip",
+        "null_params",
+        "single_field",
+        "tab_delimiter",
+        "empty_input",
+        "quoted_trailing",
+        "escaped_quote",
+        "serialise_empty",
+    };
+    ZENIT_RUN_TESTS("csv", tests, names);
     return 0;
 }

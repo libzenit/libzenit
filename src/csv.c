@@ -106,10 +106,8 @@ zenit_result_t zenit_csv_parse_record_with_allocator(const char *line, char deli
     size_t fi = 0;
 
     while (1) {
-        if (fi >= field_cap) {
-            if (!grow_fields(out, &field_cap, allocator)) {
-                return ZENIT_RESULT_ERROR(ZENIT_ERROR_ALLOC);
-            }
+        if (fi >= field_cap && !grow_fields(out, &field_cap, allocator)) {
+            return ZENIT_RESULT_ERROR(ZENIT_ERROR_ALLOC);
         }
 
         size_t buf_cap = 64;
@@ -182,6 +180,38 @@ static int needs_quoting(const char *s, char delimiter) {
     return 0;
 }
 
+/* Compute the serialised length of a single field (quoted or raw). */
+static size_t serialised_field_len(const char *s, char delimiter) {
+    if (needs_quoting(s, delimiter)) {
+        size_t n = 2;
+        for (const char *p = s; *p; p++) {
+            if (*p == '"') n++;
+            n++;
+        }
+        return n;
+    }
+    return strlen(s);
+}
+
+/* Write a single field into buf at pos. Returns the new position. */
+static size_t serialised_field_write(const char *s, char delimiter, char *buf, size_t pos) {
+    if (needs_quoting(s, delimiter)) {
+        buf[pos++] = '"';
+        for (const char *p = s; *p; p++) {
+            if (*p == '"') {
+                buf[pos++] = '"';
+            }
+            buf[pos++] = *p;
+        }
+        buf[pos++] = '"';
+    } else {
+        size_t flen = strlen(s);
+        memcpy(buf + pos, s, flen);
+        pos += flen;
+    }
+    return pos;
+}
+
 zenit_result_t zenit_csv_serialise_record_with_allocator(const zenit_csv_record_t *record, char delimiter, char **out, zenit_allocator_t allocator) {
     if (record == NULL || out == NULL) {
         return ZENIT_RESULT_ERROR(ZENIT_ERROR_NULL);
@@ -189,18 +219,8 @@ zenit_result_t zenit_csv_serialise_record_with_allocator(const zenit_csv_record_
 
     size_t total = 0;
     for (size_t i = 0; i < record->count; i++) {
-        const char *field = record->fields[i];
         if (i > 0) total++;
-
-        if (needs_quoting(field, delimiter)) {
-            total += 2;
-            for (const char *p = field; *p; p++) {
-                if (*p == '"') total++;
-                total++;
-            }
-        } else {
-            total += strlen(field);
-        }
+        total += serialised_field_len(record->fields[i], delimiter);
     }
     total++;
 
@@ -211,23 +231,8 @@ zenit_result_t zenit_csv_serialise_record_with_allocator(const zenit_csv_record_
 
     size_t pos = 0;
     for (size_t i = 0; i < record->count; i++) {
-        const char *field = record->fields[i];
         if (i > 0) buf[pos++] = delimiter;
-
-        if (needs_quoting(field, delimiter)) {
-            buf[pos++] = '"';
-            for (const char *p = field; *p; p++) {
-                if (*p == '"') {
-                    buf[pos++] = '"';
-                }
-                buf[pos++] = *p;
-            }
-            buf[pos++] = '"';
-        } else {
-            size_t flen = strlen(field);
-            memcpy(buf + pos, field, flen);
-            pos += flen;
-        }
+        pos = serialised_field_write(record->fields[i], delimiter, buf, pos);
     }
     buf[pos] = '\0';
 

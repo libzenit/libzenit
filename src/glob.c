@@ -52,23 +52,32 @@ static int match_char_class(const char **p, char c) {
     return (negated && !matched) || (!negated && matched) ? 1 : 0;
 }
 
+static int match(const char *p, const char *s);
+
+/*
+ * Match the remaining pattern after a '*' against suffixes of s.
+ * p points past the '*', s is the current string position.
+ */
+static int match_star(const char *p, const char *s) {
+    if (*p == '\0') {
+        return 1;
+    }
+    while (*s != '\0') {
+        if (match(p, s)) {
+            return 1;
+        }
+        s++;
+    }
+    return match(p, s);
+}
+
 /*
  * Recursive glob matching engine with backtracking for '*'.
  */
 static int match(const char *p, const char *s) {
     while (*p != '\0') {
         if (*p == '*') {
-            p++;
-            if (*p == '\0') {
-                return 1;
-            }
-            while (*s != '\0') {
-                if (match(p, s)) {
-                    return 1;
-                }
-                s++;
-            }
-            return match(p, s);
+            return match_star(p + 1, s);
         }
 
         if (*s == '\0') {

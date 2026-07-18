@@ -112,57 +112,68 @@ void zenit_logger_log(zenit_logger_t *logger, zenit_log_level_t level, const cha
 /**
  * @brief Log a message at TRACE level.
  *
+ * Convenience macro that expands to zenit_logger_log with ZENIT_LOG_TRACE.
+ *
  * @param logger Logger handle.
- * @param fmt    printf-style format string.
- * @param ...    Format arguments.
+ * @param ...    printf-style format string and arguments.
  */
-void zenit_logger_trace(zenit_logger_t *logger, const char *fmt, ...);
+#define zenit_logger_trace(logger, ...) \
+    zenit_logger_log((logger), ZENIT_LOG_TRACE, __VA_ARGS__)
 
 /**
  * @brief Log a message at DEBUG level.
  *
+ * Convenience macro that expands to zenit_logger_log with ZENIT_LOG_DEBUG.
+ *
  * @param logger Logger handle.
- * @param fmt    printf-style format string.
- * @param ...    Format arguments.
+ * @param ...    printf-style format string and arguments.
  */
-void zenit_logger_debug(zenit_logger_t *logger, const char *fmt, ...);
+#define zenit_logger_debug(logger, ...) \
+    zenit_logger_log((logger), ZENIT_LOG_DEBUG, __VA_ARGS__)
 
 /**
  * @brief Log a message at INFO level.
  *
+ * Convenience macro that expands to zenit_logger_log with ZENIT_LOG_INFO.
+ *
  * @param logger Logger handle.
- * @param fmt    printf-style format string.
- * @param ...    Format arguments.
+ * @param ...    printf-style format string and arguments.
  */
-void zenit_logger_info(zenit_logger_t *logger, const char *fmt, ...);
+#define zenit_logger_info(logger, ...) \
+    zenit_logger_log((logger), ZENIT_LOG_INFO, __VA_ARGS__)
 
 /**
  * @brief Log a message at WARN level.
  *
+ * Convenience macro that expands to zenit_logger_log with ZENIT_LOG_WARN.
+ *
  * @param logger Logger handle.
- * @param fmt    printf-style format string.
- * @param ...    Format arguments.
+ * @param ...    printf-style format string and arguments.
  */
-void zenit_logger_warn(zenit_logger_t *logger, const char *fmt, ...);
+#define zenit_logger_warn(logger, ...) \
+    zenit_logger_log((logger), ZENIT_LOG_WARN, __VA_ARGS__)
 
 /**
  * @brief Log a message at ERROR level.
  *
+ * Convenience macro that expands to zenit_logger_log with ZENIT_LOG_ERROR.
+ *
  * @param logger Logger handle.
- * @param fmt    printf-style format string.
- * @param ...    Format arguments.
+ * @param ...    printf-style format string and arguments.
  */
-void zenit_logger_error(zenit_logger_t *logger, const char *fmt, ...);
+#define zenit_logger_error(logger, ...) \
+    zenit_logger_log((logger), ZENIT_LOG_ERROR, __VA_ARGS__)
 
 /**
  * @brief Log a message at FATAL level and abort.
  *
- * After logging, calls abort().  The logger is flushed before aborting.
+ * Convenience macro that expands to zenit_logger_log with ZENIT_LOG_FATAL.
+ * zenit_logger_log calls abort() after logging for FATAL level.
  *
  * @param logger Logger handle.
- * @param fmt    printf-style format string.
- * @param ...    Format arguments.
+ * @param ...    printf-style format string and arguments.
  */
-void zenit_logger_fatal(zenit_logger_t *logger, const char *fmt, ...);
+#define zenit_logger_fatal(logger, ...) \
+    zenit_logger_log((logger), ZENIT_LOG_FATAL, __VA_ARGS__)
 
 #endif

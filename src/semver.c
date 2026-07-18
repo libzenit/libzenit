@@ -68,18 +68,21 @@ zenit_result_t zenit_semver_parse(const char *str, zenit_semver_t *out) {
         return ZENIT_RESULT_ERROR(ZENIT_ERROR_PARAM);
     }
 
-    /* Check for pre-release */
-    if (*p == '-') {
+    /* Parse pre-release or build metadata (stops at stop_char or \0) */
+    if (*p == '-' || *p == '+') {
+        char *dest = (*p == '-') ? out->pre_release : out->build;
+        size_t max_len = (*p == '-') ? ZENIT_SEMVER_MAX_PRERELEASE : ZENIT_SEMVER_MAX_BUILD;
+        char stop = (*p == '-') ? '+' : '\0';
         p++;
         size_t i = 0;
-        while (*p != '\0' && *p != '+') {
-            if (i >= ZENIT_SEMVER_MAX_PRERELEASE - 1) {
+        while (*p != '\0' && *p != stop) {
+            if (i >= max_len - 1) {
                 return ZENIT_RESULT_ERROR(ZENIT_ERROR_PARAM);
             }
-            out->pre_release[i++] = *p;
+            dest[i++] = *p;
             p++;
         }
-        out->pre_release[i] = '\0';
+        dest[i] = '\0';
         if (i == 0) return ZENIT_RESULT_ERROR(ZENIT_ERROR_PARAM);
     }
 
@@ -189,18 +192,25 @@ static int cmp_pre_id(const char *a_start, size_t a_len, const char *b_start, si
     return 0;
 }
 
+/* Return pointer to first '.' in s, or NULL if none. */
+static const char* find_dot(const char *s) {
+    for (; *s; s++) {
+        if (*s == '.') return s;
+    }
+    return NULL;
+}
+
 /* Compare pre-release strings per SemVer 2.0.0 precedence rules. */
 static int cmp_prerelease(const char *a, const char *b) {
     if (a[0] == '\0' && b[0] == '\0') return 0;
-    if (a[0] == '\0') return 1;   /* release has higher precedence */
+    if (a[0] == '\0') return 1;
     if (b[0] == '\0') return -1;
 
-    /* Split on '.' and compare pairwise */
     const char *ap = a;
     const char *bp = b;
     while (1) {
-        const char *a_dot = strchr(ap, '.');
-        const char *b_dot = strchr(bp, '.');
+        const char *a_dot = find_dot(ap);
+        const char *b_dot = find_dot(bp);
         size_t a_len = a_dot ? (size_t)(a_dot - ap) : strlen(ap);
         size_t b_len = b_dot ? (size_t)(b_dot - bp) : strlen(bp);
 
@@ -208,7 +218,7 @@ static int cmp_prerelease(const char *a, const char *b) {
         if (c != 0) return c;
 
         if (a_dot == NULL && b_dot == NULL) return 0;
-        if (a_dot == NULL) return -1;   /* shorter has lower precedence */
+        if (a_dot == NULL) return -1;
         if (b_dot == NULL) return 1;
 
         ap = a_dot + 1;
