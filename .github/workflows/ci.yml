@@ -100,8 +100,8 @@ jobs:
 
       - name: Generate coverage report
         if: matrix.coverage
-        shell: ${{ startsWith(matrix.os, 'windows') && 'msys2 {0}' || 'bash' }}
         run: |
+          case "${{ matrix.os }}" in windows*) export PATH="/c/msys64/mingw64/bin:/c/msys64/usr/bin:$PATH" ;; esac
           lcov --capture -d build --output-file coverage.info \
             --branch-coverage \
             --ignore-errors unused,version,empty,inconsistent,mismatch
