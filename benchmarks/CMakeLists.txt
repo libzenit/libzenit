@@ -159,11 +159,29 @@ target_link_libraries(benchmark_io PRIVATE zenit)
 add_test(NAME benchmark_io COMMAND benchmark_io)
 set_tests_properties(benchmark_io PROPERTIES LABELS "benchmark")
 
+# Directory throughput
+add_executable(benchmark_dir benchmark_dir.c)
+target_link_libraries(benchmark_dir PRIVATE zenit)
+add_test(NAME benchmark_dir COMMAND benchmark_dir)
+set_tests_properties(benchmark_dir PROPERTIES LABELS "benchmark")
+
+# Path utilities throughput
+add_executable(benchmark_path benchmark_path.c)
+target_link_libraries(benchmark_path PRIVATE zenit)
+add_test(NAME benchmark_path COMMAND benchmark_path)
+set_tests_properties(benchmark_path PROPERTIES LABELS "benchmark")
+
 # Sort throughput
 add_executable(benchmark_sort benchmark_sort.c)
 target_link_libraries(benchmark_sort PRIVATE zenit)
 add_test(NAME benchmark_sort COMMAND benchmark_sort)
 set_tests_properties(benchmark_sort PROPERTIES LABELS "benchmark")
+
+# LRU cache throughput
+add_executable(benchmark_lru benchmark_lru.c)
+target_link_libraries(benchmark_lru PRIVATE zenit)
+add_test(NAME benchmark_lru COMMAND benchmark_lru)
+set_tests_properties(benchmark_lru PROPERTIES LABELS "benchmark")
 
 # Allocator throughput
 add_executable(benchmark_allocator benchmark_allocator.c)
@@ -177,8 +195,26 @@ target_link_libraries(benchmark_result PRIVATE zenit)
 add_test(NAME benchmark_result COMMAND benchmark_result)
 set_tests_properties(benchmark_result PROPERTIES LABELS "benchmark")
 
+# Bloom filter throughput
+add_executable(benchmark_bloom benchmark_bloom.c)
+target_link_libraries(benchmark_bloom PRIVATE zenit)
+add_test(NAME benchmark_bloom COMMAND benchmark_bloom)
+set_tests_properties(benchmark_bloom PROPERTIES LABELS "benchmark")
+
+# Trie throughput
+add_executable(benchmark_trie benchmark_trie.c)
+target_link_libraries(benchmark_trie PRIVATE zenit)
+add_test(NAME benchmark_trie COMMAND benchmark_trie)
+set_tests_properties(benchmark_trie PROPERTIES LABELS "benchmark")
+
+# Graph throughput
+add_executable(benchmark_graph benchmark_graph.c)
+target_link_libraries(benchmark_graph PRIVATE zenit)
+add_test(NAME benchmark_graph COMMAND benchmark_graph)
+set_tests_properties(benchmark_graph PROPERTIES LABELS "benchmark")
+
 if(LIBZENIT_BUILD_COVERAGE)
-  foreach(tgt benchmark_version benchmark_state benchmark_arena benchmark_ring benchmark_vector benchmark_map benchmark_set benchmark_string benchmark_list benchmark_heap benchmark_deque benchmark_bitset benchmark_json benchmark_base64 benchmark_hex benchmark_uri benchmark_str benchmark_sort benchmark_stack benchmark_queue benchmark_timer benchmark_pool benchmark_io benchmark_allocator benchmark_result)
+  foreach(tgt benchmark_version benchmark_state benchmark_arena benchmark_ring benchmark_vector benchmark_map benchmark_set benchmark_string benchmark_list benchmark_heap benchmark_deque benchmark_bitset benchmark_json benchmark_base64 benchmark_hex benchmark_uri benchmark_str benchmark_path benchmark_sort benchmark_lru benchmark_stack benchmark_queue benchmark_timer benchmark_pool benchmark_io benchmark_dir benchmark_allocator benchmark_result benchmark_bloom benchmark_trie benchmark_graph)
     target_compile_options(${tgt} PRIVATE --coverage -g -O0)
     target_link_options(${tgt} PRIVATE --coverage)
   endforeach()
@@ -206,14 +242,20 @@ add_custom_target(benchmark
   COMMAND "$<TARGET_FILE:benchmark_hex>"
   COMMAND "$<TARGET_FILE:benchmark_uri>"
   COMMAND "$<TARGET_FILE:benchmark_str>"
+  COMMAND "$<TARGET_FILE:benchmark_path>"
   COMMAND "$<TARGET_FILE:benchmark_sort>"
+  COMMAND "$<TARGET_FILE:benchmark_lru>"
   COMMAND "$<TARGET_FILE:benchmark_stack>"
   COMMAND "$<TARGET_FILE:benchmark_queue>"
   COMMAND "$<TARGET_FILE:benchmark_timer>"
   COMMAND "$<TARGET_FILE:benchmark_pool>"
   COMMAND "$<TARGET_FILE:benchmark_io>"
+  COMMAND "$<TARGET_FILE:benchmark_dir>"
   COMMAND "$<TARGET_FILE:benchmark_allocator>"
   COMMAND "$<TARGET_FILE:benchmark_result>"
+  COMMAND "$<TARGET_FILE:benchmark_bloom>"
+  COMMAND "$<TARGET_FILE:benchmark_trie>"
+  COMMAND "$<TARGET_FILE:benchmark_graph>"
   COMMAND ${CMAKE_COMMAND} -E echo ""
   COMMAND ${CMAKE_COMMAND} -E echo "===== Done ====="
   USES_TERMINAL

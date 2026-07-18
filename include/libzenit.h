@@ -38,11 +38,17 @@
 #include <libzenit/hex.h>
 #include <libzenit/uri.h>
 #include <libzenit/str.h>
+#include <libzenit/path.h>
 #include <libzenit/sort.h>
 #include <libzenit/stack.h>
 #include <libzenit/queue.h>
 #include <libzenit/timer.h>
 #include <libzenit/pool.h>
 #include <libzenit/io.h>
+#include <libzenit/lru.h>
+#include <libzenit/trie.h>
+#include <libzenit/dir.h>
+#include <libzenit/bloom.h>
+#include <libzenit/graph.h>
 
 #endif
