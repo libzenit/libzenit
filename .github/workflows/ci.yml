@@ -48,6 +48,7 @@ jobs:
             compiler: gcc
             build_type: Debug
             coverage: true
+            shell: msys2 {0}
 
     runs-on: ${{ matrix.os }}
     defaults:
@@ -99,7 +100,7 @@ jobs:
           fi
 
       - name: Generate coverage report
-        if: matrix.coverage && !startsWith(matrix.os, 'windows')
+        if: matrix.coverage
         run: |
           lcov --capture -d build --output-file coverage.info \
             --branch-coverage \
@@ -112,7 +113,7 @@ jobs:
           lcov --list coverage.info --ignore-errors empty,inconsistent,mismatch
 
       - name: Upload coverage to Codecov
-        if: matrix.coverage && !startsWith(matrix.os, 'windows')
+        if: matrix.coverage
         uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
