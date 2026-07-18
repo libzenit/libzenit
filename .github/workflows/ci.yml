@@ -49,6 +49,10 @@ jobs:
           - os: macos-latest
             compiler: clang
             build_type: Debug
+          - os: windows-latest
+            compiler: gcc
+            build_type: Debug
+            coverage: true
 
     runs-on: ${{ matrix.os }}
     defaults:
@@ -56,7 +60,18 @@ jobs:
         shell: ${{ matrix.shell || 'bash' }}
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
+
+      - name: Set up MSYS2 (Windows gcc coverage)
+        if: matrix.compiler == 'gcc' && runner.os == 'Windows'
+        uses: msys2/setup-msys2@66cd2cce69caa17b53920067426061ca1de3a884
+        with:
+          msystem: MINGW64
+          install: >-
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-ninja
+            mingw-w64-x86_64-lcov
 
       - name: Set up compiler
         if: matrix.compiler != 'msvc'
@@ -67,6 +82,8 @@ jobs:
       - name: Configure
         run: >
           cmake -B build
+          ${{ matrix.compiler == 'gcc' && runner.os == 'Windows' && '-G Ninja' || '' }}
+          ${{ matrix.compiler == 'gcc' && runner.os == 'Windows' && '-DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++' || '' }}
           -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
           -DLIBZENIT_BUILD_TESTS=ON
           ${{ matrix.coverage && '-DLIBZENIT_BUILD_COVERAGE=ON' || '' }}
@@ -78,7 +95,7 @@ jobs:
         run: ctest --test-dir build --output-on-failure -C ${{ matrix.build_type }} --parallel -V -LE benchmark
 
       - name: Install lcov
-        if: matrix.coverage
+        if: matrix.coverage && runner.os != 'Windows'
         run: |
           if [ "$RUNNER_OS" = "macOS" ]; then
             brew install lcov
@@ -117,7 +134,7 @@ jobs:
         build_type: [Debug, Release]
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
 
       - name: Configure
         run: >
@@ -166,7 +183,7 @@ jobs:
     continue-on-error: ${{ contains(fromJson('["memory", "cfi", "implicit-truncation"]'), matrix.sanitizer) }}
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
 
       - name: Set up compiler
         run: |
@@ -215,7 +232,7 @@ jobs:
     continue-on-error: true
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
 
       - name: Set up compiler
         run: |
@@ -238,7 +255,7 @@ jobs:
             tee benchmark_${{ matrix.os }}.log
 
       - name: Upload benchmark log
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: benchmark-log-${{ matrix.os }}
           path: benchmark_${{ matrix.os }}.log
@@ -253,12 +270,12 @@ jobs:
       contents: write
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
         with:
           ref: ${{ github.head_ref || github.ref_name }}
 
       - name: Download all benchmark logs
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
           pattern: benchmark-log-*
           merge-multiple: true
@@ -331,7 +348,7 @@ jobs:
         shell: ${{ matrix.shell || 'bash' }}
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
 
       - name: Set up compiler
         if: runner.os != 'Windows' && matrix.cmake_system != 'iOS'

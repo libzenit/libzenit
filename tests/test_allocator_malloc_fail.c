@@ -34,7 +34,7 @@ void *__wrap_realloc(void *ptr, size_t size) {
 
 static int test_default_alloc_fail(void) {
     malloc_fail_countdown = 0;
-    void * const p = zenit_default_alloc(64, NULL);
+    const void *p = zenit_default_alloc(64, NULL);
     malloc_fail_countdown = -1;
     if (p != NULL) {
         fprintf(stderr, "FAIL: zenit_default_alloc should return NULL on malloc failure\n");
