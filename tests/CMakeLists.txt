@@ -62,6 +62,13 @@ zenit_add_test(test_bitset      test_bitset.c)
 zenit_add_test(test_json        test_json.c)
 zenit_add_test(test_json_cov    test_json_cov.c)
 
+# ─── Encoding / string / sort tests ───
+zenit_add_test(test_base64      test_base64.c)
+zenit_add_test(test_hex         test_hex.c)
+zenit_add_test(test_uri         test_uri.c)
+zenit_add_test(test_str         test_str.c)
+zenit_add_test(test_sort        test_sort.c)
+
 # ─── Malloc-fail tests (--wrap) ───
 zenit_add_malloc_fail_test(test_ring_malloc_fail   test_ring_malloc_fail.c)
 zenit_add_malloc_fail_test(test_state_malloc_fail  test_state_malloc_fail.c)
@@ -94,3 +101,5 @@ zenit_add_malloc_fail_realloc_test(test_heap_malloc_fail    test_heap_malloc_fai
 zenit_add_malloc_fail_realloc_test(test_deque_malloc_fail   test_deque_malloc_fail.c)
 zenit_add_malloc_fail_realloc_test(test_string_malloc_fail  test_string_malloc_fail.c)
 zenit_add_malloc_fail_realloc_test(test_json_malloc_fail    test_json_malloc_fail.c)
+zenit_add_malloc_fail_test(test_base64_malloc_fail test_base64_malloc_fail.c)
+zenit_add_malloc_fail_realloc_test(test_str_malloc_fail test_str_malloc_fail.c)

@@ -470,6 +470,11 @@ libzen/
     │       ├── benchmark.h         # Benchmark framework API
     │       ├── bitset.h            # Bit set API
     │       ├── json.h              # JSON parser / serializer API
+    │       ├── base64.h            # Base64 encoding/decoding
+    │       ├── hex.h               # Hex encoding/decoding
+    │       ├── uri.h               # URI percent-encoding
+    │       ├── str.h               # String utilities (trim/split/join)
+    │       ├── sort.h              # Quicksort + binary search
     │       ├── ring.h              # Ring buffer API
     │       ├── string.h            # String builder API
     │       ├── vector.h            # Dynamic array API
@@ -495,9 +500,14 @@ libzen/
     │   ├── deque.c                 # Double-ended queue impl (circular buffer, 1.5x growth)
     │   ├── string.c                # String builder impl (backed by vector)
     │   ├── bitset.c                # Bit set impl (byte array, auto-grow, popcount)
-    │   └── json.c                  # JSON parser / serializer impl (recursive-descent)
+    │   ├── json.c                  # JSON parser / serializer impl (recursive-descent)
+    │   ├── base64.c                # Base64 encoding/decoding
+    │   ├── hex.c                   # Hex encoding/decoding
+    │   ├── uri.c                   # URI percent-encoding
+    │   ├── str.c                   # String utilities (trim/split/join)
+    │   └── sort.c                  # Quicksort + binary search
     ├── tests/
-    │   ├── CMakeLists.txt          # 27 test executables (via zenit_add_test helpers)
+    │   ├── CMakeLists.txt          # 33 test executables (via zenit_add_test helpers)
     │   ├── test_malloc_fail.h      # Shared malloc/calloc wrappers for --wrap tests
     │   ├── test_runner.h           # Shared test runner (macros, globals, test_run_all)
     │   ├── test_result.c           # Error code & macro validation
@@ -526,9 +536,16 @@ libzen/
     │   ├── test_bitset.c           # Bit set happy path, edge cases, resize, auto-grow
     │   ├── test_json.c             # JSON parser/serializer, all types, round-trip, errors
     │   ├── test_json_cov.c         # JSON coverage edge cases (control chars, UTF-8, errors)
-    │   └── test_json_malloc_fail.c # Malloc/calloc/realloc failure via --wrap
+    │   ├── test_json_malloc_fail.c # Malloc/calloc/realloc failure via --wrap
+    │   ├── test_base64.c           # Base64 happy path, padding, edge cases, binary
+    │   ├── test_base64_malloc_fail.c # Malloc failure via --wrap
+    │   ├── test_hex.c              # Hex happy path, odd-length, uppercase, edge cases
+    │   ├── test_uri.c              # URI encode/decode, unreserved, reserved, plus, edge cases
+    │   ├── test_str.c              # String trim/split/join happy path, edge cases, null params
+    │   ├── test_str_malloc_fail.c  # Malloc failure via --wrap
+    │   └── test_sort.c             # Quicksort + binary search, large elements, duplicates, edge cases
     ├── benchmarks/
-    │   ├── CMakeLists.txt          # 13 benchmark executables (label: "benchmark")
+    │   ├── CMakeLists.txt          # 18 benchmark executables (label: "benchmark")
     │   ├── benchmark_version.c     # Version call throughput
     │   ├── benchmark_state.c       # State-machine transition throughput
     │   ├── benchmark_arena.c       # Arena allocator throughput (vs malloc baseline)
@@ -541,7 +558,12 @@ libzen/
     │   ├── benchmark_deque.c       # Deque throughput (push_back, push_front, push_pop)
     │   ├── benchmark_string.c      # String builder throughput (append_cstr, append)
     │   ├── benchmark_bitset.c      # Bit set throughput (set, test, count)
-    │   └── benchmark_json.c        # JSON throughput (parse, serialize, build)
+    │   ├── benchmark_json.c        # JSON throughput (parse, serialize, build)
+    │   ├── benchmark_base64.c      # Base64 encode/decode throughput
+    │   ├── benchmark_hex.c         # Hex encode/decode throughput
+    │   ├── benchmark_uri.c         # URI encode/decode throughput
+    │   ├── benchmark_str.c         # String trim/split/join throughput
+    │   └── benchmark_sort.c        # Quicksort + binary search throughput
     ├── scripts/
     │   ├── checksum.py             # Release checksum generator
     │   └── benchmark_report.py     # Benchmark log parser & report generator (BENCHMARK.md + charts)

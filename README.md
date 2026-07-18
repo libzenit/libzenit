@@ -397,6 +397,79 @@ Recursive-descent JSON parser and serializer with DOM-style value tree, custom a
 
 ---
 
+### 15. Base64 — `include/libzenit/base64.h`
+
+Standard Base64 encoding/decoding (RFC 4648) with padding.
+
+| Function | Description |
+|---|---|
+| `zenit_base64_encode(data, len)` | Encode raw bytes into a Base64 string (caller frees) |
+| `zenit_base64_decode(encoded, out_len)` | Decode a Base64 string into raw bytes (caller frees) |
+
+- **Source:** [`src/base64.c`](src/base64.c)
+- **Tests:** [`tests/test_base64.c`](tests/test_base64.c) (9 sub-tests: encode/decode, padding, binary round-trip, NULL params, invalid input), [`tests/test_base64_malloc_fail.c`](tests/test_base64_malloc_fail.c) (allocation failure via `--wrap=malloc`)
+- **Benchmark:** [`benchmarks/benchmark_base64.c`](benchmarks/benchmark_base64.c) — encode 256B (100K), decode 256B (100K)
+
+---
+
+### 16. Hex — `include/libzenit/hex.h`
+
+Lowercase hexadecimal encoding/decoding. Accepts uppercase hex on decode. Handles odd-length input by treating it as if a leading `0` were present.
+
+| Function | Description |
+|---|---|
+| `zenit_hex_encode(data, len)` | Encode raw bytes into a lowercase hex string (caller frees) |
+| `zenit_hex_decode(hex, out_len)` | Decode a hex string into raw bytes (caller frees) |
+
+- **Source:** [`src/hex.c`](src/hex.c)
+- **Tests:** [`tests/test_hex.c`](tests/test_hex.c) (10 sub-tests: encode/decode, odd-length, uppercase, binary round-trip, invalid input, NULL params)
+
+---
+
+### 17. URI Percent-Encoding — `include/libzenit/uri.h`
+
+Percent-encoding for URI components per RFC 3986. Unreserved characters (A-Z, a-z, 0-9, `-`, `_`, `.`, `~`) pass through; everything else is `%XX` encoded. Decodes `+` as space.
+
+| Function | Description |
+|---|---|
+| `zenit_uri_encode(input)` | Encode a string for use in a URI (caller frees) |
+| `zenit_uri_decode(encoded)` | Decode a percent-encoded URI string (caller frees) |
+
+- **Source:** [`src/uri.c`](src/uri.c)
+- **Tests:** [`tests/test_uri.c`](tests/test_uri.c) (11 sub-tests: encode unreserved/reserved/empty/NULL, decode basic/plus/empty/invalid/NULL, round-trip)
+
+---
+
+### 18. String Utilities — `include/libzenit/str.h`
+
+Common string manipulation helpers — trim, split, and join. All functions return newly allocated memory (caller frees).
+
+| Function | Description |
+|---|---|
+| `zenit_str_trim(s)` | Remove leading and trailing whitespace |
+| `zenit_str_split(s, delim, out_count)` | Split into substrings at delimiter characters |
+| `zenit_str_join(parts, count, delim)` | Join an array of strings with a delimiter |
+
+- **Source:** [`src/str.c`](src/str.c)
+- **Tests:** [`tests/test_str.c`](tests/test_str.c) (18 sub-tests: trim basic/left/right/none/all/empty/NULL, split basic/consecutive/empty/no-delim/NULL, join basic/empty-delim/zero-count/one-part/NULL), [`tests/test_str_malloc_fail.c`](tests/test_str_malloc_fail.c) (allocation failure via `--wrap=malloc`)
+
+---
+
+### 19. Sort & Binary Search — `include/libzenit/sort.h`
+
+In-place quicksort (median-of-three pivot) and binary search over sorted arrays. Uses a caller-provided comparator, matching the same signature as the heap module.
+
+| Function | Description |
+|---|---|
+| `zenit_sort_quick(base, count, elem_size, compare)` | In-place quicksort (not stable) |
+| `zenit_binary_search(key, base, count, elem_size, compare)` | Binary search on sorted array; returns pointer or NULL |
+
+- **Source:** [`src/sort.c`](src/sort.c)
+- **Tests:** [`tests/test_sort.c`](tests/test_sort.c) (13 sub-tests: sort already-sorted/reverse/random/single/empty/doubles/duplicates/large-elements, binary search found/not-found/first/last/empty/NULL)
+- **Benchmark:** [`benchmarks/benchmark_sort.c`](benchmarks/benchmark_sort.c) — sort random 10K, sort sorted 10K, binary search hit (1M), binary search miss (1M)
+
+---
+
 ## Build Options
 
 | Option | Default | Description |
@@ -428,6 +501,11 @@ libzen/
 │       ├── benchmark.h         # Benchmark framework API
 │       ├── bitset.h            # Bit set API
 │       ├── json.h              # JSON parser / serializer API
+│       ├── base64.h            # Base64 encoding/decoding
+│       ├── hex.h               # Hex encoding/decoding
+│       ├── uri.h               # URI percent-encoding
+│       ├── str.h               # String utilities (trim/split/join)
+│       ├── sort.h              # Quicksort + binary search
 │       ├── ring.h              # Ring buffer API
 │       ├── string.h            # String builder API
 │       ├── vector.h            # Dynamic array API
@@ -441,15 +519,16 @@ libzen/
 │   ├── result.c / version.c / state.c / arena.c / benchmark.c
 │   ├── ring.c / _hash_common.h / vector.c / map.c / set.c
 │   ├── list.c / heap.c / deque.c / string.c / bitset.c / json.c
+│   ├── base64.c / hex.c / uri.c / str.c / sort.c
 ├── tests/
-│   ├── CMakeLists.txt          # 27 test executables (DRY helpers)
+│   ├── CMakeLists.txt          # 33 test executables (DRY helpers)
 │   ├── test_malloc_fail.h      # Shared malloc/calloc wrappers
 │   ├── test_runner.h           # Shared test runner
 │   ├── test_result.c ... test_bitset.c  # One per module
 │   ├── test_*_malloc_fail.c    # Allocation-failure tests (--wrap)
 ├── benchmarks/
-│   ├── CMakeLists.txt          # 13 benchmark executables
-│   ├── benchmark_version.c ... benchmark_bitset.c ... benchmark_json.c
+│   ├── CMakeLists.txt          # 18 benchmark executables
+│   ├── benchmark_version.c ... benchmark_json.c ... benchmark_base64.c ... benchmark_sort.c
 ├── scripts/
 │   ├── benchmark_report.py     # CI benchmark log → BENCHMARK.md + charts
 │   └── checksum.py             # Release SHA-256 generator
@@ -496,4 +575,4 @@ libzen/
 
 ## Status
 
-Current version `0.1.0` — **alpha**. All 14 modules are implemented, fully tested, benchmarked, and passing CI across all platforms and sanitizers. All containers support custom allocators. The API is stable but may evolve before `1.0.0`.
+Current version `0.1.0` — **alpha**. All 19 modules are implemented, fully tested, benchmarked, and passing CI across all platforms and sanitizers. All containers support custom allocators. The API is stable but may evolve before `1.0.0`.
