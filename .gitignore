@@ -5,3 +5,7 @@ coverage.info
 coverage.clean
 coverage_html/
 build/
+cmake-build-*/
+.idea/
+__pycache__/
+*.pyc

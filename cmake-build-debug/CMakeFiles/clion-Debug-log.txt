@@ -1,4 +1,0 @@
-/home/ian/Programas/clion-2024.3.6/bin/cmake/linux/x64/bin/cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_MAKE_PROGRAM=/home/ian/Programas/clion-2024.3.6/bin/ninja/linux/x64/ninja -G Ninja -S /home/ian/projects/libzen -B /home/ian/projects/libzen/cmake-build-debug
--- Configuring done (0.0s)
--- Generating done (0.0s)
--- Build files have been written to: /home/ian/projects/libzen/cmake-build-debug
