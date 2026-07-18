@@ -37,6 +37,11 @@ add_library(zenit STATIC
   uri.c
   str.c
   sort.c
+  stack.c
+  queue.c
+  timer.c
+  pool.c
+  io.c
 )
 
 target_include_directories(zenit

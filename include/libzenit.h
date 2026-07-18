@@ -38,5 +38,10 @@
 #include <libzenit/uri.h>
 #include <libzenit/str.h>
 #include <libzenit/sort.h>
+#include <libzenit/stack.h>
+#include <libzenit/queue.h>
+#include <libzenit/timer.h>
+#include <libzenit/pool.h>
+#include <libzenit/io.h>
 
 #endif

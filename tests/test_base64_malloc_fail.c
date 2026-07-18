@@ -52,6 +52,35 @@ int main(void) {
         free(dec);
     }
 
+    /* encode_with_allocator: first alloc fails */
+    {
+        malloc_fail_countdown = 0;
+        char *enc = zenit_base64_encode_with_allocator((const unsigned char *)"hello", 5, ZENIT_ALLOCATOR_DEFAULT);
+        malloc_fail_countdown = -1;
+        if (enc != NULL) {
+            fprintf(stderr, "FAIL: encode_with_allocator with countdown=0 should return NULL\n");
+            failed++;
+        } else {
+            printf("PASS: encode_with_allocator alloc fail\n");
+        }
+        free(enc);
+    }
+
+    /* decode_with_allocator: first alloc fails */
+    {
+        malloc_fail_countdown = 0;
+        size_t len;
+        unsigned char *dec = zenit_base64_decode_with_allocator("aGVsbG8=", &len, ZENIT_ALLOCATOR_DEFAULT);
+        malloc_fail_countdown = -1;
+        if (dec != NULL) {
+            fprintf(stderr, "FAIL: decode_with_allocator with countdown=0 should return NULL\n");
+            failed++;
+        } else {
+            printf("PASS: decode_with_allocator alloc fail\n");
+        }
+        free(dec);
+    }
+
     if (failed > 0) {
         fprintf(stderr, "%d tests failed\n", failed);
         return 1;

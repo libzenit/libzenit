@@ -16,6 +16,7 @@
 //
 
 #include <libzenit/str.h>
+#include <libzenit/allocator.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -24,14 +25,14 @@ static int is_whitespace(char c) {
            c == '\r' || c == '\f' || c == '\v';
 }
 
-static void free_split_result(char **result, size_t count) {
+static void free_split_result_with_allocator(char **result, size_t count, zenit_allocator_t a) {
     for (size_t j = 0; j < count; j++) {
-        free(result[j]);
+        a.free_fn(result[j], a.ctx);
     }
-    free(result);
+    a.free_fn(result, a.ctx);
 }
 
-char *zenit_str_trim(const char *s) {
+static char *trim_impl(const char *s, zenit_allocator_t a) {
     if (s == NULL) return NULL;
 
     const char *start = s;
@@ -40,7 +41,7 @@ char *zenit_str_trim(const char *s) {
     }
 
     if (*start == '\0') {
-        char *out = malloc(1);
+        char *out = a.alloc_fn(1, a.ctx);
         if (out == NULL) return NULL;
         out[0] = '\0';
         return out;
@@ -52,7 +53,7 @@ char *zenit_str_trim(const char *s) {
     }
 
     size_t trimmed_len = (size_t)(end - start + 1);
-    char *out = malloc(trimmed_len + 1);
+    char *out = a.alloc_fn(trimmed_len + 1, a.ctx);
     if (out == NULL) return NULL;
 
     memcpy(out, start, trimmed_len);
@@ -61,7 +62,7 @@ char *zenit_str_trim(const char *s) {
     return out;
 }
 
-char **zenit_str_split(const char *s, const char *delim, size_t *out_count) {
+static char **split_impl(const char *s, const char *delim, size_t *out_count, zenit_allocator_t a) {
     if (s == NULL || delim == NULL || out_count == NULL) return NULL;
 
     size_t len = strlen(s);
@@ -69,7 +70,7 @@ char **zenit_str_split(const char *s, const char *delim, size_t *out_count) {
     size_t idx = 0;
     size_t token_start = 0;
 
-    char **result = malloc(cap * sizeof(char *));
+    char **result = a.alloc_fn(cap * sizeof(char *), a.ctx);
     if (result == NULL) return NULL;
 
     for (size_t i = 0; i <= len; i++) {
@@ -78,18 +79,20 @@ char **zenit_str_split(const char *s, const char *delim, size_t *out_count) {
 
         if (idx + 2 > cap) {
             cap *= 2;
-            char **tmp = realloc(result, cap * sizeof(char *));
+            size_t old_size = (cap / 2) * sizeof(char *);
+            size_t new_size = cap * sizeof(char *);
+            char **tmp = zenit_allocator_realloc(a, result, old_size, new_size);
             if (tmp == NULL) {
-                free_split_result(result, idx);
+                free_split_result_with_allocator(result, idx, a);
                 return NULL;
             }
             result = tmp;
         }
 
         size_t tlen = i - token_start;
-        char *tok = malloc(tlen + 1);
+        char *tok = a.alloc_fn(tlen + 1, a.ctx);
         if (tok == NULL) {
-            free_split_result(result, idx);
+            free_split_result_with_allocator(result, idx, a);
             return NULL;
         }
         if (tlen > 0) {
@@ -105,10 +108,10 @@ char **zenit_str_split(const char *s, const char *delim, size_t *out_count) {
     return result;
 }
 
-char *zenit_str_join(const char **parts, size_t count, const char *delim) {
+static char *join_impl(const char **parts, size_t count, const char *delim, zenit_allocator_t a) {
     if (parts == NULL || delim == NULL) return NULL;
     if (count == 0) {
-        char *out = malloc(1);
+        char *out = a.alloc_fn(1, a.ctx);
         if (out == NULL) return NULL;
         out[0] = '\0';
         return out;
@@ -125,7 +128,7 @@ char *zenit_str_join(const char **parts, size_t count, const char *delim) {
     total += delim_len * (count - 1);
     total += 1;
 
-    char *out = malloc(total);
+    char *out = a.alloc_fn(total, a.ctx);
     if (out == NULL) return NULL;
 
     size_t pos = 0;
@@ -143,4 +146,28 @@ char *zenit_str_join(const char **parts, size_t count, const char *delim) {
     out[pos] = '\0';
 
     return out;
+}
+
+char *zenit_str_trim(const char *s) {
+    return zenit_str_trim_with_allocator(s, ZENIT_ALLOCATOR_DEFAULT);
+}
+
+char *zenit_str_trim_with_allocator(const char *s, zenit_allocator_t allocator) {
+    return trim_impl(s, allocator);
+}
+
+char **zenit_str_split(const char *s, const char *delim, size_t *out_count) {
+    return zenit_str_split_with_allocator(s, delim, out_count, ZENIT_ALLOCATOR_DEFAULT);
+}
+
+char **zenit_str_split_with_allocator(const char *s, const char *delim, size_t *out_count, zenit_allocator_t allocator) {
+    return split_impl(s, delim, out_count, allocator);
+}
+
+char *zenit_str_join(const char **parts, size_t count, const char *delim) {
+    return zenit_str_join_with_allocator(parts, count, delim, ZENIT_ALLOCATOR_DEFAULT);
+}
+
+char *zenit_str_join_with_allocator(const char **parts, size_t count, const char *delim, zenit_allocator_t allocator) {
+    return join_impl(parts, count, delim, allocator);
 }

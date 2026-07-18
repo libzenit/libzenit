@@ -69,38 +69,38 @@ static int decode_quad(const char *encoded, size_t i, unsigned int *triple) {
     return 0;
 }
 
-char *zenit_base64_encode(const unsigned char *data, size_t len) {
+static char *encode_impl(const unsigned char *data, size_t len, zenit_allocator_t a) {
     if (data == NULL && len > 0) return NULL;
 
     size_t out_len = zenit_base64_encode_len(len);
-    char *out = malloc(out_len);
+    char *out = a.alloc_fn(out_len, a.ctx);
     if (out == NULL) return NULL;
 
     size_t i = 0;
     size_t o = 0;
 
     while (i + 3 <= len) {
-        unsigned int a = data[i++];
+        unsigned int a0 = data[i++];
         unsigned int b = data[i++];
         unsigned int c = data[i++];
-        out[o++] = enc_table[(a >> 2) & 0x3F];
-        out[o++] = enc_table[((a << 4) | (b >> 4)) & 0x3F];
+        out[o++] = enc_table[(a0 >> 2) & 0x3F];
+        out[o++] = enc_table[((a0 << 4) | (b >> 4)) & 0x3F];
         out[o++] = enc_table[((b << 2) | (c >> 6)) & 0x3F];
         out[o++] = enc_table[c & 0x3F];
     }
 
     size_t remaining = len - i;
     if (remaining == 1) {
-        unsigned int a = data[i];
-        out[o++] = enc_table[(a >> 2) & 0x3F];
-        out[o++] = enc_table[(a << 4) & 0x3F];
+        unsigned int a0 = data[i];
+        out[o++] = enc_table[(a0 >> 2) & 0x3F];
+        out[o++] = enc_table[(a0 << 4) & 0x3F];
         out[o++] = '=';
         out[o++] = '=';
     } else if (remaining == 2) {
-        unsigned int a = data[i];
+        unsigned int a0 = data[i];
         unsigned int b = data[i + 1];
-        out[o++] = enc_table[(a >> 2) & 0x3F];
-        out[o++] = enc_table[((a << 4) | (b >> 4)) & 0x3F];
+        out[o++] = enc_table[(a0 >> 2) & 0x3F];
+        out[o++] = enc_table[((a0 << 4) | (b >> 4)) & 0x3F];
         out[o++] = enc_table[(b << 2) & 0x3F];
         out[o++] = '=';
     }
@@ -109,21 +109,21 @@ char *zenit_base64_encode(const unsigned char *data, size_t len) {
     return out;
 }
 
-unsigned char *zenit_base64_decode(const char *encoded, size_t *out_len) {
+static unsigned char *decode_impl(const char *encoded, size_t *out_len, zenit_allocator_t a) {
     if (encoded == NULL) return NULL;
 
     size_t len = strlen(encoded);
     if (len < 4 || (len % 4) != 0) return NULL;
 
     size_t max_out = zenit_base64_decode_len(encoded);
-    unsigned char *out = malloc(max_out);
+    unsigned char *out = a.alloc_fn(max_out, a.ctx);
     if (out == NULL) return NULL;
 
     size_t o = 0;
     for (size_t i = 0; i < len; i += 4) {
         unsigned int triple;
         if (decode_quad(encoded, i, &triple) != 0) {
-            free(out);
+            a.free_fn(out, a.ctx);
             return NULL;
         }
         out[o++] = (unsigned char)(triple >> 16);
@@ -139,4 +139,20 @@ unsigned char *zenit_base64_decode(const char *encoded, size_t *out_len) {
         *out_len = o;
     }
     return out;
+}
+
+char *zenit_base64_encode(const unsigned char *data, size_t len) {
+    return zenit_base64_encode_with_allocator(data, len, ZENIT_ALLOCATOR_DEFAULT);
+}
+
+char *zenit_base64_encode_with_allocator(const unsigned char *data, size_t len, zenit_allocator_t allocator) {
+    return encode_impl(data, len, allocator);
+}
+
+unsigned char *zenit_base64_decode(const char *encoded, size_t *out_len) {
+    return zenit_base64_decode_with_allocator(encoded, out_len, ZENIT_ALLOCATOR_DEFAULT);
+}
+
+unsigned char *zenit_base64_decode_with_allocator(const char *encoded, size_t *out_len, zenit_allocator_t allocator) {
+    return decode_impl(encoded, out_len, allocator);
 }

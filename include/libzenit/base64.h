@@ -18,6 +18,7 @@
 #ifndef LIBZENIT_BASE64_H
 #define LIBZENIT_BASE64_H
 
+#include <libzenit/allocator.h>
 #include <stddef.h>
 
 /**
@@ -42,10 +43,10 @@ size_t zenit_base64_encode_len(size_t input_len);
 size_t zenit_base64_decode_len(const char *encoded);
 
 /**
- * @brief Encode raw bytes into a Base64 string.
+ * @brief Encode raw bytes into a Base64 string (default allocator).
  *
- * Allocates a null-terminated string via malloc().  The caller owns
- * the returned pointer and must free() it.
+ * Allocates a null-terminated string.  The caller owns the returned
+ * pointer and must free it using the default free().
  *
  * @param data Pointer to the raw bytes to encode.
  * @param len  Number of bytes to encode.
@@ -54,10 +55,20 @@ size_t zenit_base64_decode_len(const char *encoded);
 char *zenit_base64_encode(const unsigned char *data, size_t len);
 
 /**
- * @brief Decode a Base64 string into raw bytes.
+ * @brief Encode raw bytes into a Base64 string (custom allocator).
  *
- * Allocates a buffer via malloc().  The caller owns the returned pointer
- * and must free() it.
+ * @param data      Pointer to the raw bytes to encode.
+ * @param len       Number of bytes to encode.
+ * @param allocator Custom allocator for the output string.
+ * @return Null-terminated Base64 string, or NULL on allocation failure.
+ */
+char *zenit_base64_encode_with_allocator(const unsigned char *data, size_t len, zenit_allocator_t allocator);
+
+/**
+ * @brief Decode a Base64 string into raw bytes (default allocator).
+ *
+ * Allocates a buffer.  The caller owns the returned pointer and must
+ * free it using the default free().
  *
  * @param encoded Null-terminated Base64 string.
  * @param out_len On success, receives the number of decoded bytes.
@@ -65,5 +76,16 @@ char *zenit_base64_encode(const unsigned char *data, size_t len);
  *         or invalid input.
  */
 unsigned char *zenit_base64_decode(const char *encoded, size_t *out_len);
+
+/**
+ * @brief Decode a Base64 string into raw bytes (custom allocator).
+ *
+ * @param encoded   Null-terminated Base64 string.
+ * @param out_len   On success, receives the number of decoded bytes.
+ * @param allocator Custom allocator for the output buffer.
+ * @return Allocated buffer of decoded bytes, or NULL on allocation failure
+ *         or invalid input.
+ */
+unsigned char *zenit_base64_decode_with_allocator(const char *encoded, size_t *out_len, zenit_allocator_t allocator);
 
 #endif

@@ -403,8 +403,12 @@ Standard Base64 encoding/decoding (RFC 4648) with padding.
 
 | Function | Description |
 |---|---|
-| `zenit_base64_encode(data, len)` | Encode raw bytes into a Base64 string (caller frees) |
-| `zenit_base64_decode(encoded, out_len)` | Decode a Base64 string into raw bytes (caller frees) |
+| Function | Description |
+|---|---|---|
+| `zenit_base64_encode(data, len)` | Encode raw bytes into a Base64 string (default allocator) |
+| `zenit_base64_encode_with_allocator(data, len, allocator)` | Encode with a custom allocator |
+| `zenit_base64_decode(encoded, out_len)` | Decode a Base64 string into raw bytes (default allocator) |
+| `zenit_base64_decode_with_allocator(encoded, out_len, allocator)` | Decode with a custom allocator |
 
 - **Source:** [`src/base64.c`](src/base64.c)
 - **Tests:** [`tests/test_base64.c`](tests/test_base64.c) (9 sub-tests: encode/decode, padding, binary round-trip, NULL params, invalid input), [`tests/test_base64_malloc_fail.c`](tests/test_base64_malloc_fail.c) (allocation failure via `--wrap=malloc`)
@@ -418,11 +422,16 @@ Lowercase hexadecimal encoding/decoding. Accepts uppercase hex on decode. Handle
 
 | Function | Description |
 |---|---|
-| `zenit_hex_encode(data, len)` | Encode raw bytes into a lowercase hex string (caller frees) |
-| `zenit_hex_decode(hex, out_len)` | Decode a hex string into raw bytes (caller frees) |
+| Function | Description |
+|---|---|---|
+| `zenit_hex_encode(data, len)` | Encode raw bytes into a lowercase hex string (default allocator) |
+| `zenit_hex_encode_with_allocator(data, len, allocator)` | Encode with a custom allocator |
+| `zenit_hex_decode(hex, out_len)` | Decode a hex string into raw bytes (default allocator) |
+| `zenit_hex_decode_with_allocator(hex, out_len, allocator)` | Decode with a custom allocator |
 
 - **Source:** [`src/hex.c`](src/hex.c)
-- **Tests:** [`tests/test_hex.c`](tests/test_hex.c) (10 sub-tests: encode/decode, odd-length, uppercase, binary round-trip, invalid input, NULL params)
+- **Tests:** [`tests/test_hex.c`](tests/test_hex.c) (10 sub-tests: encode/decode, odd-length, uppercase, binary round-trip, invalid input, NULL params), [`tests/test_hex_malloc_fail.c`](tests/test_hex_malloc_fail.c) (allocation failure via `--wrap=malloc`)
+- **Benchmark:** [`benchmarks/benchmark_hex.c`](benchmarks/benchmark_hex.c) — encode 256B (100K), decode 256B (100K)
 
 ---
 
@@ -432,11 +441,16 @@ Percent-encoding for URI components per RFC 3986. Unreserved characters (A-Z, a-
 
 | Function | Description |
 |---|---|
-| `zenit_uri_encode(input)` | Encode a string for use in a URI (caller frees) |
-| `zenit_uri_decode(encoded)` | Decode a percent-encoded URI string (caller frees) |
+| Function | Description |
+|---|---|---|
+| `zenit_uri_encode(input)` | Percent-encode a string (default allocator) |
+| `zenit_uri_encode_with_allocator(input, allocator)` | Encode with a custom allocator |
+| `zenit_uri_decode(encoded)` | Decode a percent-encoded URI string (default allocator) |
+| `zenit_uri_decode_with_allocator(encoded, allocator)` | Decode with a custom allocator |
 
 - **Source:** [`src/uri.c`](src/uri.c)
-- **Tests:** [`tests/test_uri.c`](tests/test_uri.c) (11 sub-tests: encode unreserved/reserved/empty/NULL, decode basic/plus/empty/invalid/NULL, round-trip)
+- **Tests:** [`tests/test_uri.c`](tests/test_uri.c) (11 sub-tests: encode unreserved/reserved/empty/NULL, decode basic/plus/empty/invalid/NULL, round-trip), [`tests/test_uri_malloc_fail.c`](tests/test_uri_malloc_fail.c) (allocation failure via `--wrap=malloc`)
+- **Benchmark:** [`benchmarks/benchmark_uri.c`](benchmarks/benchmark_uri.c) — encode 256B (100K), decode 256B (100K)
 
 ---
 
@@ -446,12 +460,17 @@ Common string manipulation helpers — trim, split, and join. All functions retu
 
 | Function | Description |
 |---|---|
-| `zenit_str_trim(s)` | Remove leading and trailing whitespace |
-| `zenit_str_split(s, delim, out_count)` | Split into substrings at delimiter characters |
-| `zenit_str_join(parts, count, delim)` | Join an array of strings with a delimiter |
+| Function | Description |
+|---|---|---|
+| `zenit_str_trim(s)` | Remove leading and trailing whitespace (default allocator) |
+| `zenit_str_trim_with_allocator(s, allocator)` | Trim with a custom allocator |
+| `zenit_str_split(s, delim, out_count)` | Split into substrings (default allocator) |
+| `zenit_str_split_with_allocator(s, delim, out_count, allocator)` | Split with a custom allocator |
+| `zenit_str_join(parts, count, delim)` | Join an array of strings (default allocator) |
+| `zenit_str_join_with_allocator(parts, count, delim, allocator)` | Join with a custom allocator |
 
 - **Source:** [`src/str.c`](src/str.c)
-- **Tests:** [`tests/test_str.c`](tests/test_str.c) (18 sub-tests: trim basic/left/right/none/all/empty/NULL, split basic/consecutive/empty/no-delim/NULL, join basic/empty-delim/zero-count/one-part/NULL), [`tests/test_str_malloc_fail.c`](tests/test_str_malloc_fail.c) (allocation failure via `--wrap=malloc`)
+- **Tests:** [`tests/test_str.c`](tests/test_str.c) (18 sub-tests: trim basic/left/right/none/all/empty/NULL, split basic/consecutive/empty/no-delim/NULL, join basic/empty-delim/zero-count/one-part/NULL), [`tests/test_str_malloc_fail.c`](tests/test_str_malloc_fail.c) (allocation failure via `--wrap=malloc/calloc/realloc`)
 
 ---
 
@@ -467,6 +486,114 @@ In-place quicksort (median-of-three pivot) and binary search over sorted arrays.
 - **Source:** [`src/sort.c`](src/sort.c)
 - **Tests:** [`tests/test_sort.c`](tests/test_sort.c) (13 sub-tests: sort already-sorted/reverse/random/single/empty/doubles/duplicates/large-elements, binary search found/not-found/first/last/empty/NULL)
 - **Benchmark:** [`benchmarks/benchmark_sort.c`](benchmarks/benchmark_sort.c) — sort random 10K, sort sorted 10K, binary search hit (1M), binary search miss (1M)
+
+---
+
+### 20. Stack — `include/libzenit/stack.h`
+
+LIFO stack wrapper over the dynamic array (vector). Push and pop at the top are O(1) amortized.
+
+| Function | Description |
+|---|---|
+| `zenit_stack_create(elem_size)` | Create empty stack (default capacity 8); returns NULL on invalid param or OOM |
+| `zenit_stack_create_with_allocator(elem_size, allocator)` | Create with a custom allocator |
+| `zenit_stack_destroy(stack)` | Free all memory; NULL-safe |
+| `zenit_stack_push(stack, elem)` | Push onto top; grows if full; returns `ZENIT_ERROR_ALLOC` on failure |
+| `zenit_stack_pop(stack, out)` | Pop from top; returns `ZENIT_ERROR_EMPTY` if empty |
+| `zenit_stack_peek(stack)` | Pointer to top element (NULL if empty) |
+| `zenit_stack_count(stack)` | Number of elements (0 if NULL) |
+| `zenit_stack_empty(stack)` | 1 if empty or NULL |
+| `zenit_stack_clear(stack)` | Remove all without freeing buffer; NULL-safe |
+
+- **Source:** [`src/stack.c`](src/stack.c)
+- **Tests:** [`tests/test_stack.c`](tests/test_stack.c) (11 sub-tests: create/destroy, push/pop, peek, clear, NULL params, many elements, struct, allocator), [`tests/test_stack_malloc_fail.c`](tests/test_stack_malloc_fail.c) (allocation failure via `--wrap`)
+- **Benchmark:** [`benchmarks/benchmark_stack.c`](benchmarks/benchmark_stack.c) — push (1M), push_pop (1M), peek (1M)
+
+---
+
+### 21. Queue — `include/libzenit/queue.h`
+
+FIFO queue wrapper over the double-ended queue (deque). Enqueue and dequeue are O(1) amortized.
+
+| Function | Description |
+|---|---|
+| `zenit_queue_create(elem_size)` | Create empty queue (default capacity 8); returns NULL on invalid param or OOM |
+| `zenit_queue_create_with_allocator(elem_size, allocator)` | Create with a custom allocator |
+| `zenit_queue_destroy(queue)` | Free all memory; NULL-safe |
+| `zenit_queue_enqueue(queue, elem)` | Append to back; grows if full; returns `ZENIT_ERROR_ALLOC` on failure |
+| `zenit_queue_dequeue(queue, out)` | Remove from front; returns `ZENIT_ERROR_EMPTY` if empty |
+| `zenit_queue_peek(queue)` | Pointer to front element (NULL if empty) |
+| `zenit_queue_count(queue)` | Number of elements (0 if NULL) |
+| `zenit_queue_empty(queue)` | 1 if empty or NULL |
+| `zenit_queue_clear(queue)` | Remove all without freeing buffer; NULL-safe |
+
+- **Source:** [`src/queue.c`](src/queue.c)
+- **Tests:** [`tests/test_queue.c`](tests/test_queue.c) (12 sub-tests: create/destroy, enqueue/dequeue, peek, clear, NULL params, many elements, mixed ordering, struct, allocator), [`tests/test_queue_malloc_fail.c`](tests/test_queue_malloc_fail.c) (allocation failure via `--wrap`)
+- **Benchmark:** [`benchmarks/benchmark_queue.c`](benchmarks/benchmark_queue.c) — enqueue (1M), enqueue_dequeue (1M), peek (1M)
+
+---
+
+### 22. Timer / Stopwatch — `include/libzenit/timer.h`
+
+High-resolution timer value type using `clock_gettime` (POSIX) or `QueryPerformanceCounter` (Windows). No heap allocation — all functions operate on stack-allocated `zenit_time_t` values.
+
+| Function | Description |
+|---|---|
+| `zenit_time_now()` | Capture current monotonic time point |
+| `zenit_time_elapsed_s(start, end)` | Elapsed wall-clock time in seconds |
+| `zenit_time_elapsed_ms(start, end)` | Elapsed time in milliseconds |
+| `zenit_time_elapsed_us(start, end)` | Elapsed time in microseconds |
+| `zenit_time_elapsed_ns(start, end)` | Elapsed time in nanoseconds |
+| `zenit_time_add(a, b)` | Add two time points with nanosecond carry |
+| `zenit_time_sub(a, b)` | Subtract with nanosecond borrow |
+| `zenit_time_cmp(a, b)` | Compare: negative if a < b, zero if equal, positive if a > b |
+
+- **Source:** [`src/timer.c`](src/timer.c)
+- **Test:** [`tests/test_timer.c`](tests/test_timer.c) — now, elapsed, add, sub, cmp edge cases (no heap allocation — no malloc-fail test)
+- **Benchmark:** [`benchmarks/benchmark_timer.c`](benchmarks/benchmark_timer.c) — now (10M), elapsed_ns (10M)
+
+---
+
+### 23. Object Pool — `include/libzenit/pool.h`
+
+Fixed-capacity object pool with O(1) acquire/release. Pre-allocates a contiguous block of objects at creation; no heap allocation occurs after construction.
+
+| Function | Description |
+|---|---|
+| `zenit_pool_create(object_size, capacity)` | Create a pool; returns NULL on invalid params or OOM |
+| `zenit_pool_create_with_allocator(object_size, capacity, allocator)` | Create with a custom allocator |
+| `zenit_pool_destroy(pool)` | Free all memory; NULL-safe |
+| `zenit_pool_acquire(pool)` | Get a pre-allocated object; returns NULL if exhausted |
+| `zenit_pool_release(pool, obj)` | Return object; rejects double-free and foreign pointers |
+| `zenit_pool_count(pool)` | Number of acquired objects (0 if NULL) |
+| `zenit_pool_capacity(pool)` | Maximum objects the pool can hold (0 if NULL) |
+| `zenit_pool_available(pool)` | Number of objects available for acquisition (0 if NULL) |
+| `zenit_pool_clear(pool)` | Release all objects; NULL-safe |
+
+- **Source:** [`src/pool.c`](src/pool.c)
+- **Tests:** [`tests/test_pool.c`](tests/test_pool.c) (13 sub-tests: create/destroy, acquire/release, empty, double-free, foreign pointer, misaligned, clear, struct, allocator, consistency), [`tests/test_pool_malloc_fail.c`](tests/test_pool_malloc_fail.c) (allocation failure via `--wrap`)
+- **Benchmark:** [`benchmarks/benchmark_pool.c`](benchmarks/benchmark_pool.c) — acquire (1M), acquire_release (1M), small pool (1M)
+
+---
+
+### 24. File I/O — `include/libzenit/io.h`
+
+Portable file operations with a unified API across POSIX and Windows. Supports chunked copy for large files.
+
+| Function | Description |
+|---|---|
+| `zenit_file_read(path, out_data, out_len)` | Read entire file into allocated buffer (default allocator) |
+| `zenit_file_read_with_allocator(path, out_data, out_len, allocator)` | Read with a custom allocator |
+| `zenit_file_write(path, data, len)` | Write data, creating or truncating the file |
+| `zenit_file_append(path, data, len)` | Append data, creating the file if needed |
+| `zenit_file_exists(path)` | 1 if the file exists, 0 otherwise |
+| `zenit_file_delete(path)` | Delete a file |
+| `zenit_file_size(path, out_size)` | Get file size in bytes |
+| `zenit_file_copy(src, dst)` | Copy file (chunked, no full load into memory) |
+
+- **Source:** [`src/io.c`](src/io.c)
+- **Tests:** [`tests/test_io.c`](tests/test_io.c) (9 sub-tests: write/read, allocator variant, append, exists, delete, size, copy, NULL params, nonexistent), [`tests/test_io_malloc_fail.c`](tests/test_io_malloc_fail.c) (allocation failure via `--wrap=malloc`)
+- **Benchmark:** [`benchmarks/benchmark_io.c`](benchmarks/benchmark_io.c) — write 1KB (100K), read 1KB (100K)
 
 ---
 
@@ -513,22 +640,30 @@ libzen/
 │       ├── set.h               # Hash set API
 │       ├── list.h              # Doubly linked list API
 │       ├── heap.h              # Binary heap / priority queue API
-│       └── deque.h             # Double-ended queue API
+│       ├── deque.h             # Double-ended queue API
+│       ├── stack.h             # LIFO stack wrapper over vector
+│       ├── queue.h             # FIFO queue wrapper over deque
+│       ├── timer.h             # High-resolution stopwatch (value type)
+│       ├── pool.h              # Fixed-capacity object pool
+│       └── io.h                # File I/O (read/write/append/copy/delete)
 ├── src/
 │   ├── CMakeLists.txt          # Library target: static libzenit
 │   ├── result.c / version.c / state.c / arena.c / benchmark.c
 │   ├── ring.c / _hash_common.h / vector.c / map.c / set.c
 │   ├── list.c / heap.c / deque.c / string.c / bitset.c / json.c
 │   ├── base64.c / hex.c / uri.c / str.c / sort.c
+│   ├── stack.c / queue.c / timer.c / pool.c / io.c
 ├── tests/
-│   ├── CMakeLists.txt          # 33 test executables (DRY helpers)
+│   ├── CMakeLists.txt          # 46 test executables (DRY helpers)
 │   ├── test_malloc_fail.h      # Shared malloc/calloc wrappers
 │   ├── test_runner.h           # Shared test runner
 │   ├── test_result.c ... test_bitset.c  # One per module
 │   ├── test_*_malloc_fail.c    # Allocation-failure tests (--wrap)
 ├── benchmarks/
-│   ├── CMakeLists.txt          # 18 benchmark executables
+│   ├── CMakeLists.txt          # 23 benchmark executables
 │   ├── benchmark_version.c ... benchmark_json.c ... benchmark_base64.c ... benchmark_sort.c
+│   ├── benchmark_stack.c / benchmark_queue.c / benchmark_timer.c
+│   ├── benchmark_pool.c / benchmark_io.c
 ├── scripts/
 │   ├── benchmark_report.py     # CI benchmark log → BENCHMARK.md + charts
 │   └── checksum.py             # Release SHA-256 generator
@@ -575,4 +710,4 @@ libzen/
 
 ## Status
 
-Current version `0.1.0` — **alpha**. All 19 modules are implemented, fully tested, benchmarked, and passing CI across all platforms and sanitizers. All containers support custom allocators. The API is stable but may evolve before `1.0.0`.
+Current version `0.1.0` — **alpha**. All 24 modules are implemented, fully tested, benchmarked, and passing CI across all platforms and sanitizers. All containers support custom allocators. Encoding/utility functions (base64, hex, uri, str) also support custom allocators via `_with_allocator` variants. The API is stable but may evolve before `1.0.0`.

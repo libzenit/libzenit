@@ -18,6 +18,7 @@
 #ifndef LIBZENIT_HEX_H
 #define LIBZENIT_HEX_H
 
+#include <libzenit/allocator.h>
 #include <stddef.h>
 
 /**
@@ -42,10 +43,7 @@ size_t zenit_hex_encode_len(size_t data_len);
 size_t zenit_hex_decode_len(const char *hex);
 
 /**
- * @brief Encode raw bytes into a lowercase hex string.
- *
- * Allocates a null-terminated string via malloc().  The caller owns
- * the returned pointer and must free() it.
+ * @brief Encode raw bytes into a lowercase hex string (default allocator).
  *
  * @param data Pointer to the raw bytes to encode.
  * @param len  Number of bytes to encode.
@@ -54,13 +52,20 @@ size_t zenit_hex_decode_len(const char *hex);
 char *zenit_hex_encode(const unsigned char *data, size_t len);
 
 /**
- * @brief Decode a hex string into raw bytes.
+ * @brief Encode raw bytes into a lowercase hex string (custom allocator).
+ *
+ * @param data      Pointer to the raw bytes to encode.
+ * @param len       Number of bytes to encode.
+ * @param allocator Custom allocator for the output string.
+ * @return Null-terminated hex string (lowercase), or NULL on allocation failure.
+ */
+char *zenit_hex_encode_with_allocator(const unsigned char *data, size_t len, zenit_allocator_t allocator);
+
+/**
+ * @brief Decode a hex string into raw bytes (default allocator).
  *
  * Accepts both uppercase and lowercase hex digits.  If the input has
  * an odd length it is treated as if a leading '0' were present.
- *
- * Allocates a buffer via malloc().  The caller owns the returned pointer
- * and must free() it.
  *
  * @param hex     Null-terminated hex string.
  * @param out_len On success, receives the number of decoded bytes.
@@ -68,5 +73,16 @@ char *zenit_hex_encode(const unsigned char *data, size_t len);
  *         or invalid input (non-hex character).
  */
 unsigned char *zenit_hex_decode(const char *hex, size_t *out_len);
+
+/**
+ * @brief Decode a hex string into raw bytes (custom allocator).
+ *
+ * @param hex       Null-terminated hex string.
+ * @param out_len   On success, receives the number of decoded bytes.
+ * @param allocator Custom allocator for the output buffer.
+ * @return Allocated buffer of decoded bytes, or NULL on allocation failure
+ *         or invalid input (non-hex character).
+ */
+unsigned char *zenit_hex_decode_with_allocator(const char *hex, size_t *out_len, zenit_allocator_t allocator);
 
 #endif
