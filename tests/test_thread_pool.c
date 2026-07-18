@@ -68,10 +68,13 @@ int main(void) {
 
         zenit_thread_pool_wait(pool);
 
-        if (ATOMIC_READ(test_counter) != 10) {
-            fprintf(stderr, "FAIL: counter %ld != 10\n", ATOMIC_READ(test_counter));
-            zenit_thread_pool_destroy(pool);
-            return 1;
+        {
+            long count = ATOMIC_READ(test_counter);
+            if (count != 10) {
+                fprintf(stderr, "FAIL: counter %ld != 10\n", count);
+                zenit_thread_pool_destroy(pool);
+                return 1;
+            }
         }
 
         zenit_thread_pool_destroy(pool);
@@ -148,10 +151,13 @@ int main(void) {
 
         zenit_thread_pool_wait(pool);
 
-        if (ATOMIC_READ(test_counter) != 5) {
-            fprintf(stderr, "FAIL: single thread counter %ld != 5\n", ATOMIC_READ(test_counter));
-            zenit_thread_pool_destroy(pool);
-            return 1;
+        {
+            long count = ATOMIC_READ(test_counter);
+            if (count != 5) {
+                fprintf(stderr, "FAIL: single thread counter %ld != 5\n", count);
+                zenit_thread_pool_destroy(pool);
+                return 1;
+            }
         }
 
         zenit_thread_pool_destroy(pool);
