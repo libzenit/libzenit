@@ -22,12 +22,11 @@
 #include <Windows.h>
 #else
 #include <pthread.h>
+#include <sched.h>
 #endif
 
-/* Fixed-size task queue — tasks are stored in a ring buffer */
 #define POOL_QUEUE_CAPACITY 4096
 
-/* A single task */
 typedef struct {
     zenit_thread_task_fn fn;
     void *ctx;
@@ -37,7 +36,6 @@ struct zenit_thread_pool_t {
     size_t thread_count;
     volatile int running;
 
-    /* Task queue (ring buffer) */
     task_t queue[POOL_QUEUE_CAPACITY];
     volatile size_t queue_head;
     volatile size_t queue_tail;
@@ -59,20 +57,18 @@ struct zenit_thread_pool_t {
 static DWORD WINAPI worker_thread(LPVOID arg) {
     zenit_thread_pool_t *pool = (zenit_thread_pool_t *)arg;
 
-    while (pool->running) {
+    while (1) {
         EnterCriticalSection(&pool->mutex);
 
-        /* Wait for a task or shutdown */
         while (pool->queue_head == pool->queue_tail && pool->running) {
             SleepConditionVariableCS(&pool->cv_not_empty, &pool->mutex, INFINITE);
         }
 
-        if (!pool->running) {
+        if (!pool->running && pool->queue_head == pool->queue_tail) {
             LeaveCriticalSection(&pool->mutex);
             break;
         }
 
-        /* Dequeue */
         size_t index = pool->queue_tail % POOL_QUEUE_CAPACITY;
         task_t task = pool->queue[index];
         pool->queue_tail++;
@@ -80,7 +76,6 @@ static DWORD WINAPI worker_thread(LPVOID arg) {
         LeaveCriticalSection(&pool->mutex);
         WakeConditionVariable(&pool->cv_not_full);
 
-        /* Execute the task */
         task.fn(task.ctx);
     }
 
@@ -93,7 +88,6 @@ static void* worker_thread(void *arg) {
     while (1) {
         pthread_mutex_lock(&pool->mutex);
 
-        /* Wait for a task or shutdown */
         while (pool->queue_head == pool->queue_tail && pool->running) {
             pthread_cond_wait(&pool->cv_not_empty, &pool->mutex);
         }
@@ -103,7 +97,6 @@ static void* worker_thread(void *arg) {
             break;
         }
 
-        /* Dequeue */
         size_t index = pool->queue_tail % POOL_QUEUE_CAPACITY;
         task_t task = pool->queue[index];
         pool->queue_tail++;
@@ -111,7 +104,6 @@ static void* worker_thread(void *arg) {
         pthread_mutex_unlock(&pool->mutex);
         pthread_cond_signal(&pool->cv_not_full);
 
-        /* Execute the task */
         task.fn(task.ctx);
     }
 
@@ -148,7 +140,6 @@ zenit_thread_pool_t* zenit_thread_pool_create(size_t thread_count) {
     for (size_t i = 0; i < thread_count; i++) {
         pool->threads[i] = CreateThread(NULL, 0, worker_thread, pool, 0, NULL);
         if (pool->threads[i] == NULL) {
-            /* Clean up already-created threads */
             pool->running = 0;
             WakeAllConditionVariable(&pool->cv_not_empty);
             for (size_t j = 0; j < i; j++) {
@@ -175,7 +166,6 @@ zenit_thread_pool_t* zenit_thread_pool_create(size_t thread_count) {
     for (size_t i = 0; i < thread_count; i++) {
         int rc = pthread_create(&pool->threads[i], NULL, worker_thread, pool);
         if (rc != 0) {
-            /* Clean up already-created threads */
             pool->running = 0;
             pthread_cond_broadcast(&pool->cv_not_empty);
             for (size_t j = 0; j < i; j++) {
@@ -199,7 +189,6 @@ void zenit_thread_pool_destroy(zenit_thread_pool_t *pool) {
         return;
     }
 
-    /* Signal shutdown */
 #if defined(_WIN32)
     EnterCriticalSection(&pool->mutex);
     pool->running = 0;
@@ -238,7 +227,6 @@ zenit_result_t zenit_thread_pool_enqueue(zenit_thread_pool_t *pool, zenit_thread
 #if defined(_WIN32)
     EnterCriticalSection(&pool->mutex);
 
-    /* Wait for space in the queue */
     while (pool->queue_head - pool->queue_tail >= POOL_QUEUE_CAPACITY && pool->running) {
         SleepConditionVariableCS(&pool->cv_not_full, &pool->mutex, INFINITE);
     }
@@ -258,7 +246,6 @@ zenit_result_t zenit_thread_pool_enqueue(zenit_thread_pool_t *pool, zenit_thread
 #else
     pthread_mutex_lock(&pool->mutex);
 
-    /* Wait for space in the queue */
     while (pool->queue_head - pool->queue_tail >= POOL_QUEUE_CAPACITY && pool->running) {
         pthread_cond_wait(&pool->cv_not_full, &pool->mutex);
     }
@@ -299,13 +286,21 @@ void zenit_thread_pool_wait(zenit_thread_pool_t *pool) {
         return;
     }
 
-    /* Busy-wait until the queue is empty */
-    while (pool->queue_head != pool->queue_tail) {
-        /* Yield to allow workers to make progress */
 #if defined(_WIN32)
+    EnterCriticalSection(&pool->mutex);
+    while (pool->queue_head != pool->queue_tail) {
+        LeaveCriticalSection(&pool->mutex);
         SwitchToThread();
-#else
-        sched_yield();
-#endif
+        EnterCriticalSection(&pool->mutex);
     }
+    LeaveCriticalSection(&pool->mutex);
+#else
+    pthread_mutex_lock(&pool->mutex);
+    while (pool->queue_head != pool->queue_tail) {
+        pthread_mutex_unlock(&pool->mutex);
+        sched_yield();
+        pthread_mutex_lock(&pool->mutex);
+    }
+    pthread_mutex_unlock(&pool->mutex);
+#endif
 }

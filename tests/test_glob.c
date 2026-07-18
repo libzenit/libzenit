@@ -22,7 +22,7 @@
     int got = zenit_glob_match((p), (s)); \
     if (got != (expected)) { \
         fprintf(stderr, "FAIL: glob '%s' vs '%s' expected %d got %d\n", \
-                (p), (s), (expected), got); \
+                (const char*)(p), (const char*)(s), (expected), got); \
         return 1; \
     } \
 } while(0)

@@ -19,12 +19,20 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-/* Shared counter for testing */
+#if defined(_MSC_VER)
+#include <windows.h>
+#define ATOMIC_INC(var) InterlockedIncrement(&var)
+#define ATOMIC_READ(var) ((int)InterlockedExchangeAdd(&var, 0))
+#else
+#define ATOMIC_INC(var) __sync_fetch_and_add(&(var), 1)
+#define ATOMIC_READ(var) __sync_fetch_and_add(&(var), 0)
+#endif
+
 static volatile int test_counter = 0;
 
 static void increment_task(void *ctx) {
     (void)ctx;
-    __sync_fetch_and_add(&test_counter, 1);
+    ATOMIC_INC(test_counter);
 }
 
 int main(void) {
@@ -60,8 +68,8 @@ int main(void) {
 
         zenit_thread_pool_wait(pool);
 
-        if (test_counter != 10) {
-            fprintf(stderr, "FAIL: counter %d != 10\n", test_counter);
+        if (ATOMIC_READ(test_counter) != 10) {
+            fprintf(stderr, "FAIL: counter %d != 10\n", ATOMIC_READ(test_counter));
             zenit_thread_pool_destroy(pool);
             return 1;
         }
@@ -76,7 +84,6 @@ int main(void) {
         test_counter = 0;
 
         zenit_thread_pool_enqueue(pool, increment_task, NULL);
-        /* Give the worker a moment to pick up the task */
         zenit_thread_pool_wait(pool);
 
         if (zenit_thread_pool_pending(pool) != 0) {
@@ -141,8 +148,8 @@ int main(void) {
 
         zenit_thread_pool_wait(pool);
 
-        if (test_counter != 5) {
-            fprintf(stderr, "FAIL: single thread counter %d != 5\n", test_counter);
+        if (ATOMIC_READ(test_counter) != 5) {
+            fprintf(stderr, "FAIL: single thread counter %d != 5\n", ATOMIC_READ(test_counter));
             zenit_thread_pool_destroy(pool);
             return 1;
         }

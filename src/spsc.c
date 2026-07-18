@@ -19,6 +19,13 @@
 #include <stdlib.h>
 #include <string.h>
 
+#if defined(_MSC_VER)
+#include <windows.h>
+#define ZENIT_MEMORY_BARRIER() MemoryBarrier()
+#else
+#define ZENIT_MEMORY_BARRIER() __sync_synchronize()
+#endif
+
 /* Round up to the nearest power of two */
 static uint32_t round_pow2_u32(uint32_t v) {
     v--;
@@ -37,7 +44,7 @@ zenit_spsc_t* zenit_spsc_create(size_t elem_size, size_t capacity) {
 
     /* Round capacity to power of two */
     uint32_t cap = round_pow2_u32((uint32_t)capacity);
-    if (cap == 0) cap = (uint32_t)capacity; /* overflow */
+    if (cap == 0) cap = (uint32_t)capacity;
 
     zenit_spsc_t *spsc = malloc(sizeof(zenit_spsc_t));
     if (spsc == NULL) {
@@ -75,15 +82,13 @@ zenit_result_t zenit_spsc_push(zenit_spsc_t *spsc, const void *elem) {
     uint32_t tail = spsc->tail;
     uint32_t mask = (uint32_t)(spsc->capacity - 1);
 
-    /* Check if full: head - tail == capacity */
     if ((head - tail) >= (uint32_t)spsc->capacity) {
         return ZENIT_RESULT_ERROR(ZENIT_ERROR_FULL);
     }
 
     memcpy(spsc->buffer + (head & mask) * spsc->elem_size, elem, spsc->elem_size);
 
-    /* Write barrier: ensure data is visible before updating head */
-    __sync_synchronize();
+    ZENIT_MEMORY_BARRIER();
     spsc->head = head + 1;
 
     return ZENIT_RESULT_OK;
@@ -98,15 +103,13 @@ zenit_result_t zenit_spsc_pop(zenit_spsc_t *spsc, void *out) {
     uint32_t tail = spsc->tail;
     uint32_t mask = (uint32_t)(spsc->capacity - 1);
 
-    /* Check if empty */
     if (head == tail) {
         return ZENIT_RESULT_ERROR(ZENIT_ERROR_EMPTY);
     }
 
     memcpy(out, spsc->buffer + (tail & mask) * spsc->elem_size, spsc->elem_size);
 
-    /* Write barrier: ensure data is read before updating tail */
-    __sync_synchronize();
+    ZENIT_MEMORY_BARRIER();
     spsc->tail = tail + 1;
 
     return ZENIT_RESULT_OK;
