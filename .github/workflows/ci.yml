@@ -53,6 +53,7 @@ jobs:
             compiler: gcc
             build_type: Debug
             coverage: true
+            shell: msys2 {0}
 
     runs-on: ${{ matrix.os }}
     defaults:
@@ -60,11 +61,11 @@ jobs:
         shell: ${{ matrix.shell || 'bash' }}
 
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
+      - uses: actions/checkout@v6
 
-      - name: Set up MSYS2 (Windows gcc coverage)
+      - name: Set up MSYS2 (Windows gcc)
         if: matrix.compiler == 'gcc' && runner.os == 'Windows'
-        uses: msys2/setup-msys2@66cd2cce69caa17b53920067426061ca1de3a884
+        uses: msys2/setup-msys2@v2
         with:
           msystem: MINGW64
           install: >-
@@ -78,12 +79,13 @@ jobs:
         run: |
           echo "CC=${{ matrix.compiler == 'gcc' && 'gcc' || 'clang' }}" >> $GITHUB_ENV
           echo "CXX=${{ matrix.compiler == 'gcc' && 'g++' || 'clang++' }}" >> $GITHUB_ENV
+          echo "CMAKE_C_COMPILER=${{ matrix.compiler == 'gcc' && 'gcc' || 'clang' }}" >> $GITHUB_ENV
 
       - name: Configure
         run: >
           cmake -B build
           ${{ matrix.compiler == 'gcc' && runner.os == 'Windows' && '-G Ninja' || '' }}
-          ${{ matrix.compiler == 'gcc' && runner.os == 'Windows' && '-DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++' || '' }}
+          ${{ runner.os == 'Windows' && matrix.compiler == 'gcc' && '-DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++' || '' }}
           -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
           -DLIBZENIT_BUILD_TESTS=ON
           ${{ matrix.coverage && '-DLIBZENIT_BUILD_COVERAGE=ON' || '' }}
@@ -105,6 +107,7 @@ jobs:
 
       - name: Generate coverage report
         if: matrix.coverage
+        shell: ${{ runner.os == 'Windows' && 'msys2 {0}' || 'bash' }}
         run: |
           lcov --capture -d build --output-file coverage.info \
             --branch-coverage \
@@ -134,7 +137,7 @@ jobs:
         build_type: [Debug, Release]
 
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
+      - uses: actions/checkout@v6
 
       - name: Configure
         run: >
@@ -183,7 +186,7 @@ jobs:
     continue-on-error: ${{ contains(fromJson('["memory", "cfi", "implicit-truncation"]'), matrix.sanitizer) }}
 
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
+      - uses: actions/checkout@v6
 
       - name: Set up compiler
         run: |
@@ -232,7 +235,7 @@ jobs:
     continue-on-error: true
 
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
+      - uses: actions/checkout@v6
 
       - name: Set up compiler
         run: |
@@ -255,7 +258,7 @@ jobs:
             tee benchmark_${{ matrix.os }}.log
 
       - name: Upload benchmark log
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@v4
         with:
           name: benchmark-log-${{ matrix.os }}
           path: benchmark_${{ matrix.os }}.log
@@ -270,12 +273,12 @@ jobs:
       contents: write
 
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
+      - uses: actions/checkout@v6
         with:
           ref: ${{ github.head_ref || github.ref_name }}
 
       - name: Download all benchmark logs
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        uses: actions/download-artifact@v4
         with:
           pattern: benchmark-log-*
           merge-multiple: true
@@ -348,7 +351,7 @@ jobs:
         shell: ${{ matrix.shell || 'bash' }}
 
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
+      - uses: actions/checkout@v6
 
       - name: Set up compiler
         if: runner.os != 'Windows' && matrix.cmake_system != 'iOS'
