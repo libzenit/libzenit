@@ -19,7 +19,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#if defined(_MSC_VER)
+#if defined(_WIN32)
 #include <windows.h>
 #define ZENIT_MEMORY_BARRIER() MemoryBarrier()
 #else

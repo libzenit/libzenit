@@ -76,7 +76,7 @@ int main(void) {
     }
     printf("PASS: uuid format\n");
 
-    /* Test 3: Round-trip parse(format(generate)) */
+    /* Test 3: Round-trip format then parse */
     {
         zenit_uuid_t orig;
         zenit_uuid_generate(&orig);
@@ -131,7 +131,8 @@ int main(void) {
 
     /* Test 6: Equal UUIDs */
     {
-        zenit_uuid_t a, b;
+        zenit_uuid_t a;
+        zenit_uuid_t b;
         zenit_uuid_parse("550e8400-e29b-41d4-a716-446655440000", &a);
         zenit_uuid_parse("550e8400-e29b-41d4-a716-446655440000", &b);
         if (!zenit_uuid_equal(&a, &b)) {
@@ -143,7 +144,8 @@ int main(void) {
 
     /* Test 7: Non-equal UUIDs */
     {
-        zenit_uuid_t a, b;
+        zenit_uuid_t a;
+        zenit_uuid_t b;
         zenit_uuid_parse("550e8400-e29b-41d4-a716-446655440000", &a);
         zenit_uuid_parse("550e8400-e29b-41d4-a716-446655440001", &b);
         if (zenit_uuid_equal(&a, &b)) {

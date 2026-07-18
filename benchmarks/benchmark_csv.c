@@ -29,7 +29,7 @@ static void bench_csv_parse(void *ctx) {
 
 static void bench_csv_serialise(void *ctx) {
     (void)ctx;
-    zenit_csv_record_t *rec = (zenit_csv_record_t *)ctx;
+    const zenit_csv_record_t *rec = (const zenit_csv_record_t *)ctx;
     char *out = NULL;
     zenit_csv_serialise_record(rec, ',', &out);
     free(out);

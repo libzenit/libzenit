@@ -19,12 +19,80 @@
 #include <stdlib.h>
 #include <string.h>
 
+/* ─── Internal helpers ─── */
+
+/* Grow buf to new_cap using the record's allocator. On failure, cleans up the record. */
+static int grow_buf(char **buf, size_t new_cap, zenit_csv_record_t *out, zenit_allocator_t a) {
+    char *tmp = zenit_allocator_realloc(a, *buf, new_cap / 2, new_cap);
+    if (tmp == NULL) {
+        a.free_fn(*buf, a.ctx);
+        zenit_csv_record_destroy(out);
+        return 0;
+    }
+    *buf = tmp;
+    return 1;
+}
+
+/* Append a char to buf, growing if needed. Returns 0 on alloc failure. */
+static int buf_append(char **buf, size_t *cap, size_t *len, char c, zenit_csv_record_t *out, zenit_allocator_t a) {
+    if (*len + 1 >= *cap) {
+        if (!grow_buf(buf, *cap * 2, out, a)) return 0;
+        *cap *= 2;
+    }
+    (*buf)[(*len)++] = c;
+    return 1;
+}
+
+/* Read a quoted field from p into buf. Advances p past the closing quote. */
+static int read_quoted(const char **p, char **buf, size_t *cap, size_t *len, zenit_csv_record_t *out, zenit_allocator_t a) {
+    (*p)++;
+    while (**p != '\0') {
+        if (**p == '"') {
+            if (*(*p + 1) == '"') {
+                (*p)++;
+                if (!buf_append(buf, cap, len, '"', out, a)) return 0;
+                (*p)++;
+            } else {
+                (*p)++;
+                return 1;
+            }
+        } else {
+            if (!buf_append(buf, cap, len, **p, out, a)) return 0;
+            (*p)++;
+        }
+    }
+    return 1;
+}
+
+/* Read an unquoted field from p into buf. Stops at delimiter, \n, \r, or \0.
+   Returns 0 on alloc failure. */
+static int read_unquoted(const char **p, char **buf, size_t *cap, size_t *len, char delim, zenit_csv_record_t *out, zenit_allocator_t a) {
+    while (**p != '\0' && **p != delim && **p != '\n' && **p != '\r') {
+        if (!buf_append(buf, cap, len, **p, out, a)) return 0;
+        (*p)++;
+    }
+    return 1;
+}
+
+/* Grow the fields array in out. Returns 0 on alloc failure. */
+static int grow_fields(zenit_csv_record_t *out, size_t *cap, zenit_allocator_t a) {
+    *cap *= 2;
+    char **tmp = zenit_allocator_realloc(a, out->fields, (*cap / 2) * sizeof(char *), *cap * sizeof(char *));
+    if (tmp == NULL) {
+        zenit_csv_record_destroy(out);
+        return 0;
+    }
+    out->fields = tmp;
+    return 1;
+}
+
+/* ─── Public API ─── */
+
 zenit_result_t zenit_csv_parse_record_with_allocator(const char *line, char delimiter, zenit_csv_record_t *out, zenit_allocator_t allocator) {
     if (line == NULL || out == NULL) {
         return ZENIT_RESULT_ERROR(ZENIT_ERROR_NULL);
     }
 
-    /* Initialise output */
     out->fields = NULL;
     out->count = 0;
 
@@ -38,18 +106,12 @@ zenit_result_t zenit_csv_parse_record_with_allocator(const char *line, char deli
     size_t fi = 0;
 
     while (1) {
-        /* Grow fields array if needed */
         if (fi >= field_cap) {
-            field_cap *= 2;
-            char **tmp = zenit_allocator_realloc(allocator, out->fields, (field_cap / 2) * sizeof(char *), field_cap * sizeof(char *));
-            if (tmp == NULL) {
-                zenit_csv_record_destroy(out);
+            if (!grow_fields(out, &field_cap, allocator)) {
                 return ZENIT_RESULT_ERROR(ZENIT_ERROR_ALLOC);
             }
-            out->fields = tmp;
         }
 
-        /* Parse one field */
         size_t buf_cap = 64;
         size_t buf_len = 0;
         char *buf = allocator.alloc_fn(buf_cap, allocator.ctx);
@@ -59,83 +121,24 @@ zenit_result_t zenit_csv_parse_record_with_allocator(const char *line, char deli
         }
 
         if (*p == '"') {
-            /* Quoted field */
-            p++;
-            while (1) {
-                if (*p == '\0') {
-                    /* End of input while in quoted field — accept it */
-                    break;
-                }
-                if (*p == '"') {
-                    if (*(p + 1) == '"') {
-                        /* Escaped quote */
-                        p++;
-                        /* Append one quote */
-                        if (buf_len + 1 >= buf_cap) {
-                            buf_cap *= 2;
-                            char *tmp = zenit_allocator_realloc(allocator, buf, buf_cap / 2, buf_cap);
-                            if (tmp == NULL) {
-                                allocator.free_fn(buf, allocator.ctx);
-                                zenit_csv_record_destroy(out);
-                                return ZENIT_RESULT_ERROR(ZENIT_ERROR_ALLOC);
-                            }
-                            buf = tmp;
-                        }
-                        buf[buf_len++] = '"';
-                        p++;
-                    } else {
-                        /* End of quoted field */
-                        p++;
-                        break;
-                    }
-                } else {
-                    if (buf_len + 1 >= buf_cap) {
-                        buf_cap *= 2;
-                        char *tmp = zenit_allocator_realloc(allocator, buf, buf_cap / 2, buf_cap);
-                        if (tmp == NULL) {
-                            allocator.free_fn(buf, allocator.ctx);
-                            zenit_csv_record_destroy(out);
-                            return ZENIT_RESULT_ERROR(ZENIT_ERROR_ALLOC);
-                        }
-                        buf = tmp;
-                    }
-                    buf[buf_len++] = *p;
-                    p++;
-                }
+            if (!read_quoted(&p, &buf, &buf_cap, &buf_len, out, allocator)) {
+                return ZENIT_RESULT_ERROR(ZENIT_ERROR_ALLOC);
             }
         } else {
-            /* Unquoted field */
-            while (*p != '\0' && *p != delimiter && *p != '\n' && *p != '\r') {
-                if (buf_len + 1 >= buf_cap) {
-                    buf_cap *= 2;
-                    char *tmp = zenit_allocator_realloc(allocator, buf, buf_cap / 2, buf_cap);
-                    if (tmp == NULL) {
-                        allocator.free_fn(buf, allocator.ctx);
-                        zenit_csv_record_destroy(out);
-                        return ZENIT_RESULT_ERROR(ZENIT_ERROR_ALLOC);
-                    }
-                    buf = tmp;
-                }
-                buf[buf_len++] = *p;
-                p++;
+            if (!read_unquoted(&p, &buf, &buf_cap, &buf_len, delimiter, out, allocator)) {
+                return ZENIT_RESULT_ERROR(ZENIT_ERROR_ALLOC);
             }
         }
 
-        /* Null-terminate the field */
         if (buf_len >= buf_cap) {
-            buf_cap++;
-            char *tmp = zenit_allocator_realloc(allocator, buf, buf_cap - 1, buf_cap);
-            if (tmp == NULL) {
-                allocator.free_fn(buf, allocator.ctx);
-                zenit_csv_record_destroy(out);
+            if (!grow_buf(&buf, buf_cap + 1, out, allocator)) {
                 return ZENIT_RESULT_ERROR(ZENIT_ERROR_ALLOC);
             }
-            buf = tmp;
+            buf_cap++;
         }
         buf[buf_len] = '\0';
         out->fields[fi++] = buf;
 
-        /* Check for delimiter or end of record */
         if (*p == delimiter) {
             p++;
             continue;
@@ -165,10 +168,8 @@ void zenit_csv_record_destroy(zenit_csv_record_t *record) {
     record->count = 0;
 }
 
-/* Check if a field needs quoting (contains delimiter, quote, newline, or leading/trailing whitespace) */
 static int needs_quoting(const char *s, char delimiter) {
     if (s == NULL || *s == '\0') return 1;
-    /* Leading or trailing whitespace */
     if (*s == ' ' || *s == '\t') return 1;
     size_t len = strlen(s);
     if (len > 0 && (s[len - 1] == ' ' || s[len - 1] == '\t')) return 1;
@@ -186,23 +187,22 @@ zenit_result_t zenit_csv_serialise_record_with_allocator(const zenit_csv_record_
         return ZENIT_RESULT_ERROR(ZENIT_ERROR_NULL);
     }
 
-    /* Calculate total output length */
     size_t total = 0;
     for (size_t i = 0; i < record->count; i++) {
         const char *field = record->fields[i];
-        if (i > 0) total++; /* delimiter */
+        if (i > 0) total++;
 
         if (needs_quoting(field, delimiter)) {
-            total += 2; /* opening and closing quotes */
+            total += 2;
             for (const char *p = field; *p; p++) {
-                if (*p == '"') total++; /* doubled quote */
+                if (*p == '"') total++;
                 total++;
             }
         } else {
             total += strlen(field);
         }
     }
-    total++; /* NUL */
+    total++;
 
     char *buf = allocator.alloc_fn(total, allocator.ctx);
     if (buf == NULL) {

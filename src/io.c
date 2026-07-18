@@ -155,7 +155,6 @@ zenit_result_t zenit_file_read_line_with_allocator(const char *path, char **out_
                 return ZENIT_RESULT_ERROR(ZENIT_ERROR_NOT_FOUND);
             }
             if (bytes_read == 0) {
-                eof = 1;
                 break;
             }
             read_buf_pos = 0;
@@ -214,7 +213,6 @@ line_done_win:
                 return ZENIT_RESULT_ERROR(ZENIT_ERROR_NOT_FOUND);
             }
             if (n == 0) {
-                eof = 1;
                 break;
             }
             read_buf_pos = 0;

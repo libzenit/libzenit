@@ -26,7 +26,7 @@ static int parse_num(const char **p, int *ok) {
     int started = 0;
     while (**p >= '0' && **p <= '9') {
         started = 1;
-        int d = (int)(**p - '0');
+        int d = **p - '0';
         if (n > (2147483647 - d) / 10) {
             *ok = 0;
             return 0;
@@ -158,7 +158,8 @@ zenit_result_t zenit_semver_format_with_allocator(const zenit_semver_t *v, char 
 /* Compare two pre-release identifiers.  Returns negative, zero, or positive. */
 static int cmp_pre_id(const char *a_start, size_t a_len, const char *b_start, size_t b_len) {
     /* Check if both are numeric */
-    int a_num = 1, b_num = 1;
+    int a_num = 1;
+    int b_num = 1;
     for (size_t i = 0; i < a_len; i++) {
         if (a_start[i] < '0' || a_start[i] > '9') { a_num = 0; break; }
     }
@@ -168,7 +169,8 @@ static int cmp_pre_id(const char *a_start, size_t a_len, const char *b_start, si
 
     if (a_num && b_num) {
         /* Numeric comparison */
-        int a_val = 0, b_val = 0;
+        int a_val = 0;
+        int b_val = 0;
         for (size_t i = 0; i < a_len; i++) a_val = a_val * 10 + (a_start[i] - '0');
         for (size_t i = 0; i < b_len; i++) b_val = b_val * 10 + (b_start[i] - '0');
         if (a_val < b_val) return -1;
@@ -194,7 +196,8 @@ static int cmp_prerelease(const char *a, const char *b) {
     if (b[0] == '\0') return -1;
 
     /* Split on '.' and compare pairwise */
-    const char *ap = a, *bp = b;
+    const char *ap = a;
+    const char *bp = b;
     while (1) {
         const char *a_dot = strchr(ap, '.');
         const char *b_dot = strchr(bp, '.');

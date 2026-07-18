@@ -66,7 +66,7 @@ zenit_logger_t* zenit_logger_create_with_allocator(zenit_log_sink_fn sink, void 
     }
 
     logger->level = ZENIT_LOG_TRACE;
-    logger->sink = sink ? sink : default_sink;
+    logger->sink = sink ? sink : &default_sink;
     logger->sink_ctx = sink ? sink_ctx : NULL;
     logger->allocator = allocator;
 
@@ -107,7 +107,7 @@ void zenit_logger_log(zenit_logger_t *logger, zenit_log_level_t level, const cha
 
     /* Get current timestamp */
     time_t now = time(NULL);
-    struct tm *tm_info;
+    const struct tm *tm_info;
 
 #if defined(_WIN32)
     struct tm tm_buf;
@@ -122,7 +122,7 @@ void zenit_logger_log(zenit_logger_t *logger, zenit_log_level_t level, const cha
     if (tm_info != NULL) {
         strftime(timestamp, sizeof(timestamp), "%H:%M:%S", tm_info);
     } else {
-        strcpy(timestamp, "??:??:??");
+        memcpy(timestamp, "??:??:??", 9);
     }
 
     /* Format the user message */

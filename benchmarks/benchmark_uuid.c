@@ -26,7 +26,7 @@ static void bench_uuid_generate(void *ctx) {
 
 static void bench_uuid_format(void *ctx) {
     (void)ctx;
-    zenit_uuid_t *u = (zenit_uuid_t *)ctx;
+    const zenit_uuid_t *u = (const zenit_uuid_t *)ctx;
     char buf[ZENIT_UUID_STR_LEN];
     zenit_uuid_format(u, buf);
 }

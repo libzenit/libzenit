@@ -27,7 +27,7 @@ static void bench_semver_parse(void *ctx) {
 
 static void bench_semver_format(void *ctx) {
     (void)ctx;
-    zenit_semver_t *v = (zenit_semver_t *)ctx;
+    const zenit_semver_t *v = (const zenit_semver_t *)ctx;
     char *s = NULL;
     zenit_semver_format(v, &s);
     free(s);
@@ -35,7 +35,7 @@ static void bench_semver_format(void *ctx) {
 
 static void bench_semver_compare(void *ctx) {
     (void)ctx;
-    zenit_semver_t *versions = (zenit_semver_t *)ctx;
+    const zenit_semver_t *versions = (const zenit_semver_t *)ctx;
     zenit_semver_compare(&versions[0], &versions[1]);
 }
 
@@ -43,7 +43,8 @@ int main(void) {
     zenit_semver_t v;
     zenit_semver_parse("3.2.1-beta.2+build.99", &v);
 
-    zenit_semver_t va, vb;
+    zenit_semver_t va;
+    zenit_semver_t vb;
     zenit_semver_parse("1.2.3", &va);
     zenit_semver_parse("1.2.4", &vb);
     zenit_semver_t versions[2] = { va, vb };

@@ -118,9 +118,9 @@ zenit_result_t zenit_uuid_format(const zenit_uuid_t *uuid, char *out) {
 
 /* Convert a hex character to its numeric value (0-15).  Returns -1 on invalid. */
 static int hex_val(char c) {
-    if (c >= '0' && c <= '9') return (int)(c - '0');
-    if (c >= 'a' && c <= 'f') return (int)(c - 'a' + 10);
-    if (c >= 'A' && c <= 'F') return (int)(c - 'A' + 10);
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+    if (c >= 'A' && c <= 'F') return c - 'A' + 10;
     return -1;
 }
 

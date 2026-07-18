@@ -84,7 +84,7 @@ int main(void) {
     /* Test 6: Format with prerelease */
     {
         zenit_semver_t v = { .major = 1, .minor = 0, .patch = 0 };
-        strcpy(v.pre_release, "alpha");
+        snprintf(v.pre_release, sizeof(v.pre_release), "%s", "alpha");
         char *s = NULL;
         zenit_semver_format(&v, &s);
         if (strcmp(s, "1.0.0-alpha") != 0) {
@@ -109,7 +109,8 @@ int main(void) {
 
     /* Test 8: Compare equal */
     {
-        zenit_semver_t a, b;
+        zenit_semver_t a;
+        zenit_semver_t b;
         zenit_semver_parse("1.2.3", &a);
         zenit_semver_parse("1.2.3", &b);
         if (zenit_semver_compare(&a, &b) != 0) {
@@ -120,7 +121,8 @@ int main(void) {
 
     /* Test 9: Compare major */
     {
-        zenit_semver_t a, b;
+        zenit_semver_t a;
+        zenit_semver_t b;
         zenit_semver_parse("2.0.0", &a);
         zenit_semver_parse("1.0.0", &b);
         if (zenit_semver_compare(&a, &b) <= 0) {
@@ -131,7 +133,8 @@ int main(void) {
 
     /* Test 10: Compare prerelease precedence */
     {
-        zenit_semver_t a, b;
+        zenit_semver_t a;
+        zenit_semver_t b;
         zenit_semver_parse("1.0.0-alpha", &a);
         zenit_semver_parse("1.0.0-alpha.1", &b);
         /* alpha < alpha.1 (shorter has lower precedence) */

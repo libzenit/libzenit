@@ -64,6 +64,12 @@ static zenit_result_t create_dir_recursive(const char *path) {
         tmp[--len] = '\0';
     }
 
+    /* Guard: after stripping, the path may be empty */
+    if (len == 0) {
+        free(tmp);
+        return ZENIT_RESULT_OK;
+    }
+
     /* Walk each '/' or '\' separator */
     for (char *p = tmp + 1; *p != '\0'; p++) {
         if (*p == '/' || *p == '\\') {

@@ -278,7 +278,7 @@ size_t zenit_thread_pool_pending(const zenit_thread_pool_t *pool) {
     if (pool == NULL) {
         return 0;
     }
-    return (size_t)(pool->queue_head - pool->queue_tail);
+    return pool->queue_head - pool->queue_tail;
 }
 
 void zenit_thread_pool_wait(zenit_thread_pool_t *pool) {
