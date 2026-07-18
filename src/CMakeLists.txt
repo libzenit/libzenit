@@ -71,6 +71,10 @@ if(UNIX)
   target_link_libraries(zenit PRIVATE m)
 endif()
 
+if(WIN32)
+  target_link_libraries(zenit PRIVATE bcrypt)
+endif()
+
 if(LIBZENIT_BUILD_COVERAGE)
   target_compile_options(zenit PRIVATE --coverage -g -O0)
   target_link_options(zenit PRIVATE --coverage)

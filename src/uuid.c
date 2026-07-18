@@ -22,7 +22,6 @@
 #if defined(_WIN32)
 #include <Windows.h>
 #include <bcrypt.h>
-#pragma comment(lib, "bcrypt")
 #elif defined(__APPLE__)
 #include <stdlib.h>
 #else
