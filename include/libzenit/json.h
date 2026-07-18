@@ -234,6 +234,15 @@ zenit_result_t zenit_json_object_remove(zenit_json_value_t *obj, const char *key
 char *zenit_json_serialize(const zenit_json_t *json);
 
 /**
+ * @brief Serialise a document with a custom allocator.
+ *
+ * @param json      Document to serialise.
+ * @param allocator Custom allocator for the output string.
+ * @return Allocated string, or NULL on allocation failure.
+ */
+char *zenit_json_serialize_with_allocator(const zenit_json_t *json, zenit_allocator_t allocator);
+
+/**
  * @brief Serialise a value subtree to a JSON string.
  *
  * The caller owns the returned string.
@@ -242,5 +251,14 @@ char *zenit_json_serialize(const zenit_json_t *json);
  * @return Allocated string, or NULL on allocation failure.
  */
 char *zenit_json_value_serialize(const zenit_json_value_t *val);
+
+/**
+ * @brief Serialise a value subtree with a custom allocator.
+ *
+ * @param val       Value to serialise.
+ * @param allocator Custom allocator for the output string.
+ * @return Allocated string, or NULL on allocation failure.
+ */
+char *zenit_json_value_serialize_with_allocator(const zenit_json_value_t *val, zenit_allocator_t allocator);
 
 #endif
