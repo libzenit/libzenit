@@ -272,7 +272,7 @@ jobs:
 
       - name: Generate report
         run: |
-          python3 scripts/benchmark_report.py \
+          python scripts/benchmark_report.py \
             --env "macOS (Apple Silicon, clang)" \
             --file benchmark_logs/benchmark_macos-latest.log \
             --env "Linux ARM64 (gcc)" \
@@ -364,7 +364,7 @@ jobs:
         run: cmake --install build --config Release --prefix ${{ runner.temp }}/libzenit-${{ matrix.arch }}
 
       - name: Checksum
-        run: python3 ${{ github.workspace }}/scripts/checksum.py ${{ runner.temp }}/libzenit-${{ matrix.arch }}
+        run: python ${{ github.workspace }}/scripts/checksum.py ${{ runner.temp }}/libzenit-${{ matrix.arch }}
 
       - name: Bundle license
         run: cp ${{ github.workspace }}/LICENSE ${{ runner.temp }}/libzenit-${{ matrix.arch }}/
