@@ -105,7 +105,7 @@ jobs:
           lcov --capture -d build --output-file coverage.info \
             --rc lcov_branch_coverage=1
           lcov --remove coverage.info -o coverage.clean \
-            '*/_deps/*' '*/tests/*'
+            '*/tests/*'
           mv coverage.clean coverage.info
           lcov --list coverage.info
 
