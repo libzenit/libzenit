@@ -16,12 +16,10 @@
 //
 
 #include <libzenit/sort.h>
+#include "test_runner.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#define FAIL(msg) do { fprintf(stderr, "FAIL: %s\n", msg); return 1; } while (0)
-#define ASSERT(cond, msg) do { if (!(cond)) { FAIL(msg); } } while (0)
 
 static int cmp_int(const void *a, const void *b) {
     int ia = *(const int *)a;
@@ -188,16 +186,7 @@ static int test_sort_large_elements(void) {
     return 0;
 }
 
-static int run_test(const char *name, int (*fn)(void)) {
-    printf("  %s ... ", name);
-    int r = fn();
-    if (r) return r;
-    printf("PASS\n");
-    return 0;
-}
-
 int main(void) {
-    int failed = 0;
     const int (*tests[])(void) = {
         &test_sort_already_sorted,
         &test_sort_reverse,
@@ -230,13 +219,5 @@ int main(void) {
         "binary_search_null_params",
         "sort_large_elements",
     };
-    size_t n = sizeof(tests) / sizeof(tests[0]);
-
-    printf("=== sort ===\n");
-    for (size_t i = 0; i < n; i++) {
-        if (run_test(names[i], tests[i])) failed++;
-    }
-
-    printf("\n%d tests failed\n", failed);
-    return failed != 0 ? 1 : 0;
+    ZENIT_RUN_TESTS("sort", tests, names);
 }

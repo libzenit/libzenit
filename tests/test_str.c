@@ -16,12 +16,10 @@
 //
 
 #include <libzenit/str.h>
+#include "test_runner.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#define FAIL(msg) do { fprintf(stderr, "FAIL: %s\n", msg); return 1; } while (0)
-#define ASSERT(cond, msg) do { if (!(cond)) { FAIL(msg); } } while (0)
 
 /* ─── trim ─── */
 
@@ -208,16 +206,7 @@ static int test_join_null_param(void) {
     return 0;
 }
 
-static int run_test(const char *name, int (*fn)(void)) {
-    printf("  %s ... ", name);
-    int r = fn();
-    if (r) return r;
-    printf("PASS\n");
-    return 0;
-}
-
 int main(void) {
-    int failed = 0;
     const int (*tests[])(void) = {
         &test_trim_basic,
         &test_trim_left,
@@ -260,13 +249,5 @@ int main(void) {
         "join_one_part",
         "join_null_param",
     };
-    size_t n = sizeof(tests) / sizeof(tests[0]);
-
-    printf("=== str ===\n");
-    for (size_t i = 0; i < n; i++) {
-        if (run_test(names[i], tests[i])) failed++;
-    }
-
-    printf("\n%d tests failed\n", failed);
-    return failed != 0 ? 1 : 0;
+    ZENIT_RUN_TESTS("str", tests, names);
 }
