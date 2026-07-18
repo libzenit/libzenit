@@ -17,6 +17,7 @@
 
 #include <libzenit/arena.h>
 #include <libzenit/allocator.h>
+#include <stdint.h>
 #include <string.h>
 
 /* ─── Block state machine ───
@@ -28,7 +29,16 @@ enum { BUF_FREE, BUF_IN_USE };
 
 /* ─── Alignment ─── */
 #define ALIGNMENT sizeof(void *)
-#define ALIGN(n) (((n) + ALIGNMENT - 1) & ~(ALIGNMENT - 1))
+/*
+ * Align n up to the nearest multiple of ALIGNMENT.
+ * Returns SIZE_MAX on overflow so callers can detect it.
+ */
+static inline size_t align_up(size_t n) {
+    if (n > SIZE_MAX - (ALIGNMENT - 1)) {
+        return SIZE_MAX;
+    }
+    return (n + ALIGNMENT - 1) & ~(ALIGNMENT - 1);
+}
 
 /* Smallest block worth keeping after a split (header + alignment + footer) */
 #define MIN_SPLIT_TOTAL (sizeof(zenit_buf_header_t) + ALIGNMENT + sizeof(zenit_buf_footer_t))
@@ -320,7 +330,10 @@ zenit_usable_buffer_t zenit_usable_arena_allocate(
         return result;
     }
 
-    size_t aligned = ALIGN(size);
+    size_t aligned = align_up(size);
+    if (aligned == SIZE_MAX) {
+        return result;
+    }
     size_t needed = sizeof(zenit_buf_header_t) + aligned + sizeof(zenit_buf_footer_t);
 
     zenit_buf_header_t *walk = ua->free_list;

@@ -48,6 +48,13 @@ add_library(zenit STATIC
   trie.c
   bloom.c
   dir.c
+  uuid.c
+  semver.c
+  logger.c
+  glob.c
+  spsc.c
+  csv.c
+  thread_pool.c
 )
 
 target_include_directories(zenit

@@ -22,11 +22,11 @@
 
 /* ─── internal helpers ─── */
 
-/* Locate the last occurrence of '/' in s.  Returns NULL if none. */
+/* Locate the last occurrence of '/' (or '\' on all platforms) in s.  Returns NULL if none. */
 static const char* last_slash(const char *s) {
     const char *p = NULL;
     for (; *s; s++) {
-        if (*s == '/') p = s;
+        if (*s == '/' || *s == '\\') p = s;
     }
     return p;
 }
@@ -207,11 +207,11 @@ char* zenit_path_extension_with_allocator(const char *path, zenit_allocator_t al
 /* ─── Normalize helpers ─── */
 
 /*
- * Skip consecutive '/' characters in path starting at i.
+ * Skip consecutive '/' (or '\') characters in path starting at i.
  * Returns the new position (first non-slash, or len if at end).
  */
 static size_t skip_slashes(const char *path, size_t len, size_t i) {
-    while (i < len && path[i] == '/') i++;
+    while (i < len && (path[i] == '/' || path[i] == '\\')) i++;
     return i;
 }
 
@@ -227,7 +227,7 @@ static size_t next_component(const char *path, size_t len, size_t i, size_t *sta
         return len;
     }
     *start = i;
-    while (i < len && path[i] != '/') i++;
+    while (i < len && path[i] != '/' && path[i] != '\\') i++;
     *clen = i - *start;
     return i;
 }
@@ -239,7 +239,7 @@ static size_t next_component(const char *path, size_t len, size_t i, size_t *sta
 static void pop_component(const char *stack, size_t *pos, size_t min_pos) {
     if (*pos <= min_pos) return;
     (*pos)--;
-    while (*pos > min_pos && stack[*pos - 1] != '/') (*pos)--;
+    while (*pos > min_pos && stack[*pos - 1] != '/' && stack[*pos - 1] != '\\') (*pos)--;
     if (*pos > min_pos) (*pos)--;
 }
 
@@ -259,7 +259,7 @@ static char* normalize_impl(const char *path, zenit_allocator_t a) {
 
     size_t pos = 0;
     size_t i = 0;
-    int is_absolute = (path[0] == '/');
+    int is_absolute = (path[0] == '/' || path[0] == '\\');
 
     if (is_absolute) {
         stack[pos++] = '/';
@@ -313,4 +313,33 @@ char* zenit_path_normalize(const char *path) {
 
 char* zenit_path_normalize_with_allocator(const char *path, zenit_allocator_t allocator) {
     return normalize_impl(path, allocator);
+}
+
+/* ─── zenit_path_to_native ─── */
+
+static char* to_native_impl(const char *path, zenit_allocator_t a) {
+    if (path == NULL) return NULL;
+
+    size_t len = strlen(path);
+    char *out = a.alloc_fn(len + 1, a.ctx);
+    if (out == NULL) return NULL;
+
+    for (size_t i = 0; i < len; i++) {
+#if defined(_WIN32)
+        out[i] = (path[i] == '/') ? '\\' : path[i];
+#else
+        out[i] = path[i];
+#endif
+    }
+    out[len] = '\0';
+
+    return out;
+}
+
+char* zenit_path_to_native(const char *path) {
+    return zenit_path_to_native_with_allocator(path, ZENIT_ALLOCATOR_DEFAULT);
+}
+
+char* zenit_path_to_native_with_allocator(const char *path, zenit_allocator_t allocator) {
+    return to_native_impl(path, allocator);
 }
