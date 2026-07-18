@@ -20,7 +20,7 @@
 #include <stdlib.h>
 
 #if defined(_WIN32)
-#include <windows.h>
+#include <Windows.h>
 #define ATOMIC_INC(var) InterlockedIncrement(&var)
 #define ATOMIC_READ(var) ((long)InterlockedExchangeAdd(&var, 0))
 #else

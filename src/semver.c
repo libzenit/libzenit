@@ -38,6 +38,19 @@ static int parse_num(const char **p, int *ok) {
     return n;
 }
 
+/* Parse metadata string (pre-release or build) into dest, stopping at stop char. */
+static zenit_result_t parse_meta(const char **p, char *dest, size_t max_len, char stop) {
+    while (**p != '\0' && **p != stop) {
+        size_t idx = strlen(dest);
+        if (idx >= max_len - 1) return ZENIT_RESULT_ERROR(ZENIT_ERROR_PARAM);
+        dest[idx] = **p;
+        dest[idx + 1] = '\0';
+        (*p)++;
+    }
+    if (dest[0] == '\0') return ZENIT_RESULT_ERROR(ZENIT_ERROR_PARAM);
+    return ZENIT_RESULT_OK;
+}
+
 zenit_result_t zenit_semver_parse(const char *str, zenit_semver_t *out) {
     if (str == NULL || out == NULL) {
         return ZENIT_RESULT_ERROR(ZENIT_ERROR_NULL);
@@ -71,25 +84,13 @@ zenit_result_t zenit_semver_parse(const char *str, zenit_semver_t *out) {
     /* Parse pre-release and build metadata */
     if (*p == '-') {
         p++;
-        while (*p != '\0' && *p != '+') {
-            size_t idx = strlen(out->pre_release);
-            if (idx >= ZENIT_SEMVER_MAX_PRERELEASE - 1) return ZENIT_RESULT_ERROR(ZENIT_ERROR_PARAM);
-            out->pre_release[idx] = *p;
-            out->pre_release[idx + 1] = '\0';
-            p++;
-        }
-        if (out->pre_release[0] == '\0') return ZENIT_RESULT_ERROR(ZENIT_ERROR_PARAM);
+        zenit_result_t r = parse_meta(&p, out->pre_release, ZENIT_SEMVER_MAX_PRERELEASE, '+');
+        if (r.error != ZENIT_OK) return r;
     }
     if (*p == '+') {
         p++;
-        while (*p != '\0') {
-            size_t idx = strlen(out->build);
-            if (idx >= ZENIT_SEMVER_MAX_BUILD - 1) return ZENIT_RESULT_ERROR(ZENIT_ERROR_PARAM);
-            out->build[idx] = *p;
-            out->build[idx + 1] = '\0';
-            p++;
-        }
-        if (out->build[0] == '\0') return ZENIT_RESULT_ERROR(ZENIT_ERROR_PARAM);
+        zenit_result_t r = parse_meta(&p, out->build, ZENIT_SEMVER_MAX_BUILD, '\0');
+        if (r.error != ZENIT_OK) return r;
     }
 
     if (*p != '\0') {

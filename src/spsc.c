@@ -20,7 +20,7 @@
 #include <string.h>
 
 #if defined(_WIN32)
-#include <windows.h>
+#include <Windows.h>
 #define ZENIT_MEMORY_BARRIER() MemoryBarrier()
 #else
 #define ZENIT_MEMORY_BARRIER() __sync_synchronize()

@@ -22,7 +22,7 @@
 #include <time.h>
 
 #if defined(_WIN32)
-#include <windows.h>
+#include <Windows.h>
 #endif
 
 /* Internal buffer size for formatted log messages */
