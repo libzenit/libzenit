@@ -22,14 +22,21 @@
 #include <string.h>
 #include <stdlib.h>
 
-#define TMPFILE "/tmp/libzenit_test_io.tmp"
-#define TMPFILE2 "/tmp/libzenit_test_io_copy.tmp"
-#define TMPFILE_APPEND "/tmp/libzenit_test_io_append.tmp"
+/* Use relative paths — works in the test working directory on all platforms */
+#define TMPFILE "libzenit_test_io.tmp"
+#define TMPFILE2 "libzenit_test_io_copy.tmp"
+#define TMPFILE_APPEND "libzenit_test_io_append.tmp"
+#define TMPFILE_DEL "libzenit_test_io_del.tmp"
+#define NONEXISTENT "libzenit_test_io_nonexistent.tmp"
+#define NONEXISTENT_SIZE "libzenit_test_io_nonexistent_size.tmp"
+#define NONEXISTENT_COPY "libzenit_test_io_nonexistent_copy.tmp"
 
 static void cleanup(void) {
     (void)zenit_file_delete(TMPFILE);
     (void)zenit_file_delete(TMPFILE2);
     (void)zenit_file_delete(TMPFILE_APPEND);
+    (void)zenit_file_delete(TMPFILE_DEL);
+    (void)zenit_file_delete(NONEXISTENT_COPY);
 }
 
 static int test_write_and_read(void) {
@@ -131,7 +138,7 @@ static int test_exists(void) {
         FAIL("exists on real file returned 0");
         return 1;
     }
-    if (zenit_file_exists("/tmp/__nonexistent_libzenit_test__")) {
+    if (zenit_file_exists(NONEXISTENT)) {
         FAIL("exists on nonexistent returned 1");
         return 1;
     }
@@ -140,15 +147,14 @@ static int test_exists(void) {
 }
 
 static int test_delete(void) {
-    const char *tmp = "/tmp/libzenit_test_io_del.tmp";
-    zenit_file_write(tmp, "delete me", 9);
+    zenit_file_write(TMPFILE_DEL, "delete me", 9);
 
-    zenit_result_t r = zenit_file_delete(tmp);
+    zenit_result_t r = zenit_file_delete(TMPFILE_DEL);
     if (r.error != ZENIT_OK) {
         FAIL("delete failed");
         return 1;
     }
-    if (zenit_file_exists(tmp)) {
+    if (zenit_file_exists(TMPFILE_DEL)) {
         FAIL("file still exists after delete");
         return 1;
     }
@@ -277,7 +283,7 @@ static int test_null_params(void) {
 static int test_read_nonexistent(void) {
     void *buf = NULL;
     size_t len = 0;
-    zenit_result_t r = zenit_file_read("/tmp/__nonexistent_libzenit__", &buf, &len);
+    zenit_result_t r = zenit_file_read(NONEXISTENT, &buf, &len);
     if (r.error != ZENIT_ERROR_NOT_FOUND) {
         FAIL("read nonexistent should return ZENIT_ERROR_NOT_FOUND");
         return 1;
@@ -288,7 +294,7 @@ static int test_read_nonexistent(void) {
 
 static int test_size_nonexistent(void) {
     size_t sz;
-    zenit_result_t r = zenit_file_size("/tmp/__nonexistent_libzenit_size__", &sz);
+    zenit_result_t r = zenit_file_size(NONEXISTENT_SIZE, &sz);
     if (r.error != ZENIT_ERROR_NOT_FOUND) {
         FAIL("size nonexistent should return ZENIT_ERROR_NOT_FOUND");
         return 1;
@@ -298,7 +304,7 @@ static int test_size_nonexistent(void) {
 }
 
 static int test_write_bad_path(void) {
-    zenit_result_t r = zenit_file_write("/nonexistent_dir/foo.tmp", "data", 4);
+    zenit_result_t r = zenit_file_write("/nonexistent_dir_libzenit_foo.tmp", "data", 4);
     if (r.error != ZENIT_ERROR_NOT_FOUND) {
         FAIL("write to bad path should return ZENIT_ERROR_NOT_FOUND");
         return 1;
@@ -308,19 +314,19 @@ static int test_write_bad_path(void) {
 }
 
 static int test_copy_nonexistent_src(void) {
-    zenit_result_t r = zenit_file_copy("/tmp/__nonexistent_libzenit_copy__", "/tmp/__libzenit_dst__");
+    zenit_result_t r = zenit_file_copy(NONEXISTENT_COPY, "libzenit_test_io_dst.tmp");
     if (r.error != ZENIT_ERROR_NOT_FOUND) {
         FAIL("copy nonexistent src should return ZENIT_ERROR_NOT_FOUND");
         return 1;
     }
-    (void)zenit_file_delete("/tmp/__libzenit_dst__");
+    (void)zenit_file_delete("libzenit_test_io_dst.tmp");
     PASS();
     return 0;
 }
 
 static int test_copy_bad_dst_dir(void) {
     zenit_file_write(TMPFILE, "content", 7);
-    zenit_result_t r = zenit_file_copy(TMPFILE, "/nonexistent_dir/copy.tmp");
+    zenit_result_t r = zenit_file_copy(TMPFILE, "/nonexistent_dir_libzenit_copy.tmp");
     if (r.error != ZENIT_ERROR_NOT_FOUND) {
         FAIL("copy to bad dst dir should return ZENIT_ERROR_NOT_FOUND");
         return 1;
