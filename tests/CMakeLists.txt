@@ -45,7 +45,7 @@ function(zenit_add_malloc_fail_test name source)
 endfunction()
 
 # ─── Regular tests ───
-zenit_add_test(test_libzenit    test_version.c)
+zenit_add_test(test_version     test_version.c)
 zenit_add_test(test_result      test_result.c)
 zenit_add_test(test_ring        test_ring.c)
 zenit_add_test(test_state       test_state.c)
@@ -74,6 +74,9 @@ zenit_add_test(test_pool        test_pool.c)
 
 # ─── I/O tests ───
 zenit_add_test(test_io          test_io.c)
+
+# ─── Allocator test ───
+zenit_add_test(test_allocator   test_allocator.c)
 
 # ─── Encoding / string / sort tests ───
 zenit_add_test(test_base64      test_base64.c)

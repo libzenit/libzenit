@@ -176,15 +176,18 @@ static int object_grow(zenit_json_value_t *obj, size_t min_capacity, zenit_alloc
     (void)min_capacity;
     size_t old_cap = obj->obj.capacity;
     size_t new_cap = old_cap == 0 ? 8 : old_cap + (old_cap / 2);
-    size_t new_size = new_cap * sizeof(char *);
     size_t old_size = old_cap * sizeof(char *);
 
-    void *new_keys = a.alloc_fn(new_size, a.ctx);
+    /* Allocate zero-initialised memory so unused slots between old_size and
+       new_size are NULL rather than garbage (defensive — obj->count is the
+       authoritative tracker, but a read beyond count would otherwise consume
+       uninitialised pointers). */
+    void *new_keys = zenit_allocator_alloc_zero(a, new_cap, sizeof(char *));
     if (new_keys == NULL) {
         return 0;
     }
 
-    void *new_values = a.alloc_fn(new_size, a.ctx);
+    void *new_values = zenit_allocator_alloc_zero(a, new_cap, sizeof(char *));
     if (new_values == NULL) {
         a.free_fn(new_keys, a.ctx);
         return 0;

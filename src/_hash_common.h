@@ -19,6 +19,7 @@
 #define LIBZENIT_HASH_COMMON_H
 
 #include <stddef.h>
+#include <stdint.h>
 
 /*
  * Shared helpers for open-addressing hash tables (map and set).

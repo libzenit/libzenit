@@ -471,6 +471,7 @@ Common string manipulation helpers — trim, split, and join. All functions retu
 
 - **Source:** [`src/str.c`](src/str.c)
 - **Tests:** [`tests/test_str.c`](tests/test_str.c) (18 sub-tests: trim basic/left/right/none/all/empty/NULL, split basic/consecutive/empty/no-delim/NULL, join basic/empty-delim/zero-count/one-part/NULL), [`tests/test_str_malloc_fail.c`](tests/test_str_malloc_fail.c) (allocation failure via `--wrap=malloc/calloc/realloc`)
+- **Benchmark:** [`benchmarks/benchmark_str.c`](benchmarks/benchmark_str.c) — trim/split/join throughput
 
 ---
 

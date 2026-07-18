@@ -92,6 +92,10 @@ zenit_state_t *zenit_state_allocate_with_allocator(
  *         ZENIT_RESULT_ERROR(ZENIT_ERROR_NOT_FOUND) when no rule matches.
  */
 zenit_result_t zenit_state_process_event(zenit_state_t *state, int event, void *context) {
+    /* Reject NULL handle immediately — avoid dereferencing a garbage pointer */
+    if (state == NULL) {
+        return ZENIT_RESULT_ERROR(ZENIT_ERROR_NULL);
+    }
     /* Snapshot the current state before we start matching */
     int from = state->current;
 
@@ -119,6 +123,10 @@ zenit_result_t zenit_state_process_event(zenit_state_t *state, int event, void *
  * @brief Return the current state value. Pure accessor, no side effects.
  */
 int zenit_get_last_state(const zenit_state_t *state) {
+    /* NULL handle yields 0 (a harmless sentinel — most machines start at 0) */
+    if (state == NULL) {
+        return 0;
+    }
     return state->current;
 }
 

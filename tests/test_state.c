@@ -97,6 +97,16 @@ int main(void) {
     /* NULL deallocate is safe */
     zenit_state_deallocate(NULL);
 
+    /* NULL handle safety checks */
+    if (zenit_state_process_event(NULL, EV_START, NULL).error != ZENIT_ERROR_NULL) {
+        fprintf(stderr, "FAIL: process_event(NULL) should return ZENIT_ERROR_NULL\n");
+        return 1;
+    }
+    if (zenit_get_last_state(NULL) != 0) {
+        fprintf(stderr, "FAIL: get_last_state(NULL) should return 0\n");
+        return 1;
+    }
+
     printf("PASS: state machine\n");
     return 0;
 }

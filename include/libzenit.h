@@ -19,6 +19,7 @@
 #define LIBZENIT_H
 
 #include <libzenit/result.h>
+#include <libzenit/allocator.h>
 #include <libzenit/version.h>
 #include <libzenit/state.h>
 #include <libzenit/arena.h>

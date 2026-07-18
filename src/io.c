@@ -86,17 +86,22 @@ zenit_result_t zenit_file_read_with_allocator(const char *path, void **out_data,
         return ZENIT_RESULT_ERROR(ZENIT_ERROR_ALLOC);
     }
 
-    ssize_t bytes_read = read(fd, buf, size);
-    if (bytes_read < 0 || (size_t)bytes_read != size) {
-        allocator.free_fn(buf, allocator.ctx);
-        close(fd);
-        return ZENIT_RESULT_ERROR(ZENIT_ERROR_NOT_FOUND);
+    /* read(2) may return fewer bytes than requested; loop until done */
+    size_t total_read = 0;
+    while (total_read < size) {
+        ssize_t n = read(fd, (unsigned char *)buf + total_read, size - total_read);
+        if (n < 0) {
+            allocator.free_fn(buf, allocator.ctx);
+            close(fd);
+            return ZENIT_RESULT_ERROR(ZENIT_ERROR_NOT_FOUND);
+        }
+        total_read += (size_t)n;
     }
     close(fd);
-    ((unsigned char *)buf)[bytes_read] = '\0';
+    ((unsigned char *)buf)[total_read] = '\0';
 
     *out_data = buf;
-    *out_len = (size_t)bytes_read;
+    *out_len = total_read;
     return ZENIT_RESULT_OK;
 #endif
 }
@@ -135,10 +140,15 @@ static zenit_result_t file_write_impl(const char *path, const void *data, size_t
     if (fd < 0) {
         return ZENIT_RESULT_ERROR(ZENIT_ERROR_NOT_FOUND);
     }
-    ssize_t bytes_written = write(fd, data, len);
-    if (bytes_written < 0 || (size_t)bytes_written != len) {
-        close(fd);
-        return ZENIT_RESULT_ERROR(ZENIT_ERROR_SIZE);
+    /* write(2) may transfer fewer bytes than requested; loop until done */
+    size_t total_written = 0;
+    while (total_written < len) {
+        ssize_t n = write(fd, (const unsigned char *)data + total_written, len - total_written);
+        if (n < 0) {
+            close(fd);
+            return ZENIT_RESULT_ERROR(ZENIT_ERROR_SIZE);
+        }
+        total_written += (size_t)n;
     }
     close(fd);
 #endif
@@ -227,11 +237,16 @@ zenit_result_t zenit_file_copy(const char *src, const char *dst) {
     unsigned char buf[IO_COPY_BUF_SIZE];
     ssize_t n;
     while ((n = read(fd_src, buf, sizeof(buf))) > 0) {
-        ssize_t written = write(fd_dst, buf, (size_t)n);
-        if (written != n) {
-            close(fd_src);
-            close(fd_dst);
-            return ZENIT_RESULT_ERROR(ZENIT_ERROR_SIZE);
+        /* write(2) may transfer fewer bytes than requested; loop until done */
+        size_t total_written = 0;
+        while (total_written < (size_t)n) {
+            ssize_t written = write(fd_dst, buf + total_written, (size_t)n - total_written);
+            if (written < 0) {
+                close(fd_src);
+                close(fd_dst);
+                return ZENIT_RESULT_ERROR(ZENIT_ERROR_SIZE);
+            }
+            total_written += (size_t)written;
         }
     }
 
