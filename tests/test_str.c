@@ -146,10 +146,9 @@ static int test_split_many(void) {
 }
 
 static int test_split_free_func(void) {
-    char **parts = zenit_str_split("a,b,c", ",", &(size_t){0});
-    ASSERT(parts != NULL, "split");
     size_t count;
-    zenit_str_split("a,b,c", ",", &count);
+    char **parts = zenit_str_split("a,b,c", ",", &count);
+    ASSERT(parts != NULL, "split");
     zenit_str_split_free(parts, count, ZENIT_ALLOCATOR_DEFAULT);
     PASS();
     return 0;
