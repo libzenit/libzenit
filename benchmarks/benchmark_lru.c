@@ -33,7 +33,7 @@ static unsigned xorshift32(unsigned *state) {
 #define N 100000
 #define SMALL_CAPACITY 128
 
-/* ─── Context structs ─── */
+/* ─── Context ─── */
 
 typedef struct {
     zenit_lru_t *cache;
@@ -41,18 +41,16 @@ typedef struct {
     int *values;
 } lru_ctx_t;
 
-/* ─── Benchmark: sequential puts (fill warm, then overwrite) ─── */
+/* ─── Shared setup / teardown ─── */
 
-static lru_ctx_t *setup_put_ctx(void) {
+static lru_ctx_t *setup_base(int capacity) {
     lru_ctx_t *ctx = malloc(sizeof(lru_ctx_t));
     if (ctx == NULL) return NULL;
-
-    ctx->cache = zenit_lru_create(sizeof(int), sizeof(int), N);
+    ctx->cache = zenit_lru_create(sizeof(int), sizeof(int), (size_t)capacity);
     if (ctx->cache == NULL) {
         free(ctx);
         return NULL;
     }
-
     ctx->keys = malloc(N * sizeof(int));
     ctx->values = malloc(N * sizeof(int));
     if (ctx->keys == NULL || ctx->values == NULL) {
@@ -62,27 +60,30 @@ static lru_ctx_t *setup_put_ctx(void) {
         free(ctx);
         return NULL;
     }
-
-    /* Fill with sequential data */
     for (int i = 0; i < N; i++) {
         ctx->keys[i] = i;
-        ctx->values[i] = i * 2;
+        ctx->values[i] = i;
     }
-
-    /* Warm the cache */
-    for (int i = 0; i < N; i++) {
-        zenit_lru_put(ctx->cache, &ctx->keys[i], &ctx->values[i]);
-    }
-
     return ctx;
 }
 
-static void teardown_put_ctx(lru_ctx_t *ctx) {
+static void teardown(lru_ctx_t *ctx) {
     if (ctx == NULL) return;
     zenit_lru_destroy(ctx->cache);
     free(ctx->keys);
     free(ctx->values);
     free(ctx);
+}
+
+/* ─── Benchmark: sequential puts (fill warm, then overwrite) ─── */
+
+static lru_ctx_t *setup_put(void) {
+    lru_ctx_t *ctx = setup_base(N);
+    if (ctx == NULL) return NULL;
+    for (int i = 0; i < N; i++) {
+        zenit_lru_put(ctx->cache, &ctx->keys[i], &ctx->values[i]);
+    }
+    return ctx;
 }
 
 static unsigned put_rng = 42;
@@ -96,41 +97,13 @@ static void bench_put_fn(void *vctx) {
 
 /* ─── Benchmark: get hits (warm cache, random access) ─── */
 
-static lru_ctx_t *setup_get_ctx(void) {
-    lru_ctx_t *ctx = malloc(sizeof(lru_ctx_t));
+static lru_ctx_t *setup_get(void) {
+    lru_ctx_t *ctx = setup_base(N);
     if (ctx == NULL) return NULL;
-
-    ctx->cache = zenit_lru_create(sizeof(int), sizeof(int), N);
-    if (ctx->cache == NULL) {
-        free(ctx);
-        return NULL;
-    }
-
-    ctx->keys = malloc(N * sizeof(int));
-    ctx->values = malloc(N * sizeof(int));
-    if (ctx->keys == NULL || ctx->values == NULL) {
-        free(ctx->keys);
-        free(ctx->values);
-        zenit_lru_destroy(ctx->cache);
-        free(ctx);
-        return NULL;
-    }
-
     for (int i = 0; i < N; i++) {
-        ctx->keys[i] = i;
-        ctx->values[i] = i;
         zenit_lru_put(ctx->cache, &ctx->keys[i], &ctx->values[i]);
     }
-
     return ctx;
-}
-
-static void teardown_get_ctx(lru_ctx_t *ctx) {
-    if (ctx == NULL) return;
-    zenit_lru_destroy(ctx->cache);
-    free(ctx->keys);
-    free(ctx->values);
-    free(ctx);
 }
 
 static unsigned get_rng = 137;
@@ -142,47 +115,15 @@ static void bench_get_hit_fn(void *vctx) {
     zenit_lru_get(ctx->cache, &k, &out);
 }
 
-/* ─── Benchmark: put with eviction (capacity=128, N puts total) ─── */
+/* ─── Benchmark: put with eviction (small capacity, many puts) ─── */
 
-static lru_ctx_t *setup_put_evict_ctx(void) {
-    lru_ctx_t *ctx = malloc(sizeof(lru_ctx_t));
+static lru_ctx_t *setup_put_evict(void) {
+    lru_ctx_t *ctx = setup_base(SMALL_CAPACITY);
     if (ctx == NULL) return NULL;
-
-    ctx->cache = zenit_lru_create(sizeof(int), sizeof(int), SMALL_CAPACITY);
-    if (ctx->cache == NULL) {
-        free(ctx);
-        return NULL;
-    }
-
-    ctx->keys = malloc(N * sizeof(int));
-    ctx->values = malloc(N * sizeof(int));
-    if (ctx->keys == NULL || ctx->values == NULL) {
-        free(ctx->keys);
-        free(ctx->values);
-        zenit_lru_destroy(ctx->cache);
-        free(ctx);
-        return NULL;
-    }
-
-    for (int i = 0; i < N; i++) {
-        ctx->keys[i] = i;
-        ctx->values[i] = i;
-    }
-
-    /* Warm: fill the cache */
     for (int i = 0; i < SMALL_CAPACITY; i++) {
         zenit_lru_put(ctx->cache, &ctx->keys[i], &ctx->values[i]);
     }
-
     return ctx;
-}
-
-static void teardown_put_evict_ctx(lru_ctx_t *ctx) {
-    if (ctx == NULL) return;
-    zenit_lru_destroy(ctx->cache);
-    free(ctx->keys);
-    free(ctx->values);
-    free(ctx);
 }
 
 static void bench_put_evict_fn(void *vctx) {
@@ -193,42 +134,28 @@ static void bench_put_evict_fn(void *vctx) {
     zenit_lru_put(ctx->cache, &k, &v);
 }
 
+/* ─── Main ─── */
+
 int main(void) {
-    /* Sequential puts (warm + overwrite) */
-    {
-        lru_ctx_t *ctx = setup_put_ctx();
-        if (ctx == NULL) return 1;
+    lru_ctx_t *ctx;
 
-        zenit_bench_result_t r = zenit_bench_run(
-            "lru_put_100K", bench_put_fn, ctx, N
-        );
-        zenit_bench_print(&r);
-        teardown_put_ctx(ctx);
-    }
+    ctx = setup_put();
+    if (ctx == NULL) return 1;
+    zenit_bench_result_t r1 = zenit_bench_run("lru_put_100K", bench_put_fn, ctx, N);
+    zenit_bench_print(&r1);
+    teardown(ctx);
 
-    /* Get hits (warm, random access) */
-    {
-        lru_ctx_t *ctx = setup_get_ctx();
-        if (ctx == NULL) return 1;
+    ctx = setup_get();
+    if (ctx == NULL) return 1;
+    zenit_bench_result_t r2 = zenit_bench_run("lru_get_hit_100K", bench_get_hit_fn, ctx, N);
+    zenit_bench_print(&r2);
+    teardown(ctx);
 
-        zenit_bench_result_t r = zenit_bench_run(
-            "lru_get_hit_100K", bench_get_hit_fn, ctx, N
-        );
-        zenit_bench_print(&r);
-        teardown_get_ctx(ctx);
-    }
-
-    /* Put with eviction (small cache, many puts) */
-    {
-        lru_ctx_t *ctx = setup_put_evict_ctx();
-        if (ctx == NULL) return 1;
-
-        zenit_bench_result_t r = zenit_bench_run(
-            "lru_put_evict_100K", bench_put_evict_fn, ctx, N
-        );
-        zenit_bench_print(&r);
-        teardown_put_evict_ctx(ctx);
-    }
+    ctx = setup_put_evict();
+    if (ctx == NULL) return 1;
+    zenit_bench_result_t r3 = zenit_bench_run("lru_put_evict_100K", bench_put_evict_fn, ctx, N);
+    zenit_bench_print(&r3);
+    teardown(ctx);
 
     return 0;
 }

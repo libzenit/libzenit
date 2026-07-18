@@ -182,6 +182,77 @@ static int test_non_alpha_chars(void) {
     return 0;
 }
 
+static int test_non_alpha_mixed(void) {
+    zenit_trie_t *trie = zenit_trie_create();
+    int val;
+
+    /* Key with underscores, dots, and punctuation */
+    ASSERT(zenit_trie_insert(trie, "hello_world.test_data", 10).error == ZENIT_OK, "insert punctuated");
+    ASSERT(zenit_trie_search(trie, "helloworldtestdata", &val) == 1, "search stripping punct");
+    ASSERT(val == 10, "value for punctuated key");
+
+    /* Key starting with non-alpha */
+    ASSERT(zenit_trie_insert(trie, "123abc", 20).error == ZENIT_OK, "insert starting with digits");
+    ASSERT(zenit_trie_search(trie, "abc", &val) == 1, "search key with leading digits");
+    ASSERT(val == 20, "value for leading-digit key");
+
+    /* Key with only non-alpha characters — maps to root */
+    ASSERT(zenit_trie_insert(trie, "123!@#", 30).error == ZENIT_OK, "insert only non-alpha");
+    ASSERT(zenit_trie_search(trie, "999", &val) == 1, "purely non-alpha key maps to root");
+    ASSERT(val == 30, "root value from non-alpha key");
+    /* "abc" still has its own value 20 */
+    ASSERT(zenit_trie_search(trie, "abc", &val) == 1, "abc still present");
+    ASSERT(val == 20, "abc still has value 20");
+
+    /* starts_with with non-alpha in prefix */
+    ASSERT(zenit_trie_starts_with(trie, "hello123world") == 1, "starts_with non-alpha in prefix");
+
+    /* Delete a key with non-alpha */
+    ASSERT(zenit_trie_delete(trie, "hello_world.test_data").error == ZENIT_OK, "delete punctuated");
+    ASSERT(zenit_trie_count(trie) == 2, "count 2 after delete");
+    ASSERT(zenit_trie_search(trie, "helloworldtestdata", NULL) == 0, "punctuated key gone");
+    ASSERT(zenit_trie_search(trie, "abc", NULL) == 1, "abc still present");
+
+    zenit_trie_destroy(trie);
+    PASS();
+    return 0;
+}
+
+static int test_non_alpha_pure_digits(void) {
+    zenit_trie_t *trie = zenit_trie_create();
+
+    /* Insert a purely digit key — all chars skipped, root gets marked */
+    ASSERT(zenit_trie_insert(trie, "98765", 77).error == ZENIT_OK, "insert pure digits");
+    ASSERT(zenit_trie_count(trie) == 1, "count 1 after pure digit insert");
+
+    /* Search for a different digit string — also ends at root */
+    ASSERT(zenit_trie_search(trie, "12345", NULL) == 1, "different digit string also found at root");
+
+    /* starts_with with pure digits */
+    ASSERT(zenit_trie_starts_with(trie, "98765") == 1, "starts_with pure digits");
+
+    /* starts_with with mixed non-alpha */
+    ASSERT(zenit_trie_starts_with(trie, "987#$%") == 1, "starts_with mixed non-alpha");
+
+    zenit_trie_destroy(trie);
+    PASS();
+    return 0;
+}
+
+static int test_non_alpha_search_miss_after_delete(void) {
+    zenit_trie_t *trie = zenit_trie_create();
+
+    /* Insert key with non-alpha, then delete it */
+    ASSERT(zenit_trie_insert(trie, "abc123def", 50).error == ZENIT_OK, "insert non-alpha key");
+    ASSERT(zenit_trie_delete(trie, "abc123def").error == ZENIT_OK, "delete non-alpha key");
+    ASSERT(zenit_trie_search(trie, "abcdef", NULL) == 0, "search miss after delete");
+    ASSERT(zenit_trie_count(trie) == 0, "count 0 after delete");
+
+    zenit_trie_destroy(trie);
+    PASS();
+    return 0;
+}
+
 int main(void) {
     int (*tests[])(void) = {
         &test_create_destroy,
@@ -199,6 +270,9 @@ int main(void) {
         &test_null_out_value,
         &test_null_destroy_clear,
         &test_non_alpha_chars,
+        &test_non_alpha_mixed,
+        &test_non_alpha_pure_digits,
+        &test_non_alpha_search_miss_after_delete,
     };
     const char *names[] = {
         "create_destroy",
@@ -216,6 +290,9 @@ int main(void) {
         "null_out_value",
         "null_destroy_clear",
         "non_alpha_chars",
+        "non_alpha_mixed",
+        "non_alpha_pure_digits",
+        "non_alpha_search_miss_after_delete",
     };
     ZENIT_RUN_TESTS("trie", tests, names);
 }

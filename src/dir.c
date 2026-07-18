@@ -278,10 +278,13 @@ zenit_result_t zenit_dir_list(const char *path, char ***out_names, size_t *out_c
     }
     zenit_dir_iter_destroy(iter);
 
-    /* Allocate the pointer array for all entry names (zeroed so cleanup is safe) */
-    char **names = calloc(count, sizeof(char *));
-    if (count > 0 && names == NULL) {
-        return ZENIT_RESULT_ERROR(ZENIT_ERROR_ALLOC);
+    /* Allocate the pointer array for all entry names */
+    char **names = NULL;
+    if (count > 0) {
+        names = calloc(count, sizeof(char *));
+        if (names == NULL) {
+            return ZENIT_RESULT_ERROR(ZENIT_ERROR_ALLOC);
+        }
     }
 
     /* Second pass: re-open and populate the array.

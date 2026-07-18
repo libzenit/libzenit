@@ -461,6 +461,64 @@ static int test_put_get_out_value_null(void) {
     return 0;
 }
 
+static int test_peek_null_cache(void) {
+    ASSERT(zenit_lru_peek(NULL, NULL, NULL) == 0, "peek NULL cache");
+    ASSERT(zenit_lru_peek(NULL, &(int){0}, NULL) == 0, "peek NULL cache with key");
+    PASS();
+    return 0;
+}
+
+static int test_clear_with_evict(void) {
+    reset_evict();
+    zenit_lru_t *c = zenit_lru_create_with_evict(sizeof(int), sizeof(int), 4, track_evict, NULL);
+    ASSERT(c != NULL, "create with evict");
+    for (int i = 0; i < 3; i++) {
+        zenit_lru_put(c, &i, &i);
+    }
+    ASSERT(evict_count == 0, "no evictions on put before full");
+    evict_count = 0;
+    zenit_lru_clear(c);
+    ASSERT(evict_count == 3, "evict callback called 3 times on clear");
+    ASSERT(zenit_lru_count(c) == 0, "count 0 after clear");
+    int k = 42;
+    zenit_lru_put(c, &k, &k);
+    ASSERT(zenit_lru_count(c) == 1, "count 1 after clear+put");
+    zenit_lru_destroy(c);
+    PASS();
+    return 0;
+}
+
+static int test_remove_null_key(void) {
+    zenit_lru_t *c = zenit_lru_create(sizeof(int), sizeof(int), 4);
+    ASSERT(c != NULL, "create");
+    ASSERT(zenit_lru_remove(c, NULL).error == ZENIT_ERROR_NULL, "remove NULL key");
+    ASSERT(zenit_lru_remove(NULL, &(int){0}).error == ZENIT_ERROR_NULL, "remove NULL cache");
+    zenit_lru_destroy(c);
+    PASS();
+    return 0;
+}
+
+static int test_contains_null_key(void) {
+    zenit_lru_t *c = zenit_lru_create(sizeof(int), sizeof(int), 4);
+    ASSERT(c != NULL, "create");
+    ASSERT(zenit_lru_contains(c, NULL) == 0, "contains NULL key");
+    ASSERT(zenit_lru_contains(NULL, &(int){0}) == 0, "contains NULL cache");
+    zenit_lru_destroy(c);
+    PASS();
+    return 0;
+}
+
+static int test_put_null_params(void) {
+    zenit_lru_t *c = zenit_lru_create(sizeof(int), sizeof(int), 4);
+    ASSERT(c != NULL, "create");
+    ASSERT(zenit_lru_put(NULL, NULL, NULL).error == ZENIT_ERROR_NULL, "put NULL all");
+    ASSERT(zenit_lru_put(c, NULL, &(int){0}).error == ZENIT_ERROR_NULL, "put NULL key");
+    ASSERT(zenit_lru_put(c, &(int){0}, NULL).error == ZENIT_ERROR_NULL, "put NULL value");
+    zenit_lru_destroy(c);
+    PASS();
+    return 0;
+}
+
 int main(void) {
     int (*tests[])(void) = {
         &test_create_destroy,
@@ -482,6 +540,11 @@ int main(void) {
         &test_get_promotes_to_mru,
         &test_large_entries,
         &test_put_get_out_value_null,
+        &test_peek_null_cache,
+        &test_clear_with_evict,
+        &test_remove_null_key,
+        &test_contains_null_key,
+        &test_put_null_params,
     };
     const char *names[] = {
         "create_destroy",
@@ -503,6 +566,11 @@ int main(void) {
         "get_promotes_to_mru",
         "large_entries",
         "put_get_out_value_null",
+        "peek_null_cache",
+        "clear_with_evict",
+        "remove_null_key",
+        "contains_null_key",
+        "put_null_params",
     };
     ZENIT_RUN_TESTS("lru", tests, names);
 }

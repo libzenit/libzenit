@@ -292,6 +292,27 @@ static int test_explicit_rounding(void) {
     return 0;
 }
 
+/* ─── Test: create with very small capacity exercises minimum bits/hashes ─── */
+static int test_small_capacity(void) {
+    zenit_bloom_t *bf = zenit_bloom_create(1, 0.01);
+    if (bf == NULL) { FAIL("create with small capacity returned NULL"); return 1; }
+    if (zenit_bloom_num_bits(bf) < 64) { FAIL("num_bits should be >= 64"); return 1; }
+    if (zenit_bloom_num_hashes(bf) < 1) { FAIL("num_hashes should be >= 1"); return 1; }
+    if (zenit_bloom_count(bf) != 0) { FAIL("count should be 0"); return 1; }
+
+    /* Insert and contain should still work with small-capacity filter */
+    const char *item = "x";
+    zenit_bloom_insert(bf, item, 1);
+    if (!zenit_bloom_contains(bf, item, 1)) {
+        FAIL("inserted item not found in small-capacity filter");
+        return 1;
+    }
+    if (zenit_bloom_count(bf) != 1) { FAIL("count should be 1"); return 1; }
+
+    zenit_bloom_destroy(bf);
+    return 0;
+}
+
 int main(void) {
     int ret = 0;
     ret |= test_create_destroy();
@@ -309,6 +330,7 @@ int main(void) {
     ret |= test_invalid_rate();
     ret |= test_explicit_zero();
     ret |= test_explicit_rounding();
+    ret |= test_small_capacity();
 
     if (failures > 0 || ret != 0) {
         fprintf(stderr, "FAIL: %d test(s) had errors\n", failures);

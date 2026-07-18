@@ -301,6 +301,63 @@ static int test_null_params(void) {
     return 0;
 }
 
+static int test_create_too_long(void) {
+    char long_path[1030];
+    memset(long_path, 'a', 1025);
+    long_path[1025] = '\0';
+    zenit_result_t r = zenit_dir_create(long_path);
+    ASSERT(r.error == ZENIT_ERROR_PARAM, "too-long path should return PARAM error");
+    PASS();
+    return 0;
+}
+
+static int test_null_exists(void) {
+    ASSERT(zenit_dir_exists(NULL) == 0, "exists NULL should return 0");
+    PASS();
+    return 0;
+}
+
+static int test_null_remove(void) {
+    ASSERT(zenit_dir_remove(NULL).error == ZENIT_ERROR_NULL, "remove NULL should return NULL error");
+    PASS();
+    return 0;
+}
+
+static int test_list_null_param(void) {
+    char **names = NULL;
+    size_t count = 0;
+    ASSERT(zenit_dir_list(NULL, &names, &count).error == ZENIT_ERROR_NULL, "list NULL path");
+    ASSERT(zenit_dir_list(TMP_DIR_LIST, NULL, &count).error == ZENIT_ERROR_NULL, "list NULL out_names");
+    ASSERT(zenit_dir_list(TMP_DIR_LIST, &names, NULL).error == ZENIT_ERROR_NULL, "list NULL out_count");
+    PASS();
+    return 0;
+}
+
+static int test_list_second_pass(void) {
+    char **names = NULL;
+    size_t count = 0;
+    zenit_result_t r = zenit_dir_list(TMP_DIR_LIST, &names, &count);
+    ASSERT(r.error == ZENIT_OK, "list second pass ok");
+    for (size_t i = 0; i < count; i++) free(names[i]);
+    free(names);
+    PASS();
+    return 0;
+}
+
+static int test_null_next(void) {
+    zenit_dir_entry_t entry;
+    ASSERT(zenit_dir_next(NULL, &entry) == 0, "next NULL iter");
+    ASSERT(zenit_dir_next(NULL, NULL) == 0, "next NULL all");
+    PASS();
+    return 0;
+}
+
+static int test_null_iter(void) {
+    ASSERT(zenit_dir_iter(NULL) == NULL, "iter NULL path");
+    PASS();
+    return 0;
+}
+
 int main(void) {
     cleanup();
 
@@ -314,6 +371,13 @@ int main(void) {
         test_remove,
         test_nonexistent,
         test_null_params,
+        test_create_too_long,
+        test_null_exists,
+        test_null_remove,
+        test_list_null_param,
+        test_list_second_pass,
+        test_null_next,
+        test_null_iter,
     };
     const char *names[] = {
         "create and exists",
@@ -325,6 +389,13 @@ int main(void) {
         "remove",
         "nonexistent",
         "NULL params",
+        "create too long",
+        "NULL exists",
+        "NULL remove",
+        "list NULL param",
+        "list second pass",
+        "NULL next",
+        "NULL iter",
     };
     ZENIT_RUN_TESTS("dir", tests, names);
 

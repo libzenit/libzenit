@@ -229,6 +229,38 @@ static int test_allocator_variants(void) {
     return 0;
 }
 
+static int test_dirname_empty(void) {
+    char *d = zenit_path_dirname("");
+    ASSERT(d != NULL, "dirname empty returned NULL");
+    ASSERT(strcmp(d, ".") == 0, "dirname empty failed");
+    free(d);
+    return 0;
+}
+
+static int test_basename_empty(void) {
+    char *b = zenit_path_basename("");
+    ASSERT(b != NULL, "basename empty returned NULL");
+    ASSERT(strcmp(b, "") == 0, "basename empty failed");
+    free(b);
+    return 0;
+}
+
+static int test_extension_empty(void) {
+    char *e = zenit_path_extension("");
+    ASSERT(e != NULL, "extension empty returned NULL");
+    ASSERT(strcmp(e, "") == 0, "extension empty failed");
+    free(e);
+    return 0;
+}
+
+static int test_normalize_empty(void) {
+    char *n = zenit_path_normalize("");
+    ASSERT(n != NULL, "normalize empty returned NULL");
+    ASSERT(strcmp(n, "/") == 0, "normalize empty failed");
+    free(n);
+    return 0;
+}
+
 int main(void) {
     int (*tests[])(void) = {
         &test_join_basic,
@@ -252,6 +284,10 @@ int main(void) {
         &test_normalize_trailing_slash,
         &test_null_params,
         &test_allocator_variants,
+        &test_dirname_empty,
+        &test_basename_empty,
+        &test_extension_empty,
+        &test_normalize_empty,
     };
     const char *names[] = {
         "join_basic",
@@ -275,6 +311,10 @@ int main(void) {
         "normalize_trailing_slash",
         "null_params",
         "allocator_variants",
+        "dirname_empty",
+        "basename_empty",
+        "extension_empty",
+        "normalize_empty",
     };
     ZENIT_RUN_TESTS("path", tests, names);
 }

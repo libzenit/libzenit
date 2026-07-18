@@ -236,7 +236,7 @@ static size_t next_component(const char *path, size_t len, size_t i, size_t *sta
  * Pop one path component from stack[0..pos).
  * Does not pop below min_pos (1 for absolute paths, 0 for relative).
  */
-static void pop_component(char *stack, size_t *pos, size_t min_pos) {
+static void pop_component(const char *stack, size_t *pos, size_t min_pos) {
     if (*pos <= min_pos) return;
     (*pos)--;
     while (*pos > min_pos && stack[*pos - 1] != '/') (*pos)--;
@@ -269,7 +269,8 @@ static char* normalize_impl(const char *path, zenit_allocator_t a) {
         i = skip_slashes(path, len, i);
         if (i >= len) break;
 
-        size_t start, clen;
+        size_t start;
+        size_t clen;
         i = next_component(path, len, i, &start, &clen);
 
         if (clen == 1 && path[start] == '.') {
