@@ -2,7 +2,7 @@
   <img src="media/logo.svg" alt="LibZenit" width="180">
 </p>
 
-Portable C library providing building blocks for systems programming: a **typed result type with error codes**, a **ring buffer**, a **finite-state machine engine**, a **fixed-block arena allocator**, a **benchmark framework**, a **dynamic array (vector)**, a **hash map**, a **hash set**, a **doubly linked list**, a **binary heap (priority queue)**, a **double-ended queue (deque)**, a **string builder**, a **bit set**, a **Bloom filter**, a **trie (prefix tree)**, an **LRU cache**, a **graph (adjacency list)**, a **directory API**, **path utilities**, a **custom allocator interface**, and a **version API**.
+Portable C library providing building blocks for systems programming: a **typed result type with error codes**, a **ring buffer**, a **finite-state machine engine**, a **fixed-block arena allocator**, a **benchmark framework**, a **dynamic array (vector)**, a **hash map**, a **hash set**, a **doubly linked list**, a **binary heap (priority queue)**, a **double-ended queue (deque)**, a **string builder**, a **bit set**, a **Bloom filter**, a **trie (prefix tree)**, an **LRU cache**, a **graph (adjacency list)**, a **directory API**, **path utilities**, a **custom allocator interface**, a **version API**, a **UUID v4 generator**, a **semantic version parser**, a **structured logger**, a **glob pattern matcher**, a **lock-free SPSC ring buffer**, a **generic optional type**, a **CSV record parser**, and a **thread pool**.
 
 <p align="center">
 <a href="https://github.com/libzenit/libzenit/actions/workflows/ci.yml"><img src="https://github.com/libzenit/libzenit/actions/workflows/ci.yml/badge.svg?branch=master" alt="CI Status"></a>
@@ -759,6 +759,172 @@ The sort module now includes a **stable merge sort** (`zenit_sort_stable`) and *
 
 ---
 
+### 31. Sort Improvements — `include/libzenit/sort.h`
+
+The sort module now includes a **stable merge sort** (`zenit_sort_stable`) and **bound-based binary searches** (`zenit_lower_bound`, `zenit_upper_bound`) in addition to the existing quicksort and binary search.
+
+| Function | Description |
+|---|---|
+| `zenit_sort_quick(base, count, elem_size, compare)` | In-place quicksort (not stable) |
+| `zenit_sort_stable(base, count, elem_size, compare)` | Stable merge sort (O(n) temp buffer) |
+| `zenit_binary_search(key, base, count, elem_size, compare)` | Any matching element (unspecified which) |
+| `zenit_lower_bound(key, base, count, elem_size, compare)` | First element >= key |
+| `zenit_upper_bound(key, base, count, elem_size, compare)` | First element > key |
+
+- **Source:** [`src/sort.c`](src/sort.c)
+- **Tests:** [`tests/test_sort.c`](tests/test_sort.c) (27 sub-tests: quicksort, binary search, lower_bound, upper_bound, stable_sort, stability, edge cases, NULL safety)
+- **Benchmark:** [`benchmarks/benchmark_sort.c`](benchmarks/benchmark_sort.c) — sort_random, sort_sorted, stable_sort_random, stable_sort_sorted, binary_search hit/miss
+
+---
+
+### 32. UUID v4 — `include/libzenit/uuid.h`
+
+RFC 4122 UUID v4 generation with cryptographically secure random sources (`getrandom`/`/dev/urandom` on Linux, `arc4random_buf` on macOS, `BCryptGenRandom` on Windows).
+
+| Function | Description |
+|---|---|
+| `zenit_uuid_generate(out)` | Generate a random UUID v4 |
+| `zenit_uuid_format(uuid, out)` | Format as 36-char string |
+| `zenit_uuid_parse(str, out)` | Parse 36-char UUID string |
+| `zenit_uuid_equal(a, b)` | Compare two UUIDs for equality |
+
+- **Source:** [`src/uuid.c`](src/uuid.c)
+- **Tests:** [`tests/test_uuid.c`](tests/test_uuid.c) (9 sub-tests: generate, format, round-trip, known string, uppercase, equal, not-equal, NULL params, invalid)
+- **Benchmark:** [`benchmarks/benchmark_uuid.c`](benchmarks/benchmark_uuid.c) — generate, format, parse
+
+---
+
+### 33. Semantic Versioning — `include/libzenit/semver.h`
+
+SemVer 2.0.0 parsing, formatting, and comparison with full precedence rules.
+
+| Function | Description |
+|---|---|
+| `zenit_semver_parse(str, out)` | Parse "MAJOR.MINOR.PATCH[-pre][+build]" |
+| `zenit_semver_format(v, out)` | Format back to string |
+| `zenit_semver_format_with_allocator(v, out, allocator)` | Format with custom allocator |
+| `zenit_semver_compare(a, b)` | Compare with precedence rules |
+
+- **Source:** [`src/semver.c`](src/semver.c)
+- **Tests:** [`tests/test_semver.c`](tests/test_semver.c) (13 sub-tests: parse, prerelease, build, rc+build, format, round-trip, compare, NULL, invalid, allocator)
+- **Benchmark:** [`benchmarks/benchmark_semver.c`](benchmarks/benchmark_semver.c) — parse, format, compare
+
+---
+
+### 34. Structured Logger — `include/libzenit/logger.h`
+
+Six-level logger with custom sinks, level filtering, timestamps, and convenience per-level functions.
+
+| Function | Description |
+|---|---|
+| `zenit_logger_create(sink, ctx)` | Create logger (default allocator) |
+| `zenit_logger_create_with_allocator(...)` | Create with custom allocator |
+| `zenit_logger_destroy(logger)` | Free all memory; NULL-safe |
+| `zenit_logger_set_level(logger, level)` / `zenit_logger_get_level(logger)` | Set/get minimum log level |
+| `zenit_logger_log(logger, level, fmt, ...)` | Log with explicit level |
+| `zenit_logger_trace/debug/info/warn/error/fatal(logger, ...)` | Convenience per-level functions |
+
+Levels: `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR`, `FATAL` (FATAL calls `abort()`).
+
+- **Source:** [`src/logger.c`](src/logger.c)
+- **Tests:** [`tests/test_logger.c`](tests/test_logger.c) (8 sub-tests: create/destroy, custom sink, level filtering, get/set, convenience functions, NULL safety, allocator variant)
+- **Benchmark:** [`benchmarks/benchmark_logger.c`](benchmarks/benchmark_logger.c) — info, filtered, filtered-fast
+
+---
+
+### 35. Glob Pattern Matching — `include/libzenit/glob.h`
+
+Shell-style glob pattern matching with `*`, `?`, character classes `[abc]`, ranges `[a-z]`, and negated classes `[!abc]`.
+
+| Function | Description |
+|---|---|
+| `zenit_glob_match(pattern, str)` | Match string against glob pattern |
+
+- **Source:** [`src/glob.c`](src/glob.c)
+- **Tests:** [`tests/test_glob.c`](tests/test_glob.c) (10 sub-tests: exact, star, question, star empty, multi-star, char class, range, negated, NULL, complex)
+- **Benchmark:** [`benchmarks/benchmark_glob.c`](benchmarks/benchmark_glob.c) — exact, star, star-miss, question, class
+
+---
+
+### 36. Lock-Free SPSC Ring Buffer — `include/libzenit/spsc.h`
+
+Wait-free single-producer single-consumer ring buffer for thread-safe communication. Uses volatile and memory barriers — no mutexes.
+
+| Function | Description |
+|---|---|
+| `zenit_spsc_create(elem_size, capacity)` | Create fixed-capacity buffer |
+| `zenit_spsc_destroy(spsc)` | Free all memory; NULL-safe |
+| `zenit_spsc_push(spsc, elem)` | Push element (producer) |
+| `zenit_spsc_pop(spsc, out)` | Pop element (consumer) |
+| `zenit_spsc_count(spsc)` | Number of elements stored |
+| `zenit_spsc_capacity(spsc)` | Maximum capacity |
+| `zenit_spsc_full(spsc)` / `zenit_spsc_empty(spsc)` | State queries |
+
+- **Source:** [`src/spsc.c`](src/spsc.c)
+- **Tests:** [`tests/test_spsc.c`](tests/test_spsc.c) (9 sub-tests: create/destroy, push/pop, full, empty, count, wrap-around, multiple, NULL, invalid params)
+- **Benchmark:** [`benchmarks/benchmark_spsc.c`](benchmarks/benchmark_spsc.c) — push-pop, pop-push
+
+---
+
+### 37. Optional Type — `include/libzenit/optional.h`
+
+Header-only generic optional value type. No heap allocation — value is stored inline.
+
+| Macro | Description |
+|---|---|
+| `ZENIT_OPTIONAL(type)` | Declare an optional of `type` |
+| `ZENIT_OPTIONAL_NONE` | Initializer for empty optional |
+| `ZENIT_OPTIONAL_SOME(v)` | Initializer for valued optional |
+| `zenit_optional_has(opt)` | 1 if value present |
+| `zenit_optional_get(opt)` | Get value (undefined if empty) |
+| `zenit_optional_set(opt, v)` | Set value |
+| `zenit_optional_clear(opt)` | Reset to empty |
+| `zenit_optional_get_or(opt, default)` | Get value or default |
+| `zenit_optional_copy(opt, dst)` | Copy value to destination |
+| `zenit_optional_map(opt, fn, out)` | Map function over value |
+
+- **Source:** Header-only (`include/libzenit/optional.h`)
+- **Tests:** [`tests/test_optional.c`](tests/test_optional.c) (10 sub-tests: none, some, set, clear, get_or, copy, map, map-none, double, pointer, overwrite)
+
+---
+
+### 38. CSV Parser/Serialiser — `include/libzenit/csv.h`
+
+RFC 4180 CSV record parser and serialiser with quote escaping and configurable delimiter.
+
+| Function | Description |
+|---|---|
+| `zenit_csv_parse_record(line, delim, out)` | Parse a CSV record (default allocator) |
+| `zenit_csv_parse_record_with_allocator(...)` | Parse with custom allocator |
+| `zenit_csv_record_destroy(record)` | Free record; NULL-safe |
+| `zenit_csv_serialise_record(record, delim, out)` | Serialise to string (default allocator) |
+| `zenit_csv_serialise_record_with_allocator(...)` | Serialise with custom allocator |
+
+- **Source:** [`src/csv.c`](src/csv.c)
+- **Tests:** [`tests/test_csv.c`](tests/test_csv.c) (9 sub-tests: simple, quoted, empty fields, serialise, quoted serialise, round-trip, NULL, single field, tab delimiter)
+- **Benchmark:** [`benchmarks/benchmark_csv.c`](benchmarks/benchmark_csv.c) — parse 9-field, serialise 9-field
+
+---
+
+### 39. Thread Pool — `include/libzenit/thread_pool.h`
+
+Cross-platform thread pool (pthreads / Win32 threads) with a fixed-size task queue and barrier synchronisation.
+
+| Function | Description |
+|---|---|
+| `zenit_thread_pool_create(thread_count)` | Create pool; starts workers immediately |
+| `zenit_thread_pool_destroy(pool)` | Drain queue, shut down workers; NULL-safe |
+| `zenit_thread_pool_enqueue(pool, fn, ctx)` | Queue a task for execution |
+| `zenit_thread_pool_thread_count(pool)` | Number of worker threads |
+| `zenit_thread_pool_pending(pool)` | Queued + in-progress tasks |
+| `zenit_thread_pool_wait(pool)` | Block until queue is empty |
+
+- **Source:** [`src/thread_pool.c`](src/thread_pool.c)
+- **Tests:** [`tests/test_thread_pool.c`](tests/test_thread_pool.c) (6 sub-tests: create/destroy, enqueue, pending, NULL, zero threads, single thread)
+- **Benchmark:** [`benchmarks/benchmark_thread_pool.c`](benchmarks/benchmark_thread_pool.c) — enqueue (10K tasks)
+
+---
+
 ## Build Options
 
 | Option | Default | Description |
@@ -813,7 +979,16 @@ libzen/
 │       ├── lru.h               # LRU cache API
 │       ├── graph.h             # Graph (adjacency list) API
 │       ├── dir.h               # Directory API
-│       └── path.h              # Path utilities (join/dirname/basename/normalize)
+│       ├── dir.h               # Directory API
+│       ├── path.h              # Path utilities (join/dirname/basename/normalize)
+│       ├── uuid.h              # RFC 4122 UUID v4 generation
+│       ├── semver.h            # Semantic version 2.0.0 parsing/comparison
+│       ├── logger.h            # Structured logger with levels & sinks
+│       ├── glob.h              # Shell-style glob pattern matching
+│       ├── spsc.h              # Lock-free SPSC ring buffer
+│       ├── optional.h          # Header-only generic optional type
+│       ├── csv.h               # CSV record parser/serialiser
+│       └── thread_pool.h       # Thread pool with task queue
 ├── src/
 │   ├── CMakeLists.txt          # Library target: static libzenit
 │   ├── result.c / version.c / state.c / arena.c / benchmark.c
@@ -822,15 +997,17 @@ libzen/
 │   ├── base64.c / hex.c / uri.c / str.c / sort.c
 │   ├── stack.c / queue.c / timer.c / pool.c / io.c
 │   ├── path.c / lru.c / graph.c / trie.c / bloom.c / dir.c
+│   ├── uuid.c / semver.c / logger.c / glob.c / spsc.c
+│   └── csv.c / thread_pool.c
 ├── tests/
-│   ├── CMakeLists.txt          # 60 test executables (DRY helpers)
+│   ├── CMakeLists.txt          # 76 test executables (DRY helpers)
 │   ├── test_malloc_fail.h      # Shared malloc/calloc wrappers
 │   ├── test_runner.h           # Shared test runner
 │   ├── test_result.c ... test_graph.c  # One per module
 │   ├── test_*_malloc_fail.c    # Allocation-failure tests (--wrap)
 ├── benchmarks/
-│   ├── CMakeLists.txt          # 30 benchmark executables
-│   ├── benchmark_version.c ... benchmark_graph.c  # All modules
+│   ├── CMakeLists.txt          # 38 benchmark executables
+│   ├── benchmark_version.c ... benchmark_thread_pool.c  # All modules
 ├── scripts/
 │   ├── benchmark_report.py     # CI benchmark log → BENCHMARK.md + charts
 │   └── checksum.py             # Release SHA-256 generator
@@ -877,4 +1054,4 @@ libzen/
 
 ## Status
 
-Current version `0.1.0` — **alpha**. All 31 modules are implemented, fully tested, benchmarked, and passing CI across all platforms and sanitizers. All containers support custom allocators. Encoding/utility functions (base64, hex, uri, str, path) also support custom allocators via `_with_allocator` variants. The API is stable but may evolve before `1.0.0`.
+Current version `0.1.0` — **alpha**. All 39 modules are implemented, fully tested (76 test executables), benchmarked (38 benchmarks), and passing CI across all platforms and sanitizers. All containers support custom allocators. Encoding/utility functions (base64, hex, uri, str, path) also support custom allocators via `_with_allocator` variants. The API is stable but may evolve before `1.0.0`.

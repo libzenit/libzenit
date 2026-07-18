@@ -479,7 +479,15 @@ libzen/
     │       ├── lru.h               # LRU cache API
     │       ├── graph.h             # Graph (adjacency list) API
     │       ├── dir.h               # Directory API
-    │       └── path.h              # Path utilities (join/dirname/basename/normalize)
+    │       ├── path.h              # Path utilities (join/dirname/basename/normalize)
+    │       ├── uuid.h              # RFC 4122 UUID v4 generation
+    │       ├── semver.h            # Semantic version 2.0.0 parsing/comparison
+    │       ├── logger.h            # Structured logger with levels & sinks
+    │       ├── glob.h              # Shell-style glob pattern matching
+    │       ├── spsc.h              # Lock-free SPSC ring buffer
+    │       ├── optional.h          # Header-only generic optional type
+    │       ├── csv.h               # CSV record parser/serialiser
+    │       └── thread_pool.h       # Thread pool with task queue
     ├── src/
     │   ├── CMakeLists.txt
     │   ├── result.c                # Error string conversion
@@ -507,15 +515,22 @@ libzen/
     │   ├── queue.c                 # FIFO queue (thin wrapper over deque)
     │   ├── timer.c                 # High-resolution stopwatch (clock_gettime/QPC)
     │   ├── pool.c                  # Fixed-capacity object pool (free-list)
-    │   ├── io.c                    # File I/O (POSIX/Win32, chunked read/write, read_line)
-    │   ├── path.c                  # Path utilities (join/dirname/basename/normalize)
+    │   ├── io.c                    # File I/O (POSIX/Win32, chunked read/write, buffered read_line)
+    │   ├── path.c                  # Path utilities (join/dirname/basename/normalize/native)
     │   ├── lru.c                   # LRU cache (hash map + doubly-linked list)
     │   ├── graph.c                 # Graph data structure (adjacency list, BFS, DFS)
     │   ├── trie.c                  # Trie data structure (26-ary, a-z, case-insensitive)
     │   ├── bloom.c                 # Bloom filter (bit array, double-hashing FNV-1a)
-    │   └── dir.c                   # Directory operations (POSIX/Win32, mkdir -p, iterate)
+    │   ├── dir.c                   # Directory operations (POSIX/Win32, mkdir -p, iterate)
+    │   ├── uuid.c                  # UUID v4 generation (platform CSPRNG)
+    │   ├── semver.c                # SemVer 2.0.0 parser/comparator
+    │   ├── logger.c                # Structured logger implementation
+    │   ├── glob.c                  # Recursive-descent glob matcher
+    │   ├── spsc.c                  # Lock-free SPSC ring buffer
+    │   ├── csv.c                   # CSV record parser/serialiser
+    │   └── thread_pool.c           # Thread pool (pthreads/Win32 threads)
     ├── tests/
-    │   ├── CMakeLists.txt          # 60 test executables (via zenit_add_test helpers)
+    │   ├── CMakeLists.txt          # 76 test executables (via zenit_add_test helpers)
     │   ├── test_malloc_fail.h      # Shared malloc/calloc wrappers for --wrap tests
     │   ├── test_runner.h           # Shared test runner (macros, globals, test_run_all)
     │   ├── test_result.c           # Error code & macro validation
@@ -560,7 +575,7 @@ libzen/
     │   ├── test_pool.c             # Pool happy path, acquire/release, double-free, clear
     │   ├── test_pool_malloc_fail.c # Malloc failure via --wrap
     │   ├── test_io.c               # File read/write/append/exists/delete/size/copy
-    │   ├── test_io_malloc_fail.c   # Malloc failure via --wrap
+    │   ├── test_io_malloc_fail.c   # Allocator failure via custom allocator
     │   ├── test_path.c             # Path utilities join/dirname/basename/extension/normalize
     │   ├── test_path_malloc_fail.c # Malloc failure via --wrap
     │   ├── test_dir.c              # Directory create/remove/exists/list/iterate
@@ -575,9 +590,24 @@ libzen/
     │   ├── test_lru.c                   # LRU cache happy path, eviction, peek, remove, clear, allocator, callbacks
     │   ├── test_lru_malloc_fail.c       # Malloc/calloc failure via --wrap
     │   ├── test_graph.c                 # Graph happy path, BFS, DFS, edge cases
-    │   └── test_graph_malloc_fail.c     # Malloc/calloc failure via --wrap
+    │   ├── test_graph_malloc_fail.c     # Malloc/calloc failure via --wrap
+    │   ├── test_uuid.c                  # UUID v4 generation, format, parse, equality
+    │   ├── test_uuid_malloc_fail.c      # No-op (UUID uses platform CSPRNG)
+    │   ├── test_semver.c                # SemVer parse, format, compare, precedence
+    │   ├── test_semver_malloc_fail.c    # Malloc failure via --wrap
+    │   ├── test_logger.c                # Logger levels, sinks, filtering, NULL safety
+    │   ├── test_logger_malloc_fail.c    # Malloc failure via --wrap
+    │   ├── test_glob.c                  # Wildcard, char class, range, negated class
+    │   ├── test_glob_malloc_fail.c      # No-op (glob uses no heap)
+    │   ├── test_spsc.c                  # SPSC push/pop, wrap-around, full/empty
+    │   ├── test_spsc_malloc_fail.c      # Malloc failure via --wrap
+    │   ├── test_optional.c              # All 10 optional macros
+    │   ├── test_csv.c                   # Parse/serialise/round-trip/quoted fields
+    │   ├── test_csv_malloc_fail.c       # Malloc failure via --wrap
+    │   ├── test_thread_pool.c           # Enqueue/wait/count/NULL safety
+    │   └── test_thread_pool_malloc_fail.c # Malloc failure via --wrap
     ├── benchmarks/
-    │   ├── CMakeLists.txt          # 30 benchmark executables (label: "benchmark")
+    │   ├── CMakeLists.txt          # 38 benchmark executables (label: "benchmark")
     │   ├── benchmark_version.c     # Version call throughput
     │   ├── benchmark_state.c       # State-machine transition throughput
     │   ├── benchmark_arena.c       # Arena allocator throughput (vs malloc baseline)
@@ -608,13 +638,22 @@ libzen/
     │   ├── benchmark_lru.c         # LRU put, get hit, put-with-eviction throughput
     │   ├── benchmark_graph.c       # Graph add_vertex, add_edge, BFS, get_neighbors throughput
     │   ├── benchmark_dir.c         # Directory list throughput
-    │   └── benchmark_path.c        # Path join/dirname/basename/normalize throughput
+    │   ├── benchmark_path.c        # Path join/dirname/basename/normalize throughput
+    │   ├── benchmark_uuid.c        # UUID generate/format/parse throughput
+    │   ├── benchmark_semver.c      # SemVer parse/format/compare throughput
+    │   ├── benchmark_logger.c      # Logger info/filtered/filtered-fast throughput
+    │   ├── benchmark_glob.c        # Exact/star/question/class/miss throughput
+    │   ├── benchmark_spsc.c        # SPSC push-pop/pop-push throughput
+    │   ├── benchmark_csv.c         # CSV parse/serialise throughput
+    │   └── benchmark_thread_pool.c # Thread pool enqueue throughput
     ├── scripts/
     │   ├── checksum.py             # Release checksum generator
     │   └── benchmark_report.py     # Benchmark log parser & report generator (BENCHMARK.md + charts)
     ├── media/                      # Brand assets (logo)
     │   └── logo.svg                # LibZenit logo (geometric sun)
     ├── codecov.yaml                # Codecov configuration
+    ├── Doxyfile                    # Doxygen configuration
+    ├── conanfile.py                # Conan recipe
     ├── AGENTS.md                   # This file
     ├── LICENSE                     # AGPL-3.0
     ├── README.md
