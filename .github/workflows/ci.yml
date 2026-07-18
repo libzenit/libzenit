@@ -108,9 +108,9 @@ jobs:
           lcov --remove coverage.info -o coverage.clean \
             '/usr/*' '*/_deps/*' '*/tests/*' \
             '*/googletest/*' \
-            --ignore-errors empty,inconsistent,mismatch
+            --ignore-errors empty,inconsistent
           mv coverage.clean coverage.info
-          lcov --list coverage.info --ignore-errors empty,inconsistent,mismatch
+          lcov --list coverage.info --ignore-errors empty,inconsistent
 
       - name: Upload coverage to Codecov
         if: matrix.coverage
