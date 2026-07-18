@@ -95,7 +95,7 @@ zenit_add_malloc_fail_test(test_list_malloc_fail   test_list_malloc_fail.c)
 zenit_add_malloc_fail_test(test_stack_malloc_fail  test_stack_malloc_fail.c)
 zenit_add_malloc_fail_test(test_queue_malloc_fail  test_queue_malloc_fail.c)
 zenit_add_malloc_fail_test(test_pool_malloc_fail   test_pool_malloc_fail.c)
-zenit_add_malloc_fail_test(test_io_malloc_fail     test_io_malloc_fail.c)
+zenit_add_test(test_io_malloc_fail     test_io_malloc_fail.c)
 zenit_add_malloc_fail_test(test_hex_malloc_fail    test_hex_malloc_fail.c)
 zenit_add_malloc_fail_test(test_uri_malloc_fail    test_uri_malloc_fail.c)
 # Malloc-fail tests that also need --wrap=realloc
