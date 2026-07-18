@@ -109,6 +109,31 @@ zenit_result_t zenit_file_delete(const char *path);
 zenit_result_t zenit_file_size(const char *path, size_t *out_size);
 
 /**
+ * @brief Read the first line from a text file into an allocated buffer (default allocator).
+ *
+ * Reads bytes from @p path until a newline ('\\n') is found or EOF is reached.
+ * The newline character is included if present.  The buffer is null-terminated.
+ *
+ * @param path    Null-terminated file path.
+ * @param out_line On success, receives a pointer to the allocated line (including newline).
+ * @return ZENIT_RESULT_OK on success, or an error:
+ *         - ZENIT_ERROR_NULL if @p path or @p out_line is NULL
+ *         - ZENIT_ERROR_NOT_FOUND if the file cannot be opened
+ *         - ZENIT_ERROR_ALLOC if memory allocation fails.
+ */
+zenit_result_t zenit_file_read_line(const char *path, char **out_line);
+
+/**
+ * @brief Read the first line from a text file with a custom allocator.
+ *
+ * @param path      Null-terminated file path.
+ * @param out_line  On success, receives a pointer to the allocated line.
+ * @param allocator Custom allocator for the output buffer.
+ * @return ZENIT_RESULT_OK on success, or an error code on failure.
+ */
+zenit_result_t zenit_file_read_line_with_allocator(const char *path, char **out_line, zenit_allocator_t allocator);
+
+/**
  * @brief Copy a file from source to destination.
  *
  * Opens @p src for reading and @p dst for writing (create/truncate).
