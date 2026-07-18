@@ -251,4 +251,28 @@ zenit_result_t zenit_map_keys(const zenit_map_t *map, void **out_keys, size_t *o
  */
 zenit_result_t zenit_map_values(const zenit_map_t *map, void **out_values, size_t *out_count);
 
+/**
+ * @brief Free an array returned by zenit_map_keys().
+ *
+ * Uses the same allocator that was used to allocate the keys array.
+ *
+ * @param map      Map handle (must be the same map whose allocator was used).
+ * @param keys     Pointer to the keys array returned by zenit_map_keys().
+ * @param count    Number of keys (as returned via out_count).
+ * @return ZENIT_RESULT_OK, or ZENIT_ERROR_NULL if @p map or @p keys is NULL.
+ */
+zenit_result_t zenit_map_keys_free(const zenit_map_t *map, void *keys, size_t count);
+
+/**
+ * @brief Free an array returned by zenit_map_values().
+ *
+ * Uses the same allocator that was used to allocate the values array.
+ *
+ * @param map    Map handle (must be the same map whose allocator was used).
+ * @param values Pointer to the values array returned by zenit_map_values().
+ * @param count  Number of values (as returned via out_count).
+ * @return ZENIT_RESULT_OK, or ZENIT_ERROR_NULL if @p map or @p values is NULL.
+ */
+zenit_result_t zenit_map_values_free(const zenit_map_t *map, void *values, size_t count);
+
 #endif

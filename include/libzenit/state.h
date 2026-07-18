@@ -106,7 +106,20 @@ zenit_result_t zenit_state_process_event(zenit_state_t *state, int event, void *
  * @param state Opaque handle.
  * @return The current internal state value.
  */
-int zenit_get_last_state(const zenit_state_t *state);
+int zenit_state_current(const zenit_state_t *state);
+
+/**
+ * @brief Reset the state machine to a given state without processing an event.
+ *
+ * Useful for returning to a known state without going through the transition
+ * table (e.g. after error recovery).
+ *
+ * @param state State machine handle.
+ * @param new_state State value to set as the current state.
+ * @return ZENIT_RESULT_OK on success, or ZENIT_RESULT_ERROR(ZENIT_ERROR_NULL)
+ *         if @p state is NULL.
+ */
+zenit_result_t zenit_state_reset(zenit_state_t *state, int new_state);
 
 /**
  * @brief Release all memory owned by a state machine.

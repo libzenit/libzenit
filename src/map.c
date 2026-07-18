@@ -464,3 +464,21 @@ zenit_result_t zenit_map_values(const zenit_map_t *map, void **out_values, size_
     *out_count = pos;
     return ZENIT_RESULT_OK;
 }
+
+zenit_result_t zenit_map_keys_free(const zenit_map_t *map, void *keys, size_t count) {
+    if (map == NULL || keys == NULL) {
+        return ZENIT_RESULT_ERROR(ZENIT_ERROR_NULL);
+    }
+    (void)count;
+    map->allocator.free_fn(keys, map->allocator.ctx);
+    return ZENIT_RESULT_OK;
+}
+
+zenit_result_t zenit_map_values_free(const zenit_map_t *map, void *values, size_t count) {
+    if (map == NULL || values == NULL) {
+        return ZENIT_RESULT_ERROR(ZENIT_ERROR_NULL);
+    }
+    (void)count;
+    map->allocator.free_fn(values, map->allocator.ctx);
+    return ZENIT_RESULT_OK;
+}

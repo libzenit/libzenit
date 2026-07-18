@@ -122,12 +122,23 @@ zenit_result_t zenit_state_process_event(zenit_state_t *state, int event, void *
 /**
  * @brief Return the current state value. Pure accessor, no side effects.
  */
-int zenit_get_last_state(const zenit_state_t *state) {
+int zenit_state_current(const zenit_state_t *state) {
     /* NULL handle yields 0 (a harmless sentinel — most machines start at 0) */
     if (state == NULL) {
         return 0;
     }
     return state->current;
+}
+
+/**
+ * @brief Reset the state machine to a given state without processing an event.
+ */
+zenit_result_t zenit_state_reset(zenit_state_t *state, int new_state) {
+    if (state == NULL) {
+        return ZENIT_RESULT_ERROR(ZENIT_ERROR_NULL);
+    }
+    state->current = new_state;
+    return ZENIT_RESULT_OK;
 }
 
 /**

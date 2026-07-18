@@ -70,6 +70,18 @@ char **zenit_str_split(const char *s, const char *delim, size_t *out_count);
 char **zenit_str_split_with_allocator(const char *s, const char *delim, size_t *out_count, zenit_allocator_t allocator);
 
 /**
+ * @brief Free the result of zenit_str_split() or zenit_str_split_with_allocator().
+ *
+ * Frees each element string and the array itself using the same allocator
+ * that was used for the split.
+ *
+ * @param result    Array returned by zenit_str_split() or zenit_str_split_with_allocator().
+ * @param count     Number of elements in @p result (as returned via out_count).
+ * @param allocator Allocator used for the split operation.
+ */
+void zenit_str_split_free(char **result, size_t count, zenit_allocator_t allocator);
+
+/**
  * @brief Join an array of strings with a delimiter (default allocator).
  *
  * @param parts Array of null-terminated strings.
