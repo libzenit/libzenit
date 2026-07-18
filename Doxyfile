@@ -1,0 +1,42 @@
+#
+#    LibZenit
+#    Copyright (C) 2026  Ian Torres
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU Affero General Public License version 3
+#    as published by the Free Software Foundation.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU Affero General Public License for more details.
+#
+#    You should have received a copy of the GNU Affero General Public License
+#    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+
+PROJECT_NAME           = "LibZenit"
+PROJECT_NUMBER         = 0.1.0
+PROJECT_BRIEF          = "Portable C building blocks for systems programming"
+OUTPUT_DIRECTORY       = docs
+INPUT                  = include/libzenit
+RECURSIVE              = NO
+FILE_PATTERNS          = *.h
+EXTRACT_ALL            = YES
+EXTRACT_PRIVATE        = NO
+EXTRACT_STATIC         = NO
+GENERATE_LATEX         = NO
+GENERATE_TREEVIEW      = YES
+OPTIMIZE_OUTPUT_FOR_C  = YES
+ENABLE_PREPROCESSING   = YES
+MACRO_EXPANSION        = YES
+EXPAND_ONLY_PREDEF     = YES
+PREDEFINED             = "static_inline=static inline"
+QUIET                  = YES
+WARNINGS               = YES
+WARN_IF_UNDOCUMENTED   = YES
+WARN_IF_DOC_ERROR      = YES
+SOURCE_BROWSER         = NO
+ALPHABETICAL_INDEX     = YES
+CASE_SENSE_NAMES       = YES
+TAB_SIZE               = 4

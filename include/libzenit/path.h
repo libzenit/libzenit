@@ -124,4 +124,24 @@ char* zenit_path_normalize(const char *path);
  */
 char* zenit_path_normalize_with_allocator(const char *path, zenit_allocator_t allocator);
 
+/**
+ * @brief Convert forward slashes to platform-native separators (default allocator).
+ *
+ * On Windows, replaces '/' with '\\'.  On other platforms, returns a copy
+ * of the input unchanged.
+ *
+ * @param path Null-terminated path string.
+ * @return Newly allocated path with native separators, or NULL on allocation failure or NULL input.
+ */
+char* zenit_path_to_native(const char *path);
+
+/**
+ * @brief Convert forward slashes to platform-native separators (custom allocator).
+ *
+ * @param path      Null-terminated path string.
+ * @param allocator Custom allocator for the output string.
+ * @return Newly allocated path with native separators, or NULL on allocation failure or NULL input.
+ */
+char* zenit_path_to_native_with_allocator(const char *path, zenit_allocator_t allocator);
+
 #endif

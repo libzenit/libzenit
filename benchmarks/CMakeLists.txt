@@ -213,8 +213,44 @@ target_link_libraries(benchmark_graph PRIVATE zenit)
 add_test(NAME benchmark_graph COMMAND benchmark_graph)
 set_tests_properties(benchmark_graph PROPERTIES LABELS "benchmark")
 
+# New benchmarks
+add_executable(benchmark_uuid benchmark_uuid.c)
+target_link_libraries(benchmark_uuid PRIVATE zenit)
+add_test(NAME benchmark_uuid COMMAND benchmark_uuid)
+set_tests_properties(benchmark_uuid PROPERTIES LABELS "benchmark")
+
+add_executable(benchmark_semver benchmark_semver.c)
+target_link_libraries(benchmark_semver PRIVATE zenit)
+add_test(NAME benchmark_semver COMMAND benchmark_semver)
+set_tests_properties(benchmark_semver PROPERTIES LABELS "benchmark")
+
+add_executable(benchmark_logger benchmark_logger.c)
+target_link_libraries(benchmark_logger PRIVATE zenit)
+add_test(NAME benchmark_logger COMMAND benchmark_logger)
+set_tests_properties(benchmark_logger PROPERTIES LABELS "benchmark")
+
+add_executable(benchmark_glob benchmark_glob.c)
+target_link_libraries(benchmark_glob PRIVATE zenit)
+add_test(NAME benchmark_glob COMMAND benchmark_glob)
+set_tests_properties(benchmark_glob PROPERTIES LABELS "benchmark")
+
+add_executable(benchmark_spsc benchmark_spsc.c)
+target_link_libraries(benchmark_spsc PRIVATE zenit)
+add_test(NAME benchmark_spsc COMMAND benchmark_spsc)
+set_tests_properties(benchmark_spsc PROPERTIES LABELS "benchmark")
+
+add_executable(benchmark_csv benchmark_csv.c)
+target_link_libraries(benchmark_csv PRIVATE zenit)
+add_test(NAME benchmark_csv COMMAND benchmark_csv)
+set_tests_properties(benchmark_csv PROPERTIES LABELS "benchmark")
+
+add_executable(benchmark_thread_pool benchmark_thread_pool.c)
+target_link_libraries(benchmark_thread_pool PRIVATE zenit)
+add_test(NAME benchmark_thread_pool COMMAND benchmark_thread_pool)
+set_tests_properties(benchmark_thread_pool PROPERTIES LABELS "benchmark")
+
 if(LIBZENIT_BUILD_COVERAGE)
-  foreach(tgt benchmark_version benchmark_state benchmark_arena benchmark_ring benchmark_vector benchmark_map benchmark_set benchmark_string benchmark_list benchmark_heap benchmark_deque benchmark_bitset benchmark_json benchmark_base64 benchmark_hex benchmark_uri benchmark_str benchmark_path benchmark_sort benchmark_lru benchmark_stack benchmark_queue benchmark_timer benchmark_pool benchmark_io benchmark_dir benchmark_allocator benchmark_result benchmark_bloom benchmark_trie benchmark_graph)
+  foreach(tgt benchmark_version benchmark_state benchmark_arena benchmark_ring benchmark_vector benchmark_map benchmark_set benchmark_string benchmark_list benchmark_heap benchmark_deque benchmark_bitset benchmark_json benchmark_base64 benchmark_hex benchmark_uri benchmark_str benchmark_path benchmark_sort benchmark_lru benchmark_stack benchmark_queue benchmark_timer benchmark_pool benchmark_io benchmark_dir benchmark_allocator benchmark_result benchmark_bloom benchmark_trie benchmark_graph benchmark_uuid benchmark_semver benchmark_logger benchmark_glob benchmark_spsc benchmark_csv benchmark_thread_pool)
     target_compile_options(${tgt} PRIVATE --coverage -g -O0)
     target_link_options(${tgt} PRIVATE --coverage)
   endforeach()
@@ -256,6 +292,13 @@ add_custom_target(benchmark
   COMMAND "$<TARGET_FILE:benchmark_bloom>"
   COMMAND "$<TARGET_FILE:benchmark_trie>"
   COMMAND "$<TARGET_FILE:benchmark_graph>"
+  COMMAND "$<TARGET_FILE:benchmark_uuid>"
+  COMMAND "$<TARGET_FILE:benchmark_semver>"
+  COMMAND "$<TARGET_FILE:benchmark_logger>"
+  COMMAND "$<TARGET_FILE:benchmark_glob>"
+  COMMAND "$<TARGET_FILE:benchmark_spsc>"
+  COMMAND "$<TARGET_FILE:benchmark_csv>"
+  COMMAND "$<TARGET_FILE:benchmark_thread_pool>"
   COMMAND ${CMAKE_COMMAND} -E echo ""
   COMMAND ${CMAKE_COMMAND} -E echo "===== Done ====="
   USES_TERMINAL

@@ -197,6 +197,35 @@ static int test_null_params(void) {
 
 /* ─── allocator variants ─── */
 
+static int test_to_native(void) {
+    char *p;
+
+    p = zenit_path_to_native("a/b/c");
+    ASSERT(p != NULL, "to_native returned NULL");
+    ASSERT(strlen(p) == 5, "to_native length wrong");
+    free(p);
+
+    p = zenit_path_to_native("");
+    ASSERT(p != NULL, "to_native empty returned NULL");
+    ASSERT(strcmp(p, "") == 0, "to_native empty failed");
+    free(p);
+
+    p = zenit_path_to_native(NULL);
+    ASSERT(p == NULL, "to_native NULL should return NULL");
+
+    p = zenit_path_to_native_with_allocator("a/b", ZENIT_ALLOCATOR_DEFAULT);
+    ASSERT(p != NULL, "to_native allocator returned NULL");
+#if defined(_WIN32)
+    ASSERT(strcmp(p, "a\\b") == 0, "to_native allocator failed on Windows");
+#else
+    ASSERT(strcmp(p, "a/b") == 0, "to_native allocator failed on POSIX");
+#endif
+    free(p);
+
+    PASS();
+    return 0;
+}
+
 static int test_allocator_variants(void) {
     zenit_allocator_t a = ZENIT_ALLOCATOR_DEFAULT;
     char *p;
@@ -335,6 +364,7 @@ int main(void) {
         &test_normalize_empty,
         &test_normalize_empty_absolute,
         &test_normalize_alloc_fail,
+        &test_to_native,
     };
     const char *names[] = {
         "join_basic",
@@ -364,6 +394,7 @@ int main(void) {
         "normalize_empty",
         "normalize_empty_absolute",
         "normalize_alloc_fail",
+        "to_native",
     };
     ZENIT_RUN_TESTS("path", tests, names);
 }

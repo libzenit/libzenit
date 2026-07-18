@@ -48,6 +48,13 @@ add_library(zenit STATIC
   trie.c
   bloom.c
   dir.c
+  uuid.c
+  semver.c
+  logger.c
+  glob.c
+  spsc.c
+  csv.c
+  thread_pool.c
 )
 
 target_include_directories(zenit
@@ -62,6 +69,10 @@ endif()
 
 if(UNIX)
   target_link_libraries(zenit PRIVATE m)
+endif()
+
+if(WIN32)
+  target_link_libraries(zenit PRIVATE bcrypt)
 endif()
 
 if(LIBZENIT_BUILD_COVERAGE)

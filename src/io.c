@@ -31,6 +31,9 @@
 
 #define IO_COPY_BUF_SIZE 65536
 
+/* Read-ahead buffer size for read_line — 8KB page */
+#define READ_LINE_BUF_SIZE 8192
+
 zenit_result_t zenit_file_read_with_allocator(const char *path, void **out_data, size_t *out_len, zenit_allocator_t allocator) {
     if (path == NULL || out_data == NULL || out_len == NULL) {
         return ZENIT_RESULT_ERROR(ZENIT_ERROR_NULL);
@@ -136,31 +139,46 @@ zenit_result_t zenit_file_read_line_with_allocator(const char *path, char **out_
         return ZENIT_RESULT_ERROR(ZENIT_ERROR_ALLOC);
     }
 
-    {
-        int done = 0;
-        while (!done) {
-            char c;
+    /* Read-ahead buffer for efficient I/O */
+    unsigned char read_buf[READ_LINE_BUF_SIZE];
+    size_t read_buf_pos = 0;
+    size_t read_buf_end = 0;
+    int eof = 0;
+
+    while (!eof) {
+        /* Refill read-ahead buffer if empty */
+        if (read_buf_pos >= read_buf_end) {
             DWORD bytes_read;
-            if (!ReadFile(h, &c, 1, &bytes_read, NULL)) {
+            if (!ReadFile(h, read_buf, READ_LINE_BUF_SIZE, &bytes_read, NULL)) {
                 allocator.free_fn(buf, allocator.ctx);
                 CloseHandle(h);
                 return ZENIT_RESULT_ERROR(ZENIT_ERROR_NOT_FOUND);
             }
             if (bytes_read == 0) {
-                done = 1;
-            } else {
-                zenit_result_t grow_r = grow_line_buf(&buf, &cap, len, allocator);
-                if (grow_r.error != ZENIT_OK) {
-                    allocator.free_fn(buf, allocator.ctx);
-                    CloseHandle(h);
-                    return grow_r;
-                }
-                buf[len++] = c;
-                if (c == '\n') done = 1;
+                break;
+            }
+            read_buf_pos = 0;
+            read_buf_end = (size_t)bytes_read;
+        }
+
+        /* Scan through read-ahead buffer for newline */
+        while (read_buf_pos < read_buf_end) {
+            char c = (char)read_buf[read_buf_pos++];
+            zenit_result_t grow_r = grow_line_buf(&buf, &cap, len, allocator);
+            if (grow_r.error != ZENIT_OK) {
+                allocator.free_fn(buf, allocator.ctx);
+                CloseHandle(h);
+                return grow_r;
+            }
+            buf[len++] = c;
+            if (c == '\n') {
+                /* Found newline — done */
+                goto line_done_win;
             }
         }
     }
 
+line_done_win:
     CloseHandle(h);
     buf[len] = '\0';
     *out_line = buf;
@@ -179,31 +197,46 @@ zenit_result_t zenit_file_read_line_with_allocator(const char *path, char **out_
         return ZENIT_RESULT_ERROR(ZENIT_ERROR_ALLOC);
     }
 
-    {
-        int done = 0;
-        while (!done) {
-            char c;
-            ssize_t n = read(fd, &c, 1);
+    /* Read-ahead buffer for efficient I/O */
+    unsigned char read_buf[READ_LINE_BUF_SIZE];
+    size_t read_buf_pos = 0;
+    size_t read_buf_end = 0;
+    int eof = 0;
+
+    while (!eof) {
+        /* Refill read-ahead buffer if empty */
+        if (read_buf_pos >= read_buf_end) {
+            ssize_t n = read(fd, read_buf, READ_LINE_BUF_SIZE);
             if (n < 0) {
                 allocator.free_fn(buf, allocator.ctx);
                 close(fd);
                 return ZENIT_RESULT_ERROR(ZENIT_ERROR_NOT_FOUND);
             }
             if (n == 0) {
-                done = 1;
-            } else {
-                zenit_result_t grow_r = grow_line_buf(&buf, &cap, len, allocator);
-                if (grow_r.error != ZENIT_OK) {
-                    allocator.free_fn(buf, allocator.ctx);
-                    close(fd);
-                    return grow_r;
-                }
-                buf[len++] = c;
-                if (c == '\n') done = 1;
+                break;
+            }
+            read_buf_pos = 0;
+            read_buf_end = (size_t)n;
+        }
+
+        /* Scan through read-ahead buffer for newline */
+        while (read_buf_pos < read_buf_end) {
+            char c = (char)read_buf[read_buf_pos++];
+            zenit_result_t grow_r = grow_line_buf(&buf, &cap, len, allocator);
+            if (grow_r.error != ZENIT_OK) {
+                allocator.free_fn(buf, allocator.ctx);
+                close(fd);
+                return grow_r;
+            }
+            buf[len++] = c;
+            if (c == '\n') {
+                /* Found newline — done */
+                goto line_done_posix;
             }
         }
     }
 
+line_done_posix:
     close(fd);
     buf[len] = '\0';
     *out_line = buf;

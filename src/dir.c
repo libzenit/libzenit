@@ -49,19 +49,25 @@ struct zenit_dir_iter_t {
 /*
  * Walk the path component by component, creating each directory
  * as we go.  Skips components that already exist.
+ * Uses dynamically allocated buffer to support paths of any length.
  */
 static zenit_result_t create_dir_recursive(const char *path) {
-    /* Copy the path into a mutable buffer */
-    char tmp[1024];
     size_t len = strlen(path);
-    if (len >= sizeof(tmp)) {
-        return ZENIT_RESULT_ERROR(ZENIT_ERROR_PARAM);
+    char *tmp = malloc(len + 1);
+    if (tmp == NULL) {
+        return ZENIT_RESULT_ERROR(ZENIT_ERROR_ALLOC);
     }
     memcpy(tmp, path, len + 1);
 
     /* Strip trailing slashes so we don't create empty components */
     while (len > 0 && (tmp[len - 1] == '/' || tmp[len - 1] == '\\')) {
         tmp[--len] = '\0';
+    }
+
+    /* Guard: after stripping, the path may be empty */
+    if (len == 0) {
+        free(tmp);
+        return ZENIT_RESULT_OK;
     }
 
     /* Walk each '/' or '\' separator */
@@ -74,11 +80,13 @@ static zenit_result_t create_dir_recursive(const char *path) {
 #if defined(_WIN32)
             if (_mkdir(tmp) != 0 && errno != EEXIST) {
                 *p = saved;
+                free(tmp);
                 return ZENIT_RESULT_ERROR(ZENIT_ERROR_NOT_FOUND);
             }
 #else
             if (mkdir(tmp, 0755) != 0 && errno != EEXIST) {
                 *p = saved;
+                free(tmp);
                 return ZENIT_RESULT_ERROR(ZENIT_ERROR_NOT_FOUND);
             }
 #endif
@@ -91,14 +99,17 @@ static zenit_result_t create_dir_recursive(const char *path) {
     /* Create the final (deepest) component */
 #if defined(_WIN32)
     if (_mkdir(tmp) != 0 && errno != EEXIST) {
+        free(tmp);
         return ZENIT_RESULT_ERROR(ZENIT_ERROR_NOT_FOUND);
     }
 #else
     if (mkdir(tmp, 0755) != 0 && errno != EEXIST) {
+        free(tmp);
         return ZENIT_RESULT_ERROR(ZENIT_ERROR_NOT_FOUND);
     }
 #endif
 
+    free(tmp);
     return ZENIT_RESULT_OK;
 }
 

@@ -73,6 +73,24 @@ int main(void) {
         return 1;
     }
 
+    /* Verify zenit_result_is_ok / zenit_result_is_error */
+    if (!zenit_result_is_ok(ok)) {
+        fprintf(stderr, "FAIL: zenit_result_is_ok(ZENIT_RESULT_OK) should be true\n");
+        return 1;
+    }
+    if (zenit_result_is_ok(err)) {
+        fprintf(stderr, "FAIL: zenit_result_is_ok(error) should be false\n");
+        return 1;
+    }
+    if (!zenit_result_is_error(err)) {
+        fprintf(stderr, "FAIL: zenit_result_is_error(ZENIT_RESULT_ERROR) should be true\n");
+        return 1;
+    }
+    if (zenit_result_is_error(ok)) {
+        fprintf(stderr, "FAIL: zenit_result_is_error(ZENIT_RESULT_OK) should be false\n");
+        return 1;
+    }
+
     /* Verify allocator no-realloc fallback path (success and failure) */
     {
         zenit_allocator_t no_realloc = {

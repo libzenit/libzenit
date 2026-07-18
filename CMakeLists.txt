@@ -55,3 +55,13 @@ install(
   NAMESPACE libzenit::
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/libzenit
 )
+
+find_program(DOXYGEN_EXECUTABLE doxygen)
+if(DOXYGEN_EXECUTABLE)
+  add_custom_target(docs
+    COMMAND ${DOXYGEN_EXECUTABLE} ${PROJECT_SOURCE_DIR}/Doxyfile
+    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+    COMMENT "Generating API documentation with Doxygen"
+    USES_TERMINAL
+  )
+endif()

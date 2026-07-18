@@ -50,5 +50,13 @@
 #include <libzenit/dir.h>
 #include <libzenit/bloom.h>
 #include <libzenit/graph.h>
+#include <libzenit/uuid.h>
+#include <libzenit/semver.h>
+#include <libzenit/logger.h>
+#include <libzenit/glob.h>
+#include <libzenit/spsc.h>
+#include <libzenit/optional.h>
+#include <libzenit/csv.h>
+#include <libzenit/thread_pool.h>
 
 #endif
