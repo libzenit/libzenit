@@ -50,7 +50,7 @@ int main(void) {
         return 1;
     }
 
-    if (zenit_get_last_state(state) != ST_IDLE) {
+    if (zenit_state_current(state) != ST_IDLE) {
         fprintf(stderr, "FAIL: expected ST_IDLE after init\n");
         return 1;
     }
@@ -67,7 +67,7 @@ int main(void) {
         fprintf(stderr, "FAIL: callback args mismatch\n");
         return 1;
     }
-    if (zenit_get_last_state(state) != ST_ACTIVE) {
+    if (zenit_state_current(state) != ST_ACTIVE) {
         fprintf(stderr, "FAIL: expected ST_ACTIVE after EV_START\n");
         return 1;
     }
@@ -77,18 +77,32 @@ int main(void) {
         fprintf(stderr, "FAIL: EV_FAIL should be valid from ACTIVE\n");
         return 1;
     }
-    if (zenit_get_last_state(state) != ST_ERROR) {
+    if (zenit_state_current(state) != ST_ERROR) {
         fprintf(stderr, "FAIL: expected ST_ERROR after EV_FAIL\n");
+        return 1;
+    }
+
+    /* Test zenit_state_reset */
+    if (zenit_state_reset(state, ST_IDLE).error != ZENIT_OK) {
+        fprintf(stderr, "FAIL: zenit_state_reset should succeed\n");
+        return 1;
+    }
+    if (zenit_state_current(state) != ST_IDLE) {
+        fprintf(stderr, "FAIL: expected ST_IDLE after reset\n");
+        return 1;
+    }
+    if (zenit_state_reset(NULL, ST_IDLE).error != ZENIT_ERROR_NULL) {
+        fprintf(stderr, "FAIL: zenit_state_reset(NULL) should return ZENIT_ERROR_NULL\n");
         return 1;
     }
 
     callback_invoked = 0;
     if (zenit_state_process_event(state, EV_STOP, NULL).error != ZENIT_ERROR_NOT_FOUND) {
-        fprintf(stderr, "FAIL: EV_STOP from ERROR should be invalid\n");
+        fprintf(stderr, "FAIL: EV_STOP from IDLE should be invalid\n");
         return 1;
     }
-    if (zenit_get_last_state(state) != ST_ERROR) {
-        fprintf(stderr, "FAIL: state should remain ST_ERROR after invalid event\n");
+    if (zenit_state_current(state) != ST_IDLE) {
+        fprintf(stderr, "FAIL: state should remain ST_IDLE after invalid event\n");
         return 1;
     }
 
@@ -102,8 +116,8 @@ int main(void) {
         fprintf(stderr, "FAIL: process_event(NULL) should return ZENIT_ERROR_NULL\n");
         return 1;
     }
-    if (zenit_get_last_state(NULL) != 0) {
-        fprintf(stderr, "FAIL: get_last_state(NULL) should return 0\n");
+    if (zenit_state_current(NULL) != 0) {
+        fprintf(stderr, "FAIL: zenit_state_current(NULL) should return 0\n");
         return 1;
     }
 

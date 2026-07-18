@@ -48,6 +48,10 @@ typedef struct {
  * @brief Default malloc-based allocator function.
  *
  * Defined in src/allocator.c.
+ *
+ * @param size Number of bytes to allocate.
+ * @param ctx  Opaque context (unused by the default allocator).
+ * @return Pointer to the allocated memory, or NULL on failure.
  */
 void *zenit_default_alloc(size_t size, void *ctx);
 
@@ -55,6 +59,11 @@ void *zenit_default_alloc(size_t size, void *ctx);
  * @brief Default realloc-based allocator function.
  *
  * Defined in src/allocator.c.
+ *
+ * @param ptr  Pointer previously returned by zenit_default_alloc, or NULL.
+ * @param size New size in bytes.
+ * @param ctx  Opaque context (unused by the default allocator).
+ * @return Pointer to the reallocated memory, or NULL on failure.
  */
 void *zenit_default_realloc(void *ptr, size_t size, void *ctx);
 
@@ -62,6 +71,9 @@ void *zenit_default_realloc(void *ptr, size_t size, void *ctx);
  * @brief Default free-based allocator function.
  *
  * Defined in src/allocator.c.
+ *
+ * @param ptr Pointer previously returned by zenit_default_alloc/realloc, or NULL.
+ * @param ctx Opaque context (unused by the default allocator).
  */
 void zenit_default_free(void *ptr, void *ctx);
 
@@ -73,9 +85,14 @@ void zenit_default_free(void *ptr, void *ctx);
 })
 
 /**
- * @brief Allocate memory through an allocator.
+ * @brief Allocate memory through an allocator (zeroed).
  *
  * Returns zeroed memory (calloc equivalent).
+ *
+ * @param a     Allocator to use.
+ * @param nmemb Number of elements.
+ * @param size  Size in bytes of each element.
+ * @return Pointer to the allocated zeroed memory, or NULL on failure.
  */
 static inline void *zenit_allocator_alloc_zero(zenit_allocator_t a, size_t nmemb, size_t size) {
     void *ptr = a.alloc_fn(nmemb * size, a.ctx);
@@ -89,6 +106,12 @@ static inline void *zenit_allocator_alloc_zero(zenit_allocator_t a, size_t nmemb
  * @brief Reallocate memory through an allocator, handling NULL realloc_fn.
  *
  * Defined in src/allocator.c.
+ *
+ * @param a        Allocator to use.
+ * @param ptr      Pointer to the previously allocated memory, or NULL.
+ * @param old_size Previous allocation size in bytes (ignored if @p ptr is NULL).
+ * @param new_size New desired size in bytes.
+ * @return Pointer to the reallocated memory, or NULL on failure.
  */
 void *zenit_allocator_realloc(zenit_allocator_t a, void *ptr, size_t old_size, size_t new_size);
 

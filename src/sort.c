@@ -28,12 +28,14 @@ static void swap_elements(void *a, void *b, size_t es) {
         memcpy(a, b, es);
         memcpy(b, tmp, es);
     } else {
-        void *tmp = malloc(es);
-        if (tmp == NULL) return;
-        memcpy(tmp, a, es);
-        memcpy(a, b, es);
-        memcpy(b, tmp, es);
-        free(tmp);
+        /* Byte-by-byte swap avoids heap allocation — deterministic, no failure */
+        unsigned char *ca = (unsigned char *)a;
+        unsigned char *cb = (unsigned char *)b;
+        for (size_t i = 0; i < es; i++) {
+            unsigned char t = ca[i];
+            ca[i] = cb[i];
+            cb[i] = t;
+        }
     }
 }
 

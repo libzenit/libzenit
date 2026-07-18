@@ -139,4 +139,32 @@ size_t zenit_ring_capacity(const zenit_ring_t *ring);
  */
 void zenit_ring_clear(zenit_ring_t *ring);
 
+/**
+ * @brief Resize the ring buffer to a new capacity.
+ *
+ * Existing data is preserved as much as possible (up to @p new_capacity bytes).
+ * If @p new_capacity is smaller than the current count, the oldest bytes are
+ * discarded and the count is clamped.
+ *
+ * @param ring         Ring buffer handle.
+ * @param new_capacity New desired capacity (must be > 0).
+ * @return ZENIT_RESULT_OK on success, or an error:
+ *         - ZENIT_ERROR_NULL if @p ring is NULL
+ *         - ZENIT_ERROR_PARAM if @p new_capacity == 0
+ *         - ZENIT_ERROR_ALLOC if reallocation fails.
+ */
+zenit_result_t zenit_ring_reserve(zenit_ring_t *ring, size_t new_capacity);
+
+/**
+ * @brief Shrink the internal buffer to exactly fit the current data.
+ *
+ * After this call the capacity equals the count (or 1 if empty).
+ *
+ * @param ring Ring buffer handle.
+ * @return ZENIT_RESULT_OK on success, or an error:
+ *         - ZENIT_ERROR_NULL if @p ring is NULL
+ *         - ZENIT_ERROR_ALLOC if reallocation fails.
+ */
+zenit_result_t zenit_ring_shrink_to_fit(zenit_ring_t *ring);
+
 #endif

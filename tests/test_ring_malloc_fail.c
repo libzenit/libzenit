@@ -49,9 +49,38 @@ static int test_create_buffer_fail(void) {
     return 0;
 }
 
+/* ─── Test: zenit_ring_reserve fails on malloc ─── */
+static int test_reserve_alloc_fail(void) {
+    zenit_ring_t *r = zenit_ring_create(16);
+    if (r == NULL) {
+        fprintf(stderr, "FAIL: create failed\n");
+        return 1;
+    }
+
+    malloc_fail_countdown = 0;
+    zenit_result_t res = zenit_ring_reserve(r, 32);
+    malloc_fail_countdown = -1;
+
+    if (res.error != ZENIT_ERROR_ALLOC) {
+        fprintf(stderr, "FAIL: expected ZENIT_ERROR_ALLOC, got %d\n", res.error);
+        zenit_ring_destroy(r);
+        return 1;
+    }
+    /* Original ring should still be usable */
+    if (zenit_ring_capacity(r) != 16) {
+        fprintf(stderr, "FAIL: capacity should still be 16\n");
+        zenit_ring_destroy(r);
+        return 1;
+    }
+    zenit_ring_destroy(r);
+    printf("PASS: ring_reserve returns ZENIT_ERROR_ALLOC on malloc failure\n");
+    return 0;
+}
+
 int main(void) {
     int ret = 0;
     ret |= test_create_handle_fail();
     ret |= test_create_buffer_fail();
+    ret |= test_reserve_alloc_fail();
     return ret;
 }

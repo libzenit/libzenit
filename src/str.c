@@ -148,6 +148,10 @@ static char *join_impl(const char **parts, size_t count, const char *delim, zeni
     return out;
 }
 
+void zenit_str_split_free(char **result, size_t count, zenit_allocator_t allocator) {
+    free_split_result_with_allocator(result, count, allocator);
+}
+
 char *zenit_str_trim(const char *s) {
     return zenit_str_trim_with_allocator(s, ZENIT_ALLOCATOR_DEFAULT);
 }

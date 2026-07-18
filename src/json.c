@@ -1098,21 +1098,32 @@ static int value_serialize_into(const zenit_json_value_t *val, zenit_string_t *o
     return serialize_object(val, out, a);
 }
 
-char *zenit_json_value_serialize(const zenit_json_value_t *val) {
-    zenit_string_t *s = zenit_string_create();
+char *zenit_json_value_serialize_with_allocator(const zenit_json_value_t *val, zenit_allocator_t allocator) {
+    zenit_string_t *s = zenit_string_create_with_allocator(allocator);
     if (s == NULL) {
         return NULL;
     }
 
-    if (!value_serialize_into(val, s, ZENIT_ALLOCATOR_DEFAULT)) {
+    if (!value_serialize_into(val, s, allocator)) {
         zenit_string_destroy(s);
         return NULL;
     }
 
     const char *cstr = zenit_string_cstr(s);
-    char *result = str_dup(ZENIT_ALLOCATOR_DEFAULT, cstr);
+    char *result = str_dup(allocator, cstr);
     zenit_string_destroy(s);
     return result;
+}
+
+char *zenit_json_value_serialize(const zenit_json_value_t *val) {
+    return zenit_json_value_serialize_with_allocator(val, ZENIT_ALLOCATOR_DEFAULT);
+}
+
+char *zenit_json_serialize_with_allocator(const zenit_json_t *json, zenit_allocator_t allocator) {
+    if (json == NULL || json->root == NULL) {
+        return NULL;
+    }
+    return zenit_json_value_serialize_with_allocator(json->root, allocator);
 }
 
 char *zenit_json_serialize(const zenit_json_t *json) {

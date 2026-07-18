@@ -358,3 +358,12 @@ zenit_result_t zenit_set_to_array(const zenit_set_t *set, void **out_keys, size_
     *out_count = pos;
     return ZENIT_RESULT_OK;
 }
+
+zenit_result_t zenit_set_to_array_free(const zenit_set_t *set, void *keys, size_t count) {
+    if (set == NULL || keys == NULL) {
+        return ZENIT_RESULT_ERROR(ZENIT_ERROR_NULL);
+    }
+    (void)count;
+    set->allocator.free_fn(keys, set->allocator.ctx);
+    return ZENIT_RESULT_OK;
+}

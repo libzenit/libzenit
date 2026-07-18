@@ -210,4 +210,16 @@ void *zenit_set_iter_next(zenit_iter_t *iter);
  */
 zenit_result_t zenit_set_to_array(const zenit_set_t *set, void **out_keys, size_t *out_count);
 
+/**
+ * @brief Free an array returned by zenit_set_to_array().
+ *
+ * Uses the same allocator that was used to allocate the keys array.
+ *
+ * @param set  Set handle (must be the same set whose allocator was used).
+ * @param keys Pointer to the keys array returned by zenit_set_to_array().
+ * @param count Number of keys (as returned via out_count).
+ * @return ZENIT_RESULT_OK, or ZENIT_ERROR_NULL if @p set or @p keys is NULL.
+ */
+zenit_result_t zenit_set_to_array_free(const zenit_set_t *set, void *keys, size_t count);
+
 #endif

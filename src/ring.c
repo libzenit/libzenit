@@ -269,3 +269,76 @@ void zenit_ring_clear(zenit_ring_t *ring) {
     ring->tail = 0;
     ring->count = 0;
 }
+
+/**
+ * @brief Resize the ring buffer to a new capacity.
+ *
+ * Allocates a new buffer of @p new_capacity bytes, copies as much existing
+ * data as fits (oldest first), then frees the old buffer.  If the new capacity
+ * is smaller than the current count, the oldest bytes are dropped.
+ */
+zenit_result_t zenit_ring_reserve(zenit_ring_t *ring, size_t new_capacity) {
+    if (ring == NULL) {
+        return ZENIT_RESULT_ERROR(ZENIT_ERROR_NULL);
+    }
+    if (new_capacity == 0) {
+        return ZENIT_RESULT_ERROR(ZENIT_ERROR_PARAM);
+    }
+
+    zenit_allocator_t a = ring->allocator;
+
+    /* Allocate the new buffer */
+    unsigned char *new_buf = a.alloc_fn(new_capacity, a.ctx);
+    if (new_buf == NULL) {
+        return ZENIT_RESULT_ERROR(ZENIT_ERROR_ALLOC);
+    }
+
+    /* Copy as much data as fits, starting from tail (oldest) */
+    size_t to_copy = ring->count;
+    if (to_copy > new_capacity) {
+        to_copy = new_capacity;
+    }
+
+    if (to_copy > 0) {
+        /* First segment: from tail to end of old buffer */
+        size_t first = ring->capacity - ring->tail;
+        if (first > to_copy) {
+            first = to_copy;
+        }
+        memcpy(new_buf, ring->buffer + ring->tail, first);
+
+        /* Second segment: wrap around if needed */
+        size_t second = to_copy - first;
+        if (second > 0) {
+            memcpy(new_buf + first, ring->buffer, second);
+        }
+    }
+
+    /* Free the old buffer */
+    a.free_fn(ring->buffer, a.ctx);
+
+    /* Update state */
+    ring->buffer = new_buf;
+    ring->capacity = new_capacity;
+    ring->tail = 0;
+    ring->head = to_copy;
+    ring->count = to_copy;
+
+    return ZENIT_RESULT_OK;
+}
+
+/**
+ * @brief Shrink the internal buffer to exactly fit the current data.
+ *
+ * If the ring is empty, capacity becomes 1.
+ */
+zenit_result_t zenit_ring_shrink_to_fit(zenit_ring_t *ring) {
+    if (ring == NULL) {
+        return ZENIT_RESULT_ERROR(ZENIT_ERROR_NULL);
+    }
+    size_t target = ring->count;
+    if (target == 0) {
+        target = 1;
+    }
+    return zenit_ring_reserve(ring, target);
+}

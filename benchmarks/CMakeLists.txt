@@ -165,8 +165,20 @@ target_link_libraries(benchmark_sort PRIVATE zenit)
 add_test(NAME benchmark_sort COMMAND benchmark_sort)
 set_tests_properties(benchmark_sort PROPERTIES LABELS "benchmark")
 
+# Allocator throughput
+add_executable(benchmark_allocator benchmark_allocator.c)
+target_link_libraries(benchmark_allocator PRIVATE zenit)
+add_test(NAME benchmark_allocator COMMAND benchmark_allocator)
+set_tests_properties(benchmark_allocator PROPERTIES LABELS "benchmark")
+
+# Result (error string) throughput
+add_executable(benchmark_result benchmark_result.c)
+target_link_libraries(benchmark_result PRIVATE zenit)
+add_test(NAME benchmark_result COMMAND benchmark_result)
+set_tests_properties(benchmark_result PROPERTIES LABELS "benchmark")
+
 if(LIBZENIT_BUILD_COVERAGE)
-  foreach(tgt benchmark_version benchmark_state benchmark_arena benchmark_ring benchmark_vector benchmark_map benchmark_set benchmark_string benchmark_list benchmark_heap benchmark_deque benchmark_bitset benchmark_json benchmark_base64 benchmark_hex benchmark_uri benchmark_str benchmark_sort benchmark_stack benchmark_queue benchmark_timer benchmark_pool benchmark_io)
+  foreach(tgt benchmark_version benchmark_state benchmark_arena benchmark_ring benchmark_vector benchmark_map benchmark_set benchmark_string benchmark_list benchmark_heap benchmark_deque benchmark_bitset benchmark_json benchmark_base64 benchmark_hex benchmark_uri benchmark_str benchmark_sort benchmark_stack benchmark_queue benchmark_timer benchmark_pool benchmark_io benchmark_allocator benchmark_result)
     target_compile_options(${tgt} PRIVATE --coverage -g -O0)
     target_link_options(${tgt} PRIVATE --coverage)
   endforeach()
@@ -200,6 +212,8 @@ add_custom_target(benchmark
   COMMAND "$<TARGET_FILE:benchmark_timer>"
   COMMAND "$<TARGET_FILE:benchmark_pool>"
   COMMAND "$<TARGET_FILE:benchmark_io>"
+  COMMAND "$<TARGET_FILE:benchmark_allocator>"
+  COMMAND "$<TARGET_FILE:benchmark_result>"
   COMMAND ${CMAKE_COMMAND} -E echo ""
   COMMAND ${CMAKE_COMMAND} -E echo "===== Done ====="
   USES_TERMINAL

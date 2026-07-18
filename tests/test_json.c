@@ -487,6 +487,31 @@ static int test_value_serialize(void) {
     PASS(); return 0;
 }
 
+static int test_serialize_with_allocator(void) {
+    TEST("serialize with allocator");
+    zenit_json_t *doc = zenit_json_parse("{\"x\":42}");
+    if (doc == NULL) { FAIL("parse NULL"); return 1; }
+    char *s = zenit_json_serialize_with_allocator(doc, ZENIT_ALLOCATOR_DEFAULT);
+    if (s == NULL) { FAIL("serialize_with_allocator NULL"); zenit_json_destroy(doc); return 1; }
+    if (strcmp(s, "{\"x\":42}") != 0) { FAIL("wrong content"); free(s); zenit_json_destroy(doc); return 1; }
+    free(s);
+    zenit_json_destroy(doc);
+
+    /* value variant */
+    doc = zenit_json_parse("[1,2]");
+    if (doc == NULL) { FAIL("parse NULL"); return 1; }
+    s = zenit_json_value_serialize_with_allocator(zenit_json_root(doc), ZENIT_ALLOCATOR_DEFAULT);
+    if (s == NULL) { FAIL("value_serialize_with_allocator NULL"); zenit_json_destroy(doc); return 1; }
+    if (strcmp(s, "[1,2]") != 0) { FAIL("wrong value"); free(s); zenit_json_destroy(doc); return 1; }
+    free(s);
+
+    /* NULL doc */
+    if (zenit_json_serialize_with_allocator(NULL, ZENIT_ALLOCATOR_DEFAULT) != NULL) { FAIL("NULL doc"); return 1; }
+
+    zenit_json_destroy(doc);
+    PASS(); return 0;
+}
+
 /* ─── Parse errors ─── */
 
 static int test_parse_errors(void) {
@@ -749,6 +774,7 @@ int main(void) {
         { test_roundtrip_escaped_string, "roundtrip escape" },
         { test_roundtrip_whitespace, "roundtrip ws" },
         { test_serialize_backslash, "serialize backslash" },
+        { test_serialize_with_allocator, "serialize with allocator" },
         { test_programmatic, "programmatic" },
         { test_array_ops, "array ops" },
         { test_object_ops, "object ops" },
