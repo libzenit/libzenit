@@ -186,6 +186,14 @@ int main(void) {
             fprintf(stderr, "FAIL: spsc capacity NULL\n");
             zenit_spsc_destroy(s); return 1;
         }
+        if (zenit_spsc_full(NULL) != 0) {
+            fprintf(stderr, "FAIL: spsc full NULL\n");
+            zenit_spsc_destroy(s); return 1;
+        }
+        if (zenit_spsc_empty(NULL) != 0) {
+            fprintf(stderr, "FAIL: spsc empty NULL\n");
+            zenit_spsc_destroy(s); return 1;
+        }
         zenit_spsc_destroy(NULL);
         zenit_spsc_destroy(s);
     }

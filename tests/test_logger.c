@@ -189,6 +189,56 @@ int main(void) {
     }
     printf("PASS: logger allocator variant\n");
 
+    /* Test 9: Default sink writes to stderr */
+    {
+        zenit_logger_t *log = zenit_logger_create(NULL, NULL);
+        /* This should write to stderr — can't easily capture, just ensure no crash */
+        zenit_logger_log(log, ZENIT_LOG_INFO, "default sink test");
+        zenit_logger_destroy(log);
+    }
+    printf("PASS: logger default sink\n");
+
+    /* Test 10: Filtered messages at different levels */
+    {
+        zenit_logger_t *log = zenit_logger_create(capture_sink, NULL);
+        zenit_logger_set_level(log, ZENIT_LOG_WARN);
+        captured_msg[0] = '\0';
+        zenit_logger_trace(log, "trace msg");
+        if (captured_msg[0] != '\0') {
+            fprintf(stderr, "FAIL: trace should be filtered at WARN\n");
+            zenit_logger_destroy(log);
+            return 1;
+        }
+        zenit_logger_debug(log, "debug msg");
+        if (captured_msg[0] != '\0') {
+            fprintf(stderr, "FAIL: debug should be filtered at WARN\n");
+            zenit_logger_destroy(log);
+            return 1;
+        }
+        zenit_logger_error(log, "error msg");
+        if (strstr(captured_msg, "ERROR") == NULL) {
+            fprintf(stderr, "FAIL: error should pass at WARN\n");
+            zenit_logger_destroy(log);
+            return 1;
+        }
+        zenit_logger_destroy(log);
+    }
+    printf("PASS: logger filter levels\n");
+
+    /* Test 11: Log with empty format */
+    {
+        zenit_logger_t *log = zenit_logger_create(capture_sink, NULL);
+        captured_msg[0] = '\0';
+        zenit_logger_log(log, ZENIT_LOG_INFO, "");
+        if (strstr(captured_msg, "INFO") == NULL) {
+            fprintf(stderr, "FAIL: log empty msg missing INFO\n");
+            zenit_logger_destroy(log);
+            return 1;
+        }
+        zenit_logger_destroy(log);
+    }
+    printf("PASS: logger empty message\n");
+
     printf("PASS: logger\n");
     return 0;
 }

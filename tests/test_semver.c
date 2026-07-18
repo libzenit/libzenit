@@ -170,8 +170,42 @@ int main(void) {
         if (r.error != ZENIT_ERROR_PARAM) { fprintf(stderr, "FAIL: leading zero '01.2.3'\n"); return 1; }
         r = zenit_semver_parse("1.2.3-", &v);
         if (r.error != ZENIT_ERROR_PARAM) { fprintf(stderr, "FAIL: empty prerelease\n"); return 1; }
+        r = zenit_semver_parse("1.2.3+", &v);
+        if (r.error != ZENIT_ERROR_PARAM) { fprintf(stderr, "FAIL: empty build\n"); return 1; }
     }
     printf("PASS: semver invalid\n");
+
+    /* Test 14: Very large version numbers (overflow) */
+    {
+        zenit_semver_t v;
+        zenit_result_t r = zenit_semver_parse("9999999999.0.0", &v);
+        if (r.error != ZENIT_ERROR_PARAM) { fprintf(stderr, "FAIL: overflow major\n"); return 1; }
+    }
+    printf("PASS: semver overflow\n");
+
+    /* Test 15: Compare numeric prerelease */
+    {
+        zenit_semver_t a;
+        zenit_semver_t b;
+        zenit_semver_parse("1.0.0-1", &a);
+        zenit_semver_parse("1.0.0-2", &b);
+        if (zenit_semver_compare(&a, &b) >= 0) {
+            fprintf(stderr, "FAIL: numeric prerelease\n"); return 1;
+        }
+    }
+    printf("PASS: semver numeric prerelease\n");
+
+    /* Test 16: Compare equal prerelease */
+    {
+        zenit_semver_t a;
+        zenit_semver_t b;
+        zenit_semver_parse("1.0.0-alpha.1", &a);
+        zenit_semver_parse("1.0.0-alpha.1", &b);
+        if (zenit_semver_compare(&a, &b) != 0) {
+            fprintf(stderr, "FAIL: equal prerelease\n"); return 1;
+        }
+    }
+    printf("PASS: semver equal prerelease\n");
 
     /* Test 13: Format allocator failure */
     {

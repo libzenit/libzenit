@@ -212,6 +212,68 @@ int main(void) {
     }
     printf("PASS: csv tab delimiter\n");
 
+    /* Test 10: Empty input */
+    {
+        zenit_csv_record_t rec;
+        zenit_result_t r = zenit_csv_parse_record("", ',', &rec);
+        if (r.error != ZENIT_OK || rec.count != 1 || rec.fields[0][0] != '\0') {
+            fprintf(stderr, "FAIL: csv empty input\n");
+            zenit_csv_record_destroy(&rec);
+            return 1;
+        }
+        zenit_csv_record_destroy(&rec);
+    }
+    printf("PASS: csv empty input\n");
+
+    /* Test 11: Quoted field with trailing text */
+    {
+        zenit_csv_record_t rec;
+        zenit_result_t r = zenit_csv_parse_record("\"hello\",world", ',', &rec);
+        if (r.error != ZENIT_OK || rec.count != 2 ||
+            strcmp(rec.fields[0], "hello") != 0 ||
+            strcmp(rec.fields[1], "world") != 0) {
+            fprintf(stderr, "FAIL: csv quoted trailing\n");
+            zenit_csv_record_destroy(&rec);
+            return 1;
+        }
+        zenit_csv_record_destroy(&rec);
+    }
+    printf("PASS: csv quoted trailing\n");
+
+    /* Test 12: Escaped quote in quoted field */
+    {
+        zenit_csv_record_t rec;
+        zenit_result_t r = zenit_csv_parse_record("\"say \"\"hello\"\"\"", ',', &rec);
+        if (r.error != ZENIT_OK || rec.count != 1 || strcmp(rec.fields[0], "say \"hello\"") != 0) {
+            fprintf(stderr, "FAIL: csv escaped quote: '%s'\n", rec.fields[0]);
+            zenit_csv_record_destroy(&rec);
+            return 1;
+        }
+        zenit_csv_record_destroy(&rec);
+    }
+    printf("PASS: csv escaped quote\n");
+
+    /* Test 13: Serialise empty field */
+    {
+        zenit_csv_record_t rec;
+        rec.count = 1;
+        rec.fields = malloc(sizeof(char *));
+        rec.fields[0] = strdup("");
+        char *out = NULL;
+        zenit_result_t r = zenit_csv_serialise_record(&rec, ',', &out);
+        if (r.error != ZENIT_OK || strcmp(out, "\"\"") != 0) {
+            fprintf(stderr, "FAIL: csv serialise empty: '%s'\n", out ? out : "NULL");
+            free(out);
+            free(rec.fields[0]);
+            free(rec.fields);
+            return 1;
+        }
+        free(out);
+        free(rec.fields[0]);
+        free(rec.fields);
+    }
+    printf("PASS: csv serialise empty\n");
+
     printf("PASS: csv\n");
     return 0;
 }
