@@ -731,24 +731,12 @@ static int test_undirected_add_edge_reverse_growth_fail(void) {
 
 /* ─── remove_edge invalid-param coverage ─── */
 
-static int test_remove_edge_invalid_from(void) {
+static int test_remove_edge_invalid_vertices(void) {
     zenit_graph_t *g = zenit_graph_create(4, 1);
     ASSERT(g != NULL, "create");
     ASSERT(zenit_graph_add_vertex(g).error == ZENIT_OK, "add v0");
-    /* from out of range */
-    zenit_result_t r = zenit_graph_remove_edge(g, 99, 0);
-    ASSERT(r.error == ZENIT_ERROR_PARAM, "remove_edge invalid from");
-    zenit_graph_destroy(g);
-    return 0;
-}
-
-static int test_remove_edge_invalid_to(void) {
-    zenit_graph_t *g = zenit_graph_create(4, 1);
-    ASSERT(g != NULL, "create");
-    ASSERT(zenit_graph_add_vertex(g).error == ZENIT_OK, "add v0");
-    /* to out of range */
-    zenit_result_t r = zenit_graph_remove_edge(g, 0, 99);
-    ASSERT(r.error == ZENIT_ERROR_PARAM, "remove_edge invalid to");
+    ASSERT(zenit_graph_remove_edge(g, 99, 0).error == ZENIT_ERROR_PARAM, "remove_edge invalid from");
+    ASSERT(zenit_graph_remove_edge(g, 0, 99).error == ZENIT_ERROR_PARAM, "remove_edge invalid to");
     zenit_graph_destroy(g);
     return 0;
 }
@@ -760,18 +748,11 @@ static int test_has_edge_null(void) {
     return 0;
 }
 
-static int test_has_edge_invalid_from(void) {
+static int test_has_edge_invalid_vertices(void) {
     zenit_graph_t *g = zenit_graph_create(4, 1);
     ASSERT(g != NULL, "create");
     ASSERT(zenit_graph_has_edge(g, -1, 0) == 0, "has_edge negative from");
     ASSERT(zenit_graph_has_edge(g, 99, 0) == 0, "has_edge out-of-range from");
-    zenit_graph_destroy(g);
-    return 0;
-}
-
-static int test_has_edge_invalid_to(void) {
-    zenit_graph_t *g = zenit_graph_create(4, 1);
-    ASSERT(g != NULL, "create");
     ASSERT(zenit_graph_has_edge(g, 0, -1) == 0, "has_edge negative to");
     ASSERT(zenit_graph_has_edge(g, 0, 99) == 0, "has_edge out-of-range to");
     zenit_graph_destroy(g);
@@ -859,62 +840,33 @@ static int test_remove_vertex_directed_edge_count(void) {
 
 /* ─── BFS/DFS start-vertex coverage ─── */
 
-static int test_bfs_invalid_start_negative(void) {
+typedef zenit_result_t (*traverse_fn_t)(const zenit_graph_t*, int, int(*)(int, void*), void*);
+
+static int test_traverse_invalid_starts(traverse_fn_t fn, const char* label) {
     zenit_graph_t *g = zenit_graph_create(4, 1);
-    ASSERT(g != NULL, "create");
-    zenit_result_t r = zenit_graph_bfs(g, -1, visit_noop, NULL);
-    ASSERT(r.error == ZENIT_ERROR_PARAM, "BFS negative start");
+    if (g == NULL) { fprintf(stderr, "FAIL: %s create\n", label); return 1; }
+
+    zenit_result_t r = fn(g, -1, visit_noop, NULL);
+    if (r.error != ZENIT_ERROR_PARAM) { fprintf(stderr, "FAIL: %s negative start\n", label); zenit_graph_destroy(g); return 1; }
+
+    zenit_graph_add_vertex(g);
+    zenit_graph_remove_vertex(g, 0);
+    r = fn(g, 0, visit_noop, NULL);
+    if (r.error != ZENIT_ERROR_PARAM) { fprintf(stderr, "FAIL: %s removed start\n", label); zenit_graph_destroy(g); return 1; }
+
+    r = fn(g, 99, visit_noop, NULL);
+    if (r.error != ZENIT_ERROR_PARAM) { fprintf(stderr, "FAIL: %s out-of-range start\n", label); zenit_graph_destroy(g); return 1; }
+
     zenit_graph_destroy(g);
     return 0;
 }
 
-static int test_bfs_invalid_start_removed(void) {
-    zenit_graph_t *g = zenit_graph_create(4, 1);
-    ASSERT(g != NULL, "create");
-    ASSERT(zenit_graph_add_vertex(g).error == ZENIT_OK, "add v0");
-    ASSERT(zenit_graph_remove_vertex(g, 0).error == ZENIT_OK, "remove v0");
-    zenit_result_t r = zenit_graph_bfs(g, 0, visit_noop, NULL);
-    ASSERT(r.error == ZENIT_ERROR_PARAM, "BFS removed start");
-    zenit_graph_destroy(g);
-    return 0;
+static int test_bfs_invalid_starts(void) {
+    return test_traverse_invalid_starts(zenit_graph_bfs, "BFS");
 }
 
-static int test_bfs_invalid_start_out_of_range(void) {
-    zenit_graph_t *g = zenit_graph_create(4, 1);
-    ASSERT(g != NULL, "create");
-    zenit_result_t r = zenit_graph_bfs(g, 99, visit_noop, NULL);
-    ASSERT(r.error == ZENIT_ERROR_PARAM, "BFS out-of-range start");
-    zenit_graph_destroy(g);
-    return 0;
-}
-
-static int test_dfs_invalid_start_negative(void) {
-    zenit_graph_t *g = zenit_graph_create(4, 1);
-    ASSERT(g != NULL, "create");
-    zenit_result_t r = zenit_graph_dfs(g, -1, visit_noop, NULL);
-    ASSERT(r.error == ZENIT_ERROR_PARAM, "DFS negative start");
-    zenit_graph_destroy(g);
-    return 0;
-}
-
-static int test_dfs_invalid_start_removed(void) {
-    zenit_graph_t *g = zenit_graph_create(4, 1);
-    ASSERT(g != NULL, "create");
-    ASSERT(zenit_graph_add_vertex(g).error == ZENIT_OK, "add v0");
-    ASSERT(zenit_graph_remove_vertex(g, 0).error == ZENIT_OK, "remove v0");
-    zenit_result_t r = zenit_graph_dfs(g, 0, visit_noop, NULL);
-    ASSERT(r.error == ZENIT_ERROR_PARAM, "DFS removed start");
-    zenit_graph_destroy(g);
-    return 0;
-}
-
-static int test_dfs_invalid_start_out_of_range(void) {
-    zenit_graph_t *g = zenit_graph_create(4, 1);
-    ASSERT(g != NULL, "create");
-    zenit_result_t r = zenit_graph_dfs(g, 99, visit_noop, NULL);
-    ASSERT(r.error == ZENIT_ERROR_PARAM, "DFS out-of-range start");
-    zenit_graph_destroy(g);
-    return 0;
+static int test_dfs_invalid_starts(void) {
+    return test_traverse_invalid_starts(zenit_graph_dfs, "DFS");
 }
 
 /* ─── test suite runner ─── */
@@ -962,11 +914,9 @@ int main(void) {
         &test_grow_vertex_arrays_removed_realloc_fail,
         &test_grow_adj_list_realloc_fail,
         &test_undirected_add_edge_reverse_growth_fail,
-        &test_remove_edge_invalid_from,
-        &test_remove_edge_invalid_to,
+        &test_remove_edge_invalid_vertices,
         &test_has_edge_null,
-        &test_has_edge_invalid_from,
-        &test_has_edge_invalid_to,
+        &test_has_edge_invalid_vertices,
         &test_has_edge_removed_from,
         &test_has_edge_removed_to,
         &test_get_neighbors_removed_vertex,
@@ -974,12 +924,8 @@ int main(void) {
         &test_edge_count_null,
         &test_is_directed_null,
         &test_remove_vertex_directed_edge_count,
-        &test_bfs_invalid_start_negative,
-        &test_bfs_invalid_start_removed,
-        &test_bfs_invalid_start_out_of_range,
-        &test_dfs_invalid_start_negative,
-        &test_dfs_invalid_start_removed,
-        &test_dfs_invalid_start_out_of_range,
+        &test_bfs_invalid_starts,
+        &test_dfs_invalid_starts,
     };
     const char *names[] = {
         "create_directed",
@@ -1023,11 +969,9 @@ int main(void) {
         "grow_vertex_arrays_removed_realloc_fail",
         "grow_adj_list_realloc_fail",
         "undirected_add_edge_reverse_growth_fail",
-        "remove_edge_invalid_from",
-        "remove_edge_invalid_to",
+        "remove_edge_invalid_vertices",
         "has_edge_null",
-        "has_edge_invalid_from",
-        "has_edge_invalid_to",
+        "has_edge_invalid_vertices",
         "has_edge_removed_from",
         "has_edge_removed_to",
         "get_neighbors_removed_vertex",
@@ -1035,12 +979,8 @@ int main(void) {
         "edge_count_null",
         "is_directed_null",
         "remove_vertex_directed_edge_count",
-        "bfs_invalid_start_negative",
-        "bfs_invalid_start_removed",
-        "bfs_invalid_start_out_of_range",
-        "dfs_invalid_start_negative",
-        "dfs_invalid_start_removed",
-        "dfs_invalid_start_out_of_range",
+        "bfs_invalid_starts",
+        "dfs_invalid_starts",
     };
     ZENIT_RUN_TESTS("graph", tests, names);
 }
