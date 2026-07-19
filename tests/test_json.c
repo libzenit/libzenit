@@ -723,13 +723,12 @@ static int test_parse_array_growth(void) {
     TEST("parse array with many elements (growth)");
     /* Build a JSON array with 20 elements to exercise array_grow */
     char input[512] = "[";
+    size_t len = 1;
     for (int i = 0; i < 20; i++) {
-        if (i > 0) strcat(input, ",");
-        char num[8];
-        snprintf(num, sizeof(num), "%d", i);
-        strcat(input, num);
+        int n = snprintf(input + len, sizeof(input) - len, "%s%d", (i > 0 ? "," : ""), i);
+        if (n > 0) len += n;
     }
-    strcat(input, "]");
+    snprintf(input + len, sizeof(input) - len, "]");
     zenit_json_t *doc = zenit_json_parse(input);
     if (doc == NULL) { FAIL("parse NULL"); return 1; }
     if (zenit_json_array_count(zenit_json_root(doc)) != 20) { FAIL("count"); zenit_json_destroy(doc); return 1; }
